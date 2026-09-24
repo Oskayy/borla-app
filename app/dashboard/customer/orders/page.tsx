@@ -11,6 +11,15 @@ const statusLabels: Record<string, string> = {
   CANCELLED: 'Cancelled',
 }
 
+const statusColors: Record<string, string> = {
+  DRAFT: '#999',
+  PAID: 'var(--color-accent)',
+  ASSIGNED: 'var(--color-accent)',
+  PICKED_UP: 'var(--color-accent)',
+  COMPLETED: 'var(--color-success)',
+  CANCELLED: '#B3261E',
+}
+
 export default async function OrderHistoryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,16 +31,19 @@ export default async function OrderHistoryPage() {
   })
 
   return (
-    <div style={{ maxWidth: 500, margin: '60px auto', padding: 20 }}>
-      <h1>Your Orders</h1>
-      {orders.length === 0 && <p>No orders yet.</p>}
+    <div style={{ maxWidth: 500, margin: '40px auto', padding: '0 20px' }}>
+      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Your Orders</h1>
+      {orders.length === 0 && <div className="panel"><p>No orders yet.</p></div>}
       {orders.map((order) => {
         const quote = order.quoteSnapshot as { address?: string; price?: number }
         return (
-          <div key={order.id} style={{ border: '1px solid #ccc', padding: 10, marginBottom: 10 }}>
-            <p><strong>{quote.address}</strong></p>
-            <p>GHS {quote.price} — {statusLabels[order.status] ?? order.status}</p>
-            <p style={{ fontSize: 12, color: '#666' }}>
+          <div key={order.id} className="panel" style={{ marginBottom: 12 }}>
+            <p style={{ fontWeight: 500, marginBottom: 4 }}>{quote.address}</p>
+            <p style={{ fontSize: 14, marginBottom: 4 }}>
+              <span className="status-dot" style={{ background: statusColors[order.status] ?? '#999' }} />
+              GHS {quote.price} — {statusLabels[order.status] ?? order.status}
+            </p>
+            <p style={{ fontSize: 12, color: '#999' }}>
               {new Date(order.createdAt).toLocaleDateString()}
             </p>
           </div>

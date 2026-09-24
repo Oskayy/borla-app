@@ -16,7 +16,6 @@ export default async function DriverDashboard() {
     },
   })
 
-  // Sum up every payout ever recorded for this driver's completed work
   const earningsEntries = await prisma.ledgerEntry.findMany({
     where: {
       type: { in: ['driver_payout_pickup', 'driver_payout_disposal'] },
@@ -27,23 +26,28 @@ export default async function DriverDashboard() {
   const totalEarnings = earningsEntries.reduce((sum, entry) => sum + entry.amount, 0)
 
   return (
-    <div style={{ maxWidth: 400, margin: '60px auto', padding: 20 }}>
-      <h1>Driver Dashboard</h1>
+    <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
+      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Driver Dashboard</h1>
 
-      <div style={{ background: '#f0f0f0', padding: 15, marginBottom: 20, borderRadius: 4 }}>
-        <p style={{ margin: 0, fontSize: 14, color: '#666' }}>Total earnings</p>
-        <p style={{ margin: 0, fontSize: 24, fontWeight: 'bold' }}>GHS {totalEarnings.toFixed(2)}</p>
+      <div className="panel" style={{ marginBottom: 24, background: 'var(--color-primary)', border: 'none', color: 'white' }}>
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>Total earnings</p>
+        <p style={{ margin: 0, fontSize: 28, fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+          GHS {totalEarnings.toFixed(2)}
+        </p>
       </div>
 
-      <h2 style={{ fontSize: 18 }}>Active Orders</h2>
-      {orders.length === 0 && <p>No active orders right now.</p>}
+      <h2 style={{ fontSize: 16, marginBottom: 12, color: '#666' }}>Active Orders</h2>
+      {orders.length === 0 && <div className="panel"><p>No active orders right now.</p></div>}
       {orders.map((order) => {
         const quote = order.quoteSnapshot as { address?: string; price?: number }
         return (
-          <div key={order.id} style={{ border: '1px solid #ccc', padding: 10, marginBottom: 10 }}>
-            <p><strong>Pickup at:</strong> {quote.address}</p>
-            <p><strong>Price:</strong> GHS {quote.price}</p>
-            <p><strong>Status:</strong> {order.status}</p>
+          <div key={order.id} className="panel" style={{ marginBottom: 12 }}>
+            <p style={{ fontWeight: 500, marginBottom: 4 }}>{quote.address}</p>
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>GHS {quote.price}</p>
+            <p style={{ fontSize: 13, marginBottom: 12 }}>
+              <span className="status-dot" style={{ background: 'var(--color-accent)' }} />
+              {order.status}
+            </p>
             {order.status === 'ASSIGNED' && <ConfirmPickupButton orderId={order.id} />}
             {order.status === 'PICKED_UP' && <ConfirmDisposalButton orderId={order.id} />}
           </div>

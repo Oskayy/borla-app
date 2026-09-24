@@ -23,7 +23,7 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
   }
 
   return (
-    <button onClick={confirmPickup} disabled={loading} style={{ padding: 8, width: '100%' }}>
+            <button onClick={confirmPickup} disabled={loading} className="btn-accent" style={{ width: '100%' }}>
       {loading ? 'Confirming...' : 'Confirm Pickup'}
     </button>
   )

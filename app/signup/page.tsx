@@ -21,7 +21,6 @@ export default function SignupPage() {
     setError('')
     setLoading(true)
 
-    // 1. Create the login (Supabase Auth)
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -33,7 +32,6 @@ export default function SignupPage() {
       return
     }
 
-    // 2. Save their profile info to our own User table
     const res = await fetch('/api/users/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,53 +54,56 @@ export default function SignupPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '60px auto', padding: 20 }}>
-      <h1>Create your Borla account</h1>
-      <form onSubmit={handleSignup}>
-        <input
-          placeholder="Full name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-        />
-        <input
-          placeholder="Phone number"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          required
-          style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-        />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-        >
-          <option value="CUSTOMER">I'm a customer</option>
-          <option value="DRIVER">I'm a driver</option>
-        </select>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: 10 }}>
-          {loading ? 'Creating account...' : 'Sign up'}
-        </button>
-      </form>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
+        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Create your Borla account</h1>
+        <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Takes under a minute.</p>
+        <form onSubmit={handleSignup}>
+          <input
+            placeholder="Full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="input-field"
+          />
+          <input
+            placeholder="Phone number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+            className="input-field"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="input-field"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="input-field"
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="input-field"
+          >
+            <option value="CUSTOMER">I'm a customer</option>
+            <option value="DRIVER">I'm a driver</option>
+          </select>
+          {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+          <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
+            {loading ? 'Creating account...' : 'Sign up'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

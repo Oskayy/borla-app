@@ -69,50 +69,52 @@ export default function BookPickupPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '60px auto', padding: 20 }}>
-      <h1>Schedule a Pickup</h1>
+    <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
+      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Schedule a Pickup</h1>
 
-      <input
-        placeholder="Pickup address"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-        style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-      />
+      <div className="panel">
+        <input
+          placeholder="Pickup address"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          className="input-field"
+        />
 
-      <select
-        value={wasteType}
-        onChange={(e) => setWasteType(e.target.value)}
-        style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-      >
-        <option value="general">General waste</option>
-        <option value="recyclable">Recyclable (separated)</option>
-      </select>
+        <select
+          value={wasteType}
+          onChange={(e) => setWasteType(e.target.value)}
+          className="input-field"
+        >
+          <option value="general">General waste</option>
+          <option value="recyclable">Recyclable (separated)</option>
+        </select>
 
-      <label>Number of bags: {bagCount}</label>
-      <input
-        type="range"
-        min={1}
-        max={10}
-        value={bagCount}
-        onChange={(e) => setBagCount(Number(e.target.value))}
-        style={{ display: 'block', width: '100%', marginBottom: 10 }}
-      />
+        <label style={{ fontSize: 13, color: '#666' }}>Number of bags: {bagCount}</label>
+        <input
+          type="range"
+          min={1}
+          max={10}
+          value={bagCount}
+          onChange={(e) => setBagCount(Number(e.target.value))}
+          style={{ display: 'block', width: '100%', marginBottom: 16 }}
+        />
 
-      <button onClick={getQuote} disabled={loading} style={{ width: '100%', padding: 10 }}>
-        {loading ? 'Calculating...' : 'Get price'}
-      </button>
+        <button onClick={getQuote} disabled={loading} className="btn-primary" style={{ width: '100%' }}>
+          {loading ? 'Calculating...' : 'Get price'}
+        </button>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+        {error && <p style={{ color: '#B3261E', fontSize: 13, marginTop: 12 }}>{error}</p>}
 
-      {quote !== null && (
-        <div style={{ marginTop: 20, padding: 10, border: '1px solid #ccc' }}>
-          <p>Estimated price: GHS {quote.toFixed(2)}</p>
-          <p style={{ fontSize: 12, color: '#666' }}>Rule used: {ruleId}</p>
-          <button onClick={confirmBooking} disabled={loading} style={{ width: '100%', padding: 10, marginTop: 10 }}>
-            {loading ? 'Processing...' : 'Confirm booking & pay'}
-          </button>
-        </div>
-      )}
+        {quote !== null && (
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+            <p style={{ fontSize: 22, fontFamily: 'var(--font-heading)', fontWeight: 600 }}>GHS {quote.toFixed(2)}</p>
+            <p style={{ fontSize: 12, color: '#999', marginBottom: 12 }}>Rule used: {ruleId}</p>
+            <button onClick={confirmBooking} disabled={loading} className="btn-accent" style={{ width: '100%' }}>
+              {loading ? 'Processing...' : 'Confirm booking & pay'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

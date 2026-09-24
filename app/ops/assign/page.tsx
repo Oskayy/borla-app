@@ -25,9 +25,9 @@ export default async function AssignOrdersPage() {
   })
 
   return (
-    <div style={{ maxWidth: 600, margin: '60px auto', padding: 20 }}>
-      <h1>Assign Orders to Drivers</h1>
-      {paidOrders.length === 0 && <p>No paid orders waiting for assignment.</p>}
+    <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 20px' }}>
+      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Assign Orders to Drivers</h1>
+      {paidOrders.length === 0 && <div className="panel"><p>No paid orders waiting for assignment.</p></div>}
       {paidOrders.map((order) => (
         <AssignForm key={order.id} order={order} drivers={drivers} />
       ))}

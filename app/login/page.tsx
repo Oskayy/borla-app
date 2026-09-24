@@ -34,30 +34,33 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: '60px auto', padding: 20 }}>
-      <h1>Log in to Borla</h1>
-      <form onSubmit={handleLogin}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
-        />
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: 10 }}>
-          {loading ? 'Logging in...' : 'Log in'}
-        </button>
-      </form>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
+        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Log in to Borla</h1>
+        <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Pickups, on schedule.</p>
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="input-field"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="input-field"
+          />
+          {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+          <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
+            {loading ? 'Logging in...' : 'Log in'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

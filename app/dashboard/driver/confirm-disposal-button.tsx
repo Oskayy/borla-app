@@ -23,7 +23,7 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
   }
 
   return (
-    <button onClick={confirmDisposal} disabled={loading} style={{ padding: 8, width: '100%' }}>
+        <button onClick={confirmDisposal} disabled={loading} className="btn-accent" style={{ width: '100%' }}>
       {loading ? 'Confirming...' : 'Confirm Disposal'}
     </button>
   )

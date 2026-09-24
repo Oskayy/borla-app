@@ -2,6 +2,15 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 
+const statusColors: Record<string, string> = {
+  DRAFT: '#999',
+  PAID: 'var(--color-accent)',
+  ASSIGNED: 'var(--color-accent)',
+  PICKED_UP: 'var(--color-accent)',
+  COMPLETED: 'var(--color-success)',
+  CANCELLED: '#B3261E',
+}
+
 export default async function CustomerDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -15,15 +24,21 @@ export default async function CustomerDashboard() {
   })
 
   return (
-    <div style={{ maxWidth: 500, margin: '60px auto', padding: 20 }}>
-      <h1>Welcome, {dbUser?.name}</h1>
+    <div style={{ maxWidth: 500, margin: '40px auto', padding: '0 20px' }}>
+      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Welcome, {dbUser?.name}</h1>
       {lastOrder ? (
-        <p>
-          Your most recent order ({(lastOrder.quoteSnapshot as any)?.address}) is currently:{' '}
-          <strong>{lastOrder.status}</strong>
-        </p>
+        <div className="panel">
+          <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Most recent order</p>
+          <p style={{ marginBottom: 8 }}>{(lastOrder.quoteSnapshot as any)?.address}</p>
+          <p style={{ fontSize: 14 }}>
+            <span className="status-dot" style={{ background: statusColors[lastOrder.status] ?? '#999' }} />
+            {lastOrder.status}
+          </p>
+        </div>
       ) : (
-        <p>You haven't booked a pickup yet.</p>
+        <div className="panel">
+          <p>You haven't booked a pickup yet.</p>
+        </div>
       )}
     </div>
   )

@@ -1,26 +1,72 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-bg: #F7F5F1;
+  --color-ink: #1B2321;
+  --color-primary: #0F3D3E;
+  --color-accent: #E8A33D;
+  --color-success: #2F7A4D;
+  --color-border: #D8D3C7;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body), sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 4px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-accent {
+  background: var(--color-accent);
+  color: var(--color-ink);
+  padding: 10px 18px;
+  border-radius: 4px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+.btn-accent:hover { opacity: 0.9; }
+.btn-accent:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.panel {
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 16px;
+  background: white;
+}
+
+.input-field {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: var(--font-body), sans-serif;
+  font-size: 14px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
 }
