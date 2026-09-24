@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  DRIVER
+  SUPER_ADMIN
+  OPS_MANAGER
+  DISPATCHER
+  FINANCE
+  SUPPORT
+  COMPLIANCE
+  ANALYST
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  READY_FOR_BATCH
+  ASSIGNED
+  EN_ROUTE
+  ARRIVED
+  PICKUP_PENDING_REVIEW
+  PICKED_UP
+  DISPOSAL_PENDING
+  DISPOSAL_VERIFIED
+  COMPLETED
+  FAILED_PICKUP
+  DISPUTED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  email     String?  @unique
+  name      String
+  role      UserRole
+  createdAt DateTime @default(now())
+
+  customerProfile CustomerProfile?
+  driverProfile   DriverProfile?
+  ordersAsCustomer Order[] @relation("CustomerOrders")
+  ordersAsDriver   Order[] @relation("DriverOrders")
+}
+
+model CustomerProfile {
+  id         String @id @default(uuid())
+  userId     String @unique
+  user       User   @relation(fields: [userId], references: [id])
+  address    String
+  zoneId     String?
+  zone       Zone?  @relation(fields: [zoneId], references: [id])
+}
+
+model DriverProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  vehicleType    String   // "Borla car" | "Aboboyaa tricycle"
+  vehiclePlate   String?
+  isActive       Boolean  @default(true)
+}
+
+model Zone {
+  id        String   @id @default(uuid())
+  name      String
+  city      String   // Accra | Kumasi | Tema
+  customers CustomerProfile[]
+  facilities Facility[]
+}
+
+model Facility {
+  id        String   @id @default(uuid())
+  name      String
+  zoneId    String
+  zone      Zone     @relation(fields: [zoneId], references: [id])
+  verifications FacilityVerification[]
+}
+
+model PricingRule {
+  id            String   @id @default(uuid())
+  name          String
+  baseFee       Float
+  volumeRate    Float
+  zoneMultiplier Float   @default(1.0)
+  hazardSurcharge Float  @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model PayoutRule {
+  id              String   @id @default(uuid())
+  pickupPercent   Float    // e.g. 40
+  disposalPercent Float    // e.g. 60
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  customerId  String
+  customer    User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  driverId    String?
+  driver      User?       @relation("DriverOrders", fields: [driverId], references: [id])
+  status      OrderStatus @default(DRAFT)
+  zoneId      String?
+  quoteSnapshot Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  evidence       OrderEvidence[]
+  disputes       Dispute[]
+  facilityChecks FacilityVerification[]
+  auditLogs      AuditLog[]
+  ledgerEntries  LedgerEntry[]
+  payments       Payment[]
+}
+
+model OrderEvidence {
+  id           String   @id @default(uuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id])
+  type         String   // "customer_placement" | "driver_pickup"
+  photoUrl     String
+  gpsLat       Float?
+  gpsLng       Float?
+  gpsAccuracy  Float?
+  capturedAt   DateTime
+  aiAssessment Json?
+  createdAt    DateTime @default(now())
+}
+
+model FacilityVerification {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  facilityId String
+  facility   Facility @relation(fields: [facilityId], references: [id])
+  method     String   // "qr" | "pin"
+  verifiedAt DateTime @default(now())
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id])
+  provider      String   // "paystack" | "hubtel"
+  amount        Float
+  status        String   // "success" | "failed" | "refunded"
+  providerRef   String   @unique
+  createdAt     DateTime @default(now())
+}
+
+model LedgerEntry {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  type        String   // "customer_payment" | "driver_payout_pickup" | "driver_payout_disposal" | "refund"
+  amount      Float
+  idempotencyKey String @unique
+  createdAt   DateTime @default(now())
+}
+
+model Dispute {
+  id         String    @id @default(uuid())
+  orderId    String
+  order      Order     @relation(fields: [orderId], references: [id])
+  raisedBy   String
+  reason     String
+  status     String    @default("OPEN")
+  resolution String?
+  resolvedBy String?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  actorId   String?
+  fromState String?
+  toState   String
+  reason    String?
+  createdAt DateTime @default(now())
+}
