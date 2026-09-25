@@ -24,18 +24,42 @@ export default function OptimizeForm({ orders, drivers }: { orders: any[]; drive
     setError('')
     setLoading(true)
 
-    const res = await fetch('/api/routes/optimize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderIds: selected, driverId }),
-    })
+    // Split the selection: routable orders go through optimization,
+    // no-coordinate orders get manually assigned in selection order.
+    const selectedOrders = orders.filter((o) => selected.includes(o.id))
+    const routable = selectedOrders.filter((o) => o.latitude != null && o.longitude != null).map((o) => o.id)
+    const unroutable = selectedOrders.filter((o) => o.latitude == null || o.longitude == null).map((o) => o.id)
 
-    setLoading(false)
-    if (res.ok) {
+    try {
+      if (routable.length > 0) {
+        const res = await fetch('/api/routes/optimize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderIds: routable, driverId }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Failed to optimize route')
+        }
+      }
+
+      if (unroutable.length > 0) {
+        const res = await fetch('/api/orders/manual-assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderIds: unroutable, driverId }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Failed to manually assign orders')
+        }
+      }
+
+      setLoading(false)
       router.refresh()
-    } else {
-      const data = await res.json()
-      setError(data.error || 'Failed to optimize route')
+    } catch (e: any) {
+      setLoading(false)
+      setError(e.message)
     }
   }
 
@@ -50,13 +74,14 @@ export default function OptimizeForm({ orders, drivers }: { orders: any[]; drive
               type="checkbox"
               checked={selected.includes(order.id)}
               onChange={() => toggle(order.id)}
-              disabled={!hasCoords}
             />
             <div style={{ flex: 1 }}>
               <p style={{ fontWeight: 500 }}>{quote.address}</p>
               <p style={{ fontSize: 13, color: '#666' }}>
                 GHS {quote.price} — {order.customer.name}
-                {!hasCoords && <span style={{ color: '#B3261E' }}> (no coordinates — can't be routed)</span>}
+                {!hasCoords && (
+                  <span style={{ color: '#E8A33D' }}> (no coordinates — will be manually assigned, not routed)</span>
+                )}
               </p>
             </div>
           </div>
@@ -72,7 +97,7 @@ export default function OptimizeForm({ orders, drivers }: { orders: any[]; drive
         </select>
         {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
         <button onClick={optimizeAndAssign} disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-          {loading ? 'Optimizing...' : `Optimize & Assign (${selected.length} selected)`}
+          {loading ? 'Assigning...' : `Optimize & Assign (${selected.length} selected)`}
         </button>
       </div>
     </div>
