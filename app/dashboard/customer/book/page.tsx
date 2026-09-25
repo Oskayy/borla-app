@@ -1,15 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 export default function BookPickupPage() {
   const [address, setAddress] = useState('')
   const [wasteType, setWasteType] = useState('general')
   const [bagCount, setBagCount] = useState(1)
+  const [file, setFile] = useState<File | null>(null)
   const [quote, setQuote] = useState<number | null>(null)
   const [ruleId, setRuleId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const supabase = createClient()
 
   async function getQuote() {
     setError('')
@@ -48,24 +52,55 @@ export default function BookPickupPage() {
   }
 
   async function confirmBooking() {
+    if (!file) {
+      setError('Please add a photo of your waste before continuing')
+      return
+    }
+
     setError('')
     setLoading(true)
 
-    const res = await fetch('/api/orders/create', {
+    // 1. Create the order first, so we have an orderId to attach the photo to
+    const orderRes = await fetch('/api/orders/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address, wasteType, bagCount, price: quote, ruleId }),
     })
+    const orderData = await orderRes.json()
 
-    const data = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(data.error || 'Could not create booking')
+    if (!orderRes.ok) {
+      setLoading(false)
+      setError(orderData.error || 'Could not create booking')
       return
     }
 
-    payNow(data.id)
+    // 2. Upload the placement photo
+    const filePath = `${orderData.id}/placement-${Date.now()}.jpg`
+    const { error: uploadError } = await supabase.storage
+      .from('pickup-evidence')
+      .upload(filePath, file)
+
+    if (uploadError) {
+      setLoading(false)
+      setError('Photo upload failed: ' + uploadError.message)
+      return
+    }
+
+    // 3. Save the evidence record
+    const evidenceRes = await fetch('/api/orders/add-evidence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: orderData.id, photoPath: filePath, type: 'customer_placement' }),
+    })
+
+    if (!evidenceRes.ok) {
+      setLoading(false)
+      setError('Order created, but photo could not be saved. Contact support.')
+      return
+    }
+
+    // 4. Proceed to payment
+    payNow(orderData.id)
   }
 
   return (
@@ -97,6 +132,17 @@ export default function BookPickupPage() {
           value={bagCount}
           onChange={(e) => setBagCount(Number(e.target.value))}
           style={{ display: 'block', width: '100%', marginBottom: 16 }}
+        />
+
+        <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>
+          Photo of your waste (required)
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="input-field"
         />
 
         <button onClick={getQuote} disabled={loading} className="btn-primary" style={{ width: '100%' }}>
