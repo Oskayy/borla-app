@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
@@ -112,13 +113,17 @@ model Order {
   driver      User?       @relation("DriverOrders", fields: [driverId], references: [id])
   status      OrderStatus @default(DRAFT)
   zoneId      String?
+  latitude    Float?
+  longitude   Float?
   quoteSnapshot Json?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
+
   evidence       OrderEvidence[]
   disputes       Dispute[]
   facilityChecks FacilityVerification[]
+  routeStop      RouteStop?
   auditLogs      AuditLog[]
   ledgerEntries  LedgerEntry[]
   payments       Payment[]
@@ -191,4 +196,19 @@ model AuditLog {
   toState   String
   reason    String?
   createdAt DateTime @default(now())
+}
+model Route {
+  id        String      @id @default(uuid())
+  driverId  String
+  createdAt DateTime    @default(now())
+  stops     RouteStop[]
+}
+
+model RouteStop {
+  id        String   @id @default(uuid())
+  routeId   String
+  route     Route    @relation(fields: [routeId], references: [id])
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  sequence  Int
 }

@@ -14,6 +14,8 @@ export default async function DriverDashboard() {
       driverId: user.id,
       status: { in: ['ASSIGNED', 'PICKED_UP'] },
     },
+    include: { routeStop: true },
+    orderBy: { routeStop: { sequence: 'asc' } },
   })
 
   const earningsEntries = await prisma.ledgerEntry.findMany({
@@ -37,11 +39,17 @@ export default async function DriverDashboard() {
       </div>
 
       <h2 style={{ fontSize: 16, marginBottom: 12, color: '#666' }}>Active Orders</h2>
+
       {orders.length === 0 && <div className="panel"><p>No active orders right now.</p></div>}
       {orders.map((order) => {
         const quote = order.quoteSnapshot as { address?: string; price?: number }
         return (
           <div key={order.id} className="panel" style={{ marginBottom: 12 }}>
+            {order.routeStop && (
+              <p style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 600, marginBottom: 2 }}>
+                STOP {order.routeStop.sequence}
+              </p>
+            )}
             <p style={{ fontWeight: 500, marginBottom: 4 }}>{quote.address}</p>
             <p style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>GHS {quote.price}</p>
             <p style={{ fontSize: 13, marginBottom: 12 }}>

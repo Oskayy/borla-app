@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
-import AssignForm from './assign-form'
+import OptimizeForm from './optimize-form'
 
 const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
 
@@ -28,9 +28,7 @@ export default async function AssignOrdersPage() {
     <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 20px' }}>
       <h1 style={{ fontSize: 26, marginBottom: 20 }}>Assign Orders to Drivers</h1>
       {paidOrders.length === 0 && <div className="panel"><p>No paid orders waiting for assignment.</p></div>}
-      {paidOrders.map((order) => (
-        <AssignForm key={order.id} order={order} drivers={drivers} />
-      ))}
+      {paidOrders.length > 0 && <OptimizeForm orders={paidOrders} drivers={drivers} />}
     </div>
   )
 }
