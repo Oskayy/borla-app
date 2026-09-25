@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
   if (withCoords.length > 1) {
     const coordsString = withCoords.map((o) => `${o.longitude},${o.latitude}`).join(';')
 
-    const mapboxRes = await fetch(
-      `https://api.mapbox.com/optimized-trips/v1/mapbox/driving/${coordsString}?source=first&roundtrip=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
+        const mapboxRes = await fetch(
+      `https://api.mapbox.com/optimized-trips/v1/mapbox/driving/${coordsString}?roundtrip=false&access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`
     )
     const mapboxData = await mapboxRes.json()
 

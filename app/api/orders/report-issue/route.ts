@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
-  const { orderId, issueType, note, photoPath } = await req.json()
+  const { orderId, issueType, note, photoPath, gpsLat, gpsLng } = await req.json()
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
   if (!order || order.status !== 'ASSIGNED') {
@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
           orderId,
           type: 'driver_pickup',
           photoUrl: photoPath,
+          gpsLat: gpsLat ?? null,
+          gpsLng: gpsLng ?? null,
           capturedAt: new Date(),
         },
       })

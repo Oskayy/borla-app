@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { distanceInMeters, GEOFENCE_THRESHOLD_METERS } from '@/lib/geo'
 
 export async function POST(req: NextRequest) {
-  const { orderId, photoPath } = await req.json()
+  const { orderId, photoPath, gpsLat, gpsLng } = await req.json()
 
   if (!photoPath) {
     return NextResponse.json({ error: 'Photo is required to confirm pickup' }, { status: 400 })
@@ -25,8 +26,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No active payout rule' }, { status: 500 })
   }
 
+  // Geofence check: is the driver's photo GPS near the order's address?
+  let flagged = false
+  let distanceMeters: number | null = null
+
+  if (gpsLat != null && gpsLng != null && order.latitude != null && order.longitude != null) {
+    distanceMeters = distanceInMeters(order.latitude, order.longitude, gpsLat, gpsLng)
+    flagged = distanceMeters > GEOFENCE_THRESHOLD_METERS
+  }
+
   const quote = order.quoteSnapshot as { price: number }
   const payoutAmount = (quote.price * rule.pickupPercent) / 100
+
+  const auditReason = flagged
+    ? `Driver confirmed pickup with photo evidence (GPS MISMATCH: photo taken ~${Math.round(
+        distanceMeters as number
+      )}m from pickup address)`
+    : 'Driver confirmed pickup with photo evidence'
 
   await prisma.$transaction([
     prisma.order.update({
@@ -38,6 +54,8 @@ export async function POST(req: NextRequest) {
         orderId,
         type: 'driver_pickup',
         photoUrl: photoPath,
+        gpsLat: gpsLat ?? null,
+        gpsLng: gpsLng ?? null,
         capturedAt: new Date(),
       },
     }),
@@ -55,10 +73,10 @@ export async function POST(req: NextRequest) {
         actorId: order.driverId,
         fromState: 'ASSIGNED',
         toState: 'PICKED_UP',
-        reason: 'Driver confirmed pickup with photo evidence',
+        reason: auditReason,
       },
     }),
   ])
 
-  return NextResponse.json({ success: true, payoutAmount })
+  return NextResponse.json({ success: true, payoutAmount, flagged, distanceMeters })
 }

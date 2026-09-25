@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
-  const { bagCount } = await req.json()
+  const { bagCount, wasteType, hazardous } = await req.json()
 
   const rule = await prisma.pricingRule.findFirst({
     where: { active: true },
@@ -15,11 +13,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No active pricing rule found' }, { status: 500 })
   }
 
-  const price =
-    rule.baseFee + rule.volumeRate * bagCount * rule.zoneMultiplier + rule.hazardSurcharge
+  let price = rule.baseFee + rule.volumeRate * bagCount * rule.zoneMultiplier
+
+  if (hazardous) {
+    price += rule.hazardSurcharge
+  }
+
+  if (wasteType === 'recyclable') {
+    price = price * (1 - rule.separatedDiscountPercent / 100)
+  }
 
   return NextResponse.json({
     price,
-    ruleId: rule.id, // saved with the order later, so every quote is traceable
+    ruleId: rule.id,
   })
 }

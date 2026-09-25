@@ -3,11 +3,15 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import PhotoCapture from '@/components/PhotoCapture'
 
 export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null)
+  const [gpsLat, setGpsLat] = useState<number | null>(null)
+  const [gpsLng, setGpsLng] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
   const [reporting, setReporting] = useState(false)
   const [issueType, setIssueType] = useState('LOCKED_GATE')
   const [note, setNote] = useState('')
@@ -26,23 +30,31 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
 
   async function confirmPickup() {
     if (!file) {
-      setError('Please take or select a photo first')
+      setError('Please take a photo first')
       return
     }
     setError('')
+    setWarning('')
     setLoading(true)
     try {
       const photoPath = await uploadPhoto('pickup')
       const res = await fetch('/api/orders/confirm-pickup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, photoPath }),
+        body: JSON.stringify({ orderId, photoPath, gpsLat, gpsLng }),
       })
+      const data = await res.json()
       setLoading(false)
       if (res.ok) {
+        if (data.flagged) {
+          setWarning(
+            `Location check: this photo was taken about ${Math.round(
+              data.distanceMeters
+            )}m from the pickup address. Pickup was still confirmed, but this has been flagged for ops review.`
+          )
+        }
         router.refresh()
       } else {
-        const data = await res.json()
         setError(data.error || 'Failed to confirm pickup')
       }
     } catch (e: any) {
@@ -59,7 +71,7 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
       const res = await fetch('/api/orders/report-issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, issueType, note, photoPath }),
+        body: JSON.stringify({ orderId, issueType, note, photoPath, gpsLat, gpsLng }),
       })
       setLoading(false)
       if (res.ok) {
@@ -76,15 +88,17 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
 
   return (
     <div>
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        className="input-field"
-        style={{ marginBottom: 8 }}
+      <PhotoCapture
+        label={file ? 'Retake Photo' : 'Take Photo'}
+        onCapture={(f, lat, lng) => {
+          setFile(f)
+          setGpsLat(lat)
+          setGpsLng(lng)
+        }}
       />
+      {file && <p style={{ fontSize: 12, color: '#2F7A4D', margin: '6px 0' }}>Photo captured ✓</p>}
       {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
+      {warning && <p style={{ color: '#E8A33D', fontSize: 13, marginBottom: 8 }}>{warning}</p>}
 
       {!reporting ? (
         <>

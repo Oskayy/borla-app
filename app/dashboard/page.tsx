@@ -27,11 +27,17 @@ export default async function DashboardPage() {
     redirect('/dashboard/driver')
   }
 
-  // Fallback for admin roles later
+  const opsRoles = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE', 'SUPPORT', 'COMPLIANCE', 'ANALYST']
+  if (opsRoles.includes(dbUser.role)) {
+    redirect('/ops')
+  }
+
+  // Fallback for any other/unrecognized role
   return (
     <div style={{ maxWidth: 400, margin: '60px auto', padding: 20 }}>
       <h1>Welcome, {dbUser.name}</h1>
       <p>Role: {dbUser.role}</p>
+      <p style={{ color: '#999', fontSize: 13 }}>This role doesn't have a dashboard yet.</p>
     </div>
   )
 }

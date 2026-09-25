@@ -93,6 +93,7 @@ model PricingRule {
   volumeRate    Float
   zoneMultiplier Float   @default(1.0)
   hazardSurcharge Float  @default(0)
+  separatedDiscountPercent Float    @default(15)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
 }

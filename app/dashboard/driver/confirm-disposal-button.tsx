@@ -3,9 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import PhotoCapture from '@/components/PhotoCapture'
 
 export default function ConfirmDisposalButton({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null)
+  const [gpsLat, setGpsLat] = useState<number | null>(null)
+  const [gpsLng, setGpsLng] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -13,7 +16,7 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
 
   async function confirmDisposal() {
     if (!file) {
-      setError('Please take or select a photo first')
+      setError('Please take a photo first')
       return
     }
 
@@ -34,7 +37,7 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
     const res = await fetch('/api/orders/confirm-disposal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId, photoPath: filePath }),
+      body: JSON.stringify({ orderId, photoPath: filePath, gpsLat, gpsLng }),
     })
 
     setLoading(false)
@@ -48,14 +51,15 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
 
   return (
     <div>
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        className="input-field"
-        style={{ marginBottom: 8 }}
+      <PhotoCapture
+        label={file ? 'Retake Photo' : 'Take Photo'}
+        onCapture={(f, lat, lng) => {
+          setFile(f)
+          setGpsLat(lat)
+          setGpsLng(lng)
+        }}
       />
+      {file && <p style={{ fontSize: 12, color: '#2F7A4D', margin: '6px 0' }}>Photo captured ✓</p>}
       {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
       <button onClick={confirmDisposal} disabled={loading} className="btn-accent" style={{ width: '100%' }}>
         {loading ? 'Confirming...' : 'Confirm Disposal'}
