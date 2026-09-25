@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
-  const { orderId } = await req.json()
+  const { orderId, photoPath } = await req.json()
+
+  if (!photoPath) {
+    return NextResponse.json({ error: 'Photo is required to confirm disposal' }, { status: 400 })
+  }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
   if (!order || order.status !== 'PICKED_UP') {
@@ -29,6 +33,14 @@ export async function POST(req: NextRequest) {
       where: { id: orderId },
       data: { status: 'COMPLETED' },
     }),
+    prisma.orderEvidence.create({
+      data: {
+        orderId,
+        type: 'driver_pickup', // reused type field; photoUrl path itself distinguishes "disposal-" vs "pickup-"
+        photoUrl: photoPath,
+        capturedAt: new Date(),
+      },
+    }),
     prisma.ledgerEntry.create({
       data: {
         orderId,
@@ -43,7 +55,7 @@ export async function POST(req: NextRequest) {
         actorId: order.driverId,
         fromState: 'PICKED_UP',
         toState: 'COMPLETED',
-        reason: 'Driver confirmed disposal',
+        reason: 'Driver confirmed disposal with photo evidence',
       },
     }),
   ])

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
-  const { orderId } = await req.json()
+  const { orderId, photoPath } = await req.json()
+
+  if (!photoPath) {
+    return NextResponse.json({ error: 'Photo is required to confirm pickup' }, { status: 400 })
+  }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
   if (!order || order.status !== 'ASSIGNED') {
@@ -11,7 +15,6 @@ export async function POST(req: NextRequest) {
 
   const idempotencyKey = `pickup-${orderId}`
 
-  // Idempotency check: if this payout already happened, don't do it again
   const existing = await prisma.ledgerEntry.findUnique({ where: { idempotencyKey } })
   if (existing) {
     return NextResponse.json({ success: true, note: 'Already processed' })
@@ -30,6 +33,14 @@ export async function POST(req: NextRequest) {
       where: { id: orderId },
       data: { status: 'PICKED_UP' },
     }),
+    prisma.orderEvidence.create({
+      data: {
+        orderId,
+        type: 'driver_pickup',
+        photoUrl: photoPath,
+        capturedAt: new Date(),
+      },
+    }),
     prisma.ledgerEntry.create({
       data: {
         orderId,
@@ -44,7 +55,7 @@ export async function POST(req: NextRequest) {
         actorId: order.driverId,
         fromState: 'ASSIGNED',
         toState: 'PICKED_UP',
-        reason: 'Driver confirmed pickup',
+        reason: 'Driver confirmed pickup with photo evidence',
       },
     }),
   ])
