@@ -1,8 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+
+function checkStrength(password: string) {
+  return [
+    { label: 'At least 8 characters', pass: password.length >= 8 },
+    { label: 'One uppercase letter', pass: /[A-Z]/.test(password) },
+    { label: 'One lowercase letter', pass: /[a-z]/.test(password) },
+    { label: 'One number', pass: /[0-9]/.test(password) },
+    { label: 'One symbol (e.g. ! @ # $)', pass: /[^A-Za-z0-9]/.test(password) },
+  ]
+}
 
 export default function SignupPage() {
   const [name, setName] = useState('')
@@ -14,39 +23,29 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
 
   const router = useRouter()
-  const supabase = createClient()
+  const strengthChecks = checkStrength(password)
+  const allPass = strengthChecks.every((c) => c.pass)
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    setLoading(true)
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    })
-
-    if (authError) {
-      setError(authError.message)
-      setLoading(false)
+    if (!allPass) {
+      setError('Please meet all password requirements below before continuing')
       return
     }
 
-    const res = await fetch('/api/users/create', {
+    setLoading(true)
+    const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        authId: data.user?.id,
-        name,
-        phone,
-        email,
-        role,
-      }),
+      body: JSON.stringify({ name, phone, email, password, role }),
     })
+    const data = await res.json()
+    setLoading(false)
 
     if (!res.ok) {
-      setError('Account created, but profile setup failed. Contact support.')
-      setLoading(false)
+      setError(data.error || 'Signup failed')
       return
     }
 
@@ -64,6 +63,7 @@ export default function SignupPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            autoComplete="name"
             className="input-field"
           />
           <input
@@ -71,6 +71,7 @@ export default function SignupPage() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             required
+            autoComplete="tel"
             className="input-field"
           />
           <input
@@ -79,6 +80,7 @@ export default function SignupPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="email"
             className="input-field"
           />
           <input
@@ -87,14 +89,19 @@ export default function SignupPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            autoComplete="new-password"
             className="input-field"
           />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="input-field"
-          >
+
+          <div style={{ marginBottom: 16, marginTop: -8 }}>
+            {strengthChecks.map((c) => (
+              <p key={c.label} style={{ fontSize: 12, color: c.pass ? '#2F7A4D' : '#999', margin: '2px 0' }}>
+                {c.pass ? '✓' : '○'} {c.label}
+              </p>
+            ))}
+          </div>
+
+          <select value={role} onChange={(e) => setRole(e.target.value)} className="input-field">
             <option value="CUSTOMER">I'm a customer</option>
             <option value="DRIVER">I'm a driver</option>
           </select>

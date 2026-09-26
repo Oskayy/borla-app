@@ -213,3 +213,13 @@ model RouteStop {
   order     Order    @relation(fields: [orderId], references: [id])
   sequence  Int
 }
+
+model RateLimitAttempt {
+  id         String   @id @default(uuid())
+  identifier String
+  action     String
+  success    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, action, createdAt])
+}

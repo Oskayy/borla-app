@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
+import Footer from "@/components/Footer";
 
 const heading = Space_Grotesk({
   subsets: ["latin"],
@@ -25,6 +27,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${heading.variable} ${body.variable}`}>
         {children}
+        <Footer />
+        <CookieConsentBanner />
       </body>
     </html>
   );

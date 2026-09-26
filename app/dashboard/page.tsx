@@ -29,6 +29,13 @@ export default async function DashboardPage() {
 
   const opsRoles = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE', 'SUPPORT', 'COMPLIANCE', 'ANALYST']
   if (opsRoles.includes(dbUser.role)) {
+    const { data: factorsData } = await supabase.auth.mfa.listFactors()
+    const hasVerifiedFactor = factorsData?.totp?.some((f) => f.status === 'verified')
+
+    if (!hasVerifiedFactor) {
+      redirect('/security/setup')
+    }
+
     redirect('/ops')
   }
 

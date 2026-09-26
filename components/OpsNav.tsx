@@ -9,6 +9,7 @@ const links = [
   { href: '/ops/exceptions', label: 'Exceptions' },
   { href: '/ops/pricing', label: 'Pricing Rules' },
   { href: '/ops/payouts', label: 'Payout Rules' },
+  { href: '/ops/mfa-recovery', label: '2FA Recovery' },
 ]
 
 export default function OpsNav() {
