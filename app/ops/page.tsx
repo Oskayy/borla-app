@@ -25,6 +25,12 @@ const tiles = [
     description: 'Configure driver payout splits for pickup and disposal.',
     available: true,
   },
+    {
+    href: '/ops/zones',
+    title: 'Zones',
+    description: 'Manage collection zones and their boundaries.',
+    available: true,
+  },
 ]
 
 export default function OpsDashboard() {

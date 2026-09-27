@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import PasswordInput from '@/components/PasswordInput'
 
 function checkStrength(password: string) {
   return [
@@ -83,9 +84,7 @@ export default function SignupPage() {
             autoComplete="email"
             className="input-field"
           />
-          <input
-            type="password"
-            placeholder="Password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -105,6 +104,7 @@ export default function SignupPage() {
             <option value="CUSTOMER">I'm a customer</option>
             <option value="DRIVER">I'm a driver</option>
           </select>
+
           {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
           <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
             {loading ? 'Creating account...' : 'Sign up'}

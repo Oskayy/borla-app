@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
 
+export const dynamic = 'force-dynamic'
+
 export default function BookPickupPage() {
   const [address, setAddress] = useState('')
   const [wasteType, setWasteType] = useState('general')
@@ -14,8 +16,13 @@ export default function BookPickupPage() {
   const [quote, setQuote] = useState<number | null>(null)
   const [ruleId, setRuleId] = useState('')
   const [error, setError] = useState('')
-  const [warning, setWarning] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    orderId: string
+    filePath: string
+    distanceMeters: number
+  } | null>(null)
 
   const supabase = createClient()
 
@@ -45,19 +52,25 @@ export default function BookPickupPage() {
   }
 
   async function payNow(orderId: string) {
-    const res = await fetch('/api/payments/initialize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId }),
-    })
-    const data = await res.json()
+    try {
+      const res = await fetch('/api/payments/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json()
 
-    if (!res.ok) {
-      setError(data.error || 'Could not start payment')
-      return
+      if (!res.ok) {
+        setError(data.error || 'Could not start payment')
+        setLoading(false)
+        return
+      }
+
+      window.location.href = data.authorizationUrl
+    } catch (e) {
+      setError('Something went wrong starting payment. Please try again.')
+      setLoading(false)
     }
-
-    window.location.href = data.authorizationUrl
   }
 
   async function confirmBooking() {
@@ -72,7 +85,6 @@ export default function BookPickupPage() {
     }
 
     setError('')
-    setWarning('')
     setLoading(true)
 
     const orderRes = await fetch('/api/orders/create', {
@@ -118,15 +130,64 @@ export default function BookPickupPage() {
     }
 
     const evidenceData = await evidenceRes.json()
+
     if (evidenceData.flagged) {
-      setWarning(
-        `Heads up: your photo's location is about ${Math.round(
-          evidenceData.distanceMeters
-        )}m from the address you entered. We'll still process your booking, but please double-check the address is correct.`
-      )
+      setLoading(false)
+      setPendingConfirm({
+        orderId: orderData.id,
+        filePath,
+        distanceMeters: evidenceData.distanceMeters,
+      })
+      return
     }
 
-    payNow(orderData.id)
+    await payNow(orderData.id)
+  }
+
+  async function confirmAddressAndPay() {
+    if (!pendingConfirm) return
+    setError('')
+    setLoading(true)
+    await payNow(pendingConfirm.orderId)
+  }
+
+  function goBackAndFixAddress() {
+    setPendingConfirm(null)
+    setFile(null)
+    setGpsLat(null)
+    setGpsLng(null)
+    setError('Please update your address to match your location, then take a new photo and try again.')
+  }
+
+  if (pendingConfirm) {
+    return (
+      <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
+        <h1 style={{ fontSize: 26, marginBottom: 20 }}>Double-check your address</h1>
+        <div className="panel">
+          <p style={{ fontSize: 14, marginBottom: 16 }}>
+            Your photo's location is about <strong>{Math.round(pendingConfirm.distanceMeters)}m</strong> from
+            the address you entered (<strong>{address}</strong>). This can happen if your phone's location
+            is briefly inaccurate, or if the address you typed doesn't quite match where you are.
+          </p>
+          <p style={{ fontSize: 14, marginBottom: 20 }}>
+            Is <strong>{address}</strong> correct?
+          </p>
+
+          {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+          <button onClick={confirmAddressAndPay} disabled={loading} className="btn-accent" style={{ width: '100%', marginBottom: 8 }}>
+            {loading ? 'Processing...' : 'Yes, this address is correct — proceed to payment'}
+          </button>
+          <button
+            onClick={goBackAndFixAddress}
+            disabled={loading}
+            style={{ width: '100%', background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: 10, fontSize: 14 }}
+          >
+            No, let me fix the address
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -181,7 +242,6 @@ export default function BookPickupPage() {
         </button>
 
         {error && <p style={{ color: '#B3261E', fontSize: 13, marginTop: 12 }}>{error}</p>}
-        {warning && <p style={{ color: '#E8A33D', fontSize: 13, marginTop: 12 }}>{warning}</p>}
 
         {quote !== null && (
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>

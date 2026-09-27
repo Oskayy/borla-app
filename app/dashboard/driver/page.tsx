@@ -3,11 +3,18 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import ConfirmPickupButton from './confirm-pickup-button'
 import ConfirmDisposalButton from './confirm-disposal-button'
+import DriverLocationTracker from '@/components/DriverLocationTracker'
 
 export default async function DriverDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const driverProfile = await prisma.driverProfile.findUnique({ where: { userId: user.id } })
+
+  if (!driverProfile || !driverProfile.vehicleType) {
+    redirect('/dashboard/driver/profile-setup')
+  }
 
   const orders = await prisma.order.findMany({
     where: {
@@ -29,7 +36,8 @@ export default async function DriverDashboard() {
 
   return (
     <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Driver Dashboard</h1>
+      <h1 style={{ fontSize: 26, marginBottom: 4 }}>Driver Dashboard</h1>
+      <DriverLocationTracker />
 
       <div className="panel" style={{ marginBottom: 24, background: 'var(--color-primary)', border: 'none', color: 'white' }}>
         <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>Total earnings</p>

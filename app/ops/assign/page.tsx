@@ -21,14 +21,19 @@ export default async function AssignOrdersPage() {
   })
 
   const drivers = await prisma.user.findMany({
-    where: { role: 'DRIVER' },
+    where: { role: 'DRIVER', driverProfile: { isActive: true } },
+    include: { driverProfile: { include: { zone: true } } },
+  })
+
+  const zones = await prisma.zone.findMany({
+    where: { active: true, centerLat: { not: null }, centerLng: { not: null } },
   })
 
   return (
-    <div style={{ maxWidth: 600, margin: '40px auto', padding: '0 20px' }}>
+    <div style={{ maxWidth: 700, margin: '40px auto', padding: '0 20px' }}>
       <h1 style={{ fontSize: 26, marginBottom: 20 }}>Assign Orders to Drivers</h1>
       {paidOrders.length === 0 && <div className="panel"><p>No paid orders waiting for assignment.</p></div>}
-      {paidOrders.length > 0 && <OptimizeForm orders={paidOrders} drivers={drivers} />}
+      {paidOrders.length > 0 && <OptimizeForm orders={paidOrders} drivers={drivers} zones={zones} />}
     </div>
   )
 }

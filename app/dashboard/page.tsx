@@ -23,7 +23,13 @@ export default async function DashboardPage() {
     redirect('/dashboard/customer')
   }
 
-  if (dbUser.role === 'DRIVER') {
+    if (dbUser.role === 'DRIVER') {
+    const driverProfile = await prisma.driverProfile.findUnique({ where: { userId: dbUser.id } })
+
+    if (!driverProfile || !driverProfile.vehicleType) {
+      redirect('/dashboard/driver/profile-setup')
+    }
+
     redirect('/dashboard/driver')
   }
 

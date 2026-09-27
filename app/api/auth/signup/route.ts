@@ -43,6 +43,12 @@ export async function POST(req: NextRequest) {
     await prisma.user.create({
       data: { id: data.user!.id, name, phone, email, role },
     })
+
+    if (role === 'DRIVER') {
+      await prisma.driverProfile.create({
+        data: { userId: data.user!.id },
+      })
+    }
   } catch (e) {
     await recordAttempt(ip, 'signup', false)
     return NextResponse.json({ error: 'Account created, but profile setup failed. Contact support.' }, { status: 500 })

@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import DeleteDraftButton from '@/components/DeleteDraftButton'
 
 const statusLabels: Record<string, string> = {
   DRAFT: 'Draft (not paid)',
@@ -46,6 +47,7 @@ export default async function OrderHistoryPage() {
             <p style={{ fontSize: 12, color: '#999' }}>
               {new Date(order.createdAt).toLocaleDateString()}
             </p>
+            {order.status === 'DRAFT' && <DeleteDraftButton orderId={order.id} />}
           </div>
         )
       })}

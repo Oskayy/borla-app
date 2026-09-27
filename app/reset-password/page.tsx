@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import PasswordInput from '@/components/PasswordInput'
 
 function checkStrength(password: string) {
   return [
@@ -58,9 +59,7 @@ export default function ResetPasswordPage() {
           <p style={{ fontSize: 14, color: '#2F7A4D', marginTop: 12 }}>Password updated. Redirecting to login...</p>
         ) : (
           <form onSubmit={handleSubmit}>
-            <input
-              type="password"
-              placeholder="New password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

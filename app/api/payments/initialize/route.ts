@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       amount: amountInPesewas,
       currency: 'GHS',
       metadata: { orderId: order.id },
-      callback_url: `http://localhost:3000/dashboard/customer/orders/${order.id}`,
+      callback_url: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard/customer/orders/${order.id}`,
     }),
   })
 

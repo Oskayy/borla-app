@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import PasswordInput from '@/components/PasswordInput'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -121,9 +122,7 @@ export default function LoginPage() {
             autoComplete="email"
             className="input-field"
           />
-          <input
-            type="password"
-            placeholder="Password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

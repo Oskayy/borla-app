@@ -62,20 +62,35 @@ model CustomerProfile {
 }
 
 model DriverProfile {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id])
-  vehicleType    String   // "Borla car" | "Aboboyaa tricycle"
-  vehiclePlate   String?
-  isActive       Boolean  @default(true)
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id])
+  vehicleType      String?   // "Borla car" | "Aboboyaa tricycle"
+  vehiclePlate     String?
+  isActive         Boolean   @default(true)
+  zoneId           String?
+  zone             Zone?     @relation(fields: [zoneId], references: [id])
+  homeAddress      String?
+  homeLat          Float?
+  homeLng          Float?
+  currentLat       Float?
+  currentLng       Float?
+  lastLocationAt   DateTime?
 }
 
 model Zone {
-  id        String   @id @default(uuid())
-  name      String
-  city      String   // Accra | Kumasi | Tema
-  customers CustomerProfile[]
-  facilities Facility[]
+  id            String            @id @default(uuid())
+  name          String
+  city          String            // Accra | Kumasi | Tema
+  centerLat     Float?
+  centerLng     Float?
+  radiusKm      Float             @default(3)
+  coveredAreas  String[]          @default([])
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  customers     CustomerProfile[]
+  facilities    Facility[]
+  drivers       DriverProfile[]
 }
 
 model Facility {

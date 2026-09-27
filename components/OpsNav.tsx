@@ -10,6 +10,7 @@ const links = [
   { href: '/ops/pricing', label: 'Pricing Rules' },
   { href: '/ops/payouts', label: 'Payout Rules' },
   { href: '/ops/mfa-recovery', label: '2FA Recovery' },
+  { href: '/ops/zones', label: 'Zones' },
 ]
 
 export default function OpsNav() {

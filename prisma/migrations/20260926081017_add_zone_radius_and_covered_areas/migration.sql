@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Zone" ADD COLUMN     "coveredAreas" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "radiusKm" DOUBLE PRECISION NOT NULL DEFAULT 3;
