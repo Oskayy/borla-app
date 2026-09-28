@@ -12,7 +12,10 @@ export async function GET() {
   const auth = await requireAuth(FINANCE_ROLES)
   if (!auth.ok) return auth.response
 
-  const rules = await prisma.pricingRule.findMany({ orderBy: { createdAt: 'desc' } })
+  const rules = await prisma.pricingRule.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { binPrices: { include: { binSize: true } } },
+  })
   return NextResponse.json({ rules })
 }
 
@@ -27,13 +30,37 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const name = cleanText(body?.name, 80)
   const baseFee = inRange(body?.baseFee, 0, 1000)
-  const volumeRate = inRange(body?.volumeRate, 0, 1000)
-  const zoneMultiplier = inRange(body?.zoneMultiplier, 0.1, 10)
+  const perBinCharge = inRange(body?.volumeRate, 0, 1000)
   const hazardSurcharge = inRange(body?.hazardSurcharge, 0, 1000)
+  const lateSurcharge = inRange(body?.lateSurcharge, 0, 1000)
+  const platformFeePercent = inRange(body?.platformFeePercent, 0, 50)
   const discount = inRange(body?.separatedDiscountPercent, 0, 100)
 
-  if (!name || baseFee === null || volumeRate === null || zoneMultiplier === null || hazardSurcharge === null || discount === null) {
+  if (
+    !name ||
+    baseFee === null ||
+    perBinCharge === null ||
+    hazardSurcharge === null ||
+    lateSurcharge === null ||
+    platformFeePercent === null ||
+    discount === null
+  ) {
     return NextResponse.json({ error: 'Please check the pricing values (all fields are required)' }, { status: 400 })
+  }
+
+  // Every active bin size must get a fee, so every bin a customer can pick has a price.
+  const sizes = await prisma.binSize.findMany({ where: { active: true }, orderBy: { sortOrder: 'asc' } })
+  const binFeesRaw = body?.binFees && typeof body.binFees === 'object' ? body.binFees : {}
+  const binPrices: { binSizeId: string; fee: number }[] = []
+  for (const size of sizes) {
+    const fee = inRange(binFeesRaw[size.code], 0, 1000)
+    if (fee === null) {
+      return NextResponse.json({ error: `Please enter a fee for the ${size.label.toLowerCase()}` }, { status: 400 })
+    }
+    binPrices.push({ binSizeId: size.id, fee })
+  }
+  if (binPrices.length === 0) {
+    return NextResponse.json({ error: 'No bin sizes are set up yet' }, { status: 400 })
   }
 
   const rule = await prisma.$transaction(async (tx) => {
@@ -42,20 +69,24 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         baseFee,
-        volumeRate,
-        zoneMultiplier,
+        volumeRate: perBinCharge,
+        zoneMultiplier: 1, // multipliers now live on each zone
         hazardSurcharge,
+        lateSurcharge,
+        platformFeePercent,
         separatedDiscountPercent: discount,
         active: true,
+        binPrices: { create: binPrices },
       },
     })
   })
 
+  const binText = sizes.map((s, i) => `${s.code} ${binPrices[i].fee}`).join(', ')
   await logAdminAction(
     auth.user.id,
     'PRICING_RULE_ACTIVATED',
     rule.id,
-    `"${name}": base ${baseFee}, per-bag ${volumeRate}, zone x${zoneMultiplier}, hazard ${hazardSurcharge}, recyclable discount ${discount}%`
+    `"${name}": base ${baseFee}, bins [${binText}], per-bin ${perBinCharge}, hazard ${hazardSurcharge}, late ${lateSurcharge}, platform fee ${platformFeePercent}%, recyclable discount ${discount}%`
   )
 
   return NextResponse.json({ success: true, rule })

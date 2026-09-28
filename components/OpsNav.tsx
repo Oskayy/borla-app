@@ -11,6 +11,7 @@ const links = [
   { href: '/ops/payouts', label: 'Payout Rules' },
   { href: '/ops/mfa-recovery', label: '2FA Recovery' },
   { href: '/ops/zones', label: 'Zones' },
+  { href: '/ops/shift', label: 'Shift Hours' },
 ]
 
 export default function OpsNav() {
@@ -59,4 +60,4 @@ export default function OpsNav() {
       })}
     </nav>
   )
-}
+}

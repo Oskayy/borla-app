@@ -4,7 +4,9 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import ZonesClient from '@/components/ZonesClient'
 
-const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
+const ZONE_EDIT_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
+const PRICE_EDIT_ROLES = ['SUPER_ADMIN', 'FINANCE']
+const ALLOWED_ROLES = [...ZONE_EDIT_ROLES, 'FINANCE']
 
 export default async function ZonesPage() {
   const supabase = await createClient()
@@ -30,7 +32,11 @@ export default async function ZonesPage() {
         </Link>
       </div>
 
-      <ZonesClient zones={zones} />
+      <ZonesClient
+        zones={zones}
+        canEditZones={ZONE_EDIT_ROLES.includes(dbUser.role)}
+        canEditPrice={PRICE_EDIT_ROLES.includes(dbUser.role)}
+      />
     </div>
   )
-}
+}

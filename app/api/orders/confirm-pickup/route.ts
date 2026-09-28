@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
+import { driverPoolFromSnapshot } from '@/lib/pricing-core'
 import { distanceInMeters, GEOFENCE_THRESHOLD_METERS } from '@/lib/geo'
 
 export async function POST(req: NextRequest) {
@@ -42,9 +43,9 @@ export async function POST(req: NextRequest) {
   const rule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' } })
   if (!rule) return NextResponse.json({ error: 'No active payout rule' }, { status: 500 })
 
-  const quote = order.quoteSnapshot as { price?: number } | null
-  const price = quote?.price
-  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+  // Drivers share the price after Borla's platform fee (the "driver pool").
+  const driverPool = driverPoolFromSnapshot(order.quoteSnapshot)
+  if (driverPool === null) {
     return NextResponse.json({ error: 'This order has an invalid price' }, { status: 400 })
   }
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     flagged = distanceMeters > GEOFENCE_THRESHOLD_METERS
   }
 
-  const payoutAmount = Math.round(price * rule.pickupPercent) / 100
+  const payoutAmount = Math.round(driverPool * rule.pickupPercent) / 100
   const idempotencyKey = `pickup-${orderId}`
   const auditReason = flagged
     ? `Driver confirmed pickup with photo evidence (GPS MISMATCH: photo taken ~${Math.round(distanceMeters as number)}m from pickup address)`
@@ -97,4 +98,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, payoutAmount, flagged, distanceMeters })
-}
+}

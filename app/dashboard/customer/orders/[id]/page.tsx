@@ -2,6 +2,8 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { getShiftSettings } from '@/lib/settings'
+import { classifyBooking, describeCollection } from '@/lib/shift'
 
 const statusColors: Record<string, string> = {
   DRAFT: '#999',
@@ -16,7 +18,7 @@ const statusColors: Record<string, string> = {
 
 const statusMessages: Record<string, string> = {
   DRAFT: 'Your order is being set up.',
-  PAID: "Payment received — we're finding a driver for you.",
+  PAID: "Payment received — your pickup is scheduled.",
   ASSIGNED: 'A driver has been assigned and is on the way.',
   PICKED_UP: 'Your waste has been picked up.',
   COMPLETED: 'This pickup is complete. Thank you!',
@@ -43,7 +45,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     )
   }
 
-  const quote = order.quoteSnapshot as { price: number; address?: string }
+  const quote = order.quoteSnapshot as {
+    price: number
+    address?: string
+    zoneName?: string
+    lines?: { code: string; label: string; count: number }[]
+  }
+
+  // Once paid, the order has a collection night. Show it in plain words.
+  let collection: string | null = null
+  if (order.shiftDate) {
+    const settings = await getShiftSettings()
+    const today = classifyBooking(new Date(), settings).localDate
+    collection = describeCollection(order.shiftDate.toISOString().slice(0, 10), today, settings)
+  }
+  const binsText = quote?.lines?.map((l) => `${l.count} × ${l.label}`).join(', ')
 
   return (
     <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
@@ -52,6 +68,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       <div className="panel">
         <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Pickup address</p>
         <p style={{ marginBottom: 16 }}>{quote?.address || 'N/A'}</p>
+
+        {binsText && (
+          <>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Bins</p>
+            <p style={{ marginBottom: 16 }}>{binsText}</p>
+          </>
+        )}
+
+        {collection && ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(order.status) && (
+          <div style={{ background: '#EEF4F4', borderRadius: 4, padding: 10, marginBottom: 16, fontSize: 13 }}>
+            <strong>Collection: {collection}.</strong>
+            <br />
+            Please put your bins out before the collection starts.
+          </div>
+        )}
 
         <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Amount</p>
         <p style={{ fontSize: 20, fontFamily: 'var(--font-heading)', fontWeight: 600, marginBottom: 16 }}>
@@ -71,4 +102,4 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </Link>
     </div>
   )
-}
+}

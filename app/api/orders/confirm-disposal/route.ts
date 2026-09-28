@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
+import { driverPoolFromSnapshot } from '@/lib/pricing-core'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
@@ -41,13 +42,13 @@ export async function POST(req: NextRequest) {
   const rule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' } })
   if (!rule) return NextResponse.json({ error: 'No active payout rule' }, { status: 500 })
 
-  const quote = order.quoteSnapshot as { price?: number } | null
-  const price = quote?.price
-  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+  // Drivers share the price after Borla's platform fee (the "driver pool").
+  const driverPool = driverPoolFromSnapshot(order.quoteSnapshot)
+  if (driverPool === null) {
     return NextResponse.json({ error: 'This order has an invalid price' }, { status: 400 })
   }
 
-  const payoutAmount = Math.round(price * rule.disposalPercent) / 100
+  const payoutAmount = Math.round(driverPool * rule.disposalPercent) / 100
   const idempotencyKey = `disposal-${orderId}`
 
   try {
@@ -91,4 +92,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, payoutAmount })
-}
+}

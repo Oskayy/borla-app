@@ -87,8 +87,11 @@ model Zone {
   radiusKm      Float             @default(3)
   coveredAreas  String[]          @default([])
   active        Boolean           @default(true)
+  // Price multiplier for pickups in this zone. Only Super Admin / Finance may change it.
+  priceMultiplier Float           @default(1.0)
   createdAt     DateTime          @default(now())
   customers     CustomerProfile[]
+  orders        Order[]
   facilities    Facility[]
   drivers       DriverProfile[]
 }
@@ -104,13 +107,51 @@ model Facility {
 model PricingRule {
   id            String   @id @default(uuid())
   name          String
-  baseFee       Float
-  volumeRate    Float
-  zoneMultiplier Float   @default(1.0)
+  baseFee       Float    // flat fee per order
+  volumeRate    Float    // per-bin charge, added to every bin whatever its size
+  zoneMultiplier Float   @default(1.0) // DEPRECATED: multipliers now live on each Zone. Kept so old rules stay readable.
   hazardSurcharge Float  @default(0)
+  lateSurcharge Float    @default(0)   // added to late orders (booked after the planning snapshot)
+  platformFeePercent Float @default(0) // Borla's share, taken before the driver 40/60 split
   separatedDiscountPercent Float    @default(15)
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
+  binPrices     PricingRuleBinPrice[]
+}
+
+// Customer-facing bin sizes (e.g. small 30 L, medium 60 L, large 120 L).
+model BinSize {
+  id        String   @id @default(uuid())
+  code      String   @unique // "small" | "medium" | "large"
+  label     String
+  litres    Int
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  prices    PricingRuleBinPrice[]
+}
+
+// A bin size's fee inside one pricing rule, so each rule and its bin prices are versioned together.
+model PricingRuleBinPrice {
+  id            String      @id @default(uuid())
+  pricingRuleId String
+  pricingRule   PricingRule @relation(fields: [pricingRuleId], references: [id])
+  binSizeId     String
+  binSize       BinSize     @relation(fields: [binSizeId], references: [id])
+  fee           Float
+
+  @@unique([pricingRuleId, binSizeId])
+}
+
+// Single row (id = 1). Times are minutes after local midnight in `timezone`.
+model OperatingSettings {
+  id                      Int      @id @default(1)
+  timezone                String   @default("Africa/Accra")
+  shiftStartMinutes       Int      @default(1200) // 20:00
+  shiftEndMinutes         Int      @default(360)  // 06:00 next morning
+  planningSnapshotMinutes Int      @default(1080) // 18:00
+  hardCutoffMinutes       Int      @default(0)    // 00:00
+  updatedAt               DateTime @updatedAt
 }
 
 model PayoutRule {
@@ -129,6 +170,9 @@ model Order {
   driver      User?       @relation("DriverOrders", fields: [driverId], references: [id])
   status      OrderStatus @default(DRAFT)
   zoneId      String?
+  zone        Zone?       @relation(fields: [zoneId], references: [id])
+  shiftDate   DateTime?   @db.Date // the night this order is collected (shift starts 20:00 on this date)
+  isLateOrder Boolean     @default(false)
   latitude    Float?
   longitude   Float?
   quoteSnapshot Json?
@@ -143,6 +187,8 @@ model Order {
   auditLogs      AuditLog[]
   ledgerEntries  LedgerEntry[]
   payments       Payment[]
+
+  @@index([shiftDate, status])
 }
 
 model OrderEvidence {

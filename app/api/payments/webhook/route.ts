@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { isUuid } from '@/lib/validate'
+import { getShiftSettings } from '@/lib/settings'
+import { classifyBooking } from '@/lib/shift'
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -50,6 +52,11 @@ export async function POST(req: NextRequest) {
 
   const amount = paidPesewas / 100
 
+  // The shift is decided by when payment lands: before the planning snapshot -> tonight's planned batch,
+  // snapshot to cutoff -> tonight as a late order, after the cutoff -> the next night.
+  const booking = classifyBooking(new Date(), await getShiftSettings())
+  const shiftDate = new Date(`${booking.shiftDate}T00:00:00.000Z`)
+
   try {
     await prisma.$transaction(async (tx) => {
       const existing = await tx.payment.findUnique({ where: { providerRef } })
@@ -61,7 +68,7 @@ export async function POST(req: NextRequest) {
         return
       }
 
-      const quote = order.quoteSnapshot as { price?: number } | null
+      const quote = order.quoteSnapshot as { price?: number; platformFee?: number } | null
       const expectedPesewas = Math.round((quote?.price ?? -1) * 100)
 
       // Paid amount must match the order price exactly.
@@ -91,8 +98,16 @@ export async function POST(req: NextRequest) {
       // Only an unpaid order may become PAID.
       const moved = await tx.order.updateMany({
         where: { id: orderId, status: { in: ['DRAFT', 'PENDING_PAYMENT'] } },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', shiftDate, isLateOrder: booking.isLate },
       })
+
+      // Borla's platform fee, recorded once per order.
+      const platformFee = quote?.platformFee
+      if (moved.count === 1 && typeof platformFee === 'number' && platformFee > 0) {
+        await tx.ledgerEntry.create({
+          data: { orderId, type: 'platform_fee', amount: platformFee, idempotencyKey: `platform-fee-${orderId}` },
+        })
+      }
 
       await tx.auditLog.create({
         data: {
@@ -102,7 +117,7 @@ export async function POST(req: NextRequest) {
           toState: moved.count === 1 ? 'PAID' : order.status,
           reason:
             moved.count === 1
-              ? 'Paystack webhook confirmed payment'
+              ? `Paystack webhook confirmed payment. Shift ${booking.shiftDate}${booking.isLate ? ' (late order)' : ''}`
               : 'DUPLICATE OR LATE PAYMENT received for an order that was not awaiting payment. Review for refund.',
         },
       })
@@ -114,4 +129,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true })
-}
+}

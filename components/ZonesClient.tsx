@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import ZoneForm from './ZoneForm'
+import ZoneMultiplierEditor from './ZoneMultiplierEditor'
 
 interface ZoneWithCount {
   id: string
@@ -12,21 +13,32 @@ interface ZoneWithCount {
   radiusKm: number
   coveredAreas: string[]
   active: boolean
+  priceMultiplier: number
   _count: { drivers: number; customers: number }
 }
 
-export default function ZonesClient({ zones }: { zones: ZoneWithCount[] }) {
+export default function ZonesClient({
+  zones,
+  canEditZones,
+  canEditPrice,
+}: {
+  zones: ZoneWithCount[]
+  canEditZones: boolean
+  canEditPrice: boolean
+}) {
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const editingZone = zones.find((z) => z.id === editingId) ?? null
 
   return (
     <div>
-      <ZoneForm
-        editingZone={editingZone}
-        onDoneEditing={() => setEditingId(null)}
-        otherZones={zones}
-      />
+      {canEditZones && (
+        <ZoneForm
+          editingZone={editingZone}
+          onDoneEditing={() => setEditingId(null)}
+          otherZones={zones}
+        />
+      )}
 
       <h2 style={{ fontSize: 16, margin: '24px 0 12px' }}>All Zones</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -40,17 +52,18 @@ export default function ZonesClient({ zones }: { zones: ZoneWithCount[] }) {
                 <span style={{ fontWeight: 600 }}>{zone.name} — {zone.city}</span>
                 {!zone.active && <span style={{ fontSize: 11, color: '#B3261E', marginLeft: 8 }}>INACTIVE</span>}
               </div>
-              <button
+              {canEditZones && <button
                 onClick={() => setEditingId(zone.id)}
                 style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '4px 10px', fontSize: 12 }}
               >
                 Edit
-              </button>
+              </button>}
             </div>
             <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
               {zone._count.drivers} driver(s) · {zone._count.customers} customer(s) · {zone.radiusKm}km radius
               {zone.centerLat != null && ` · Center: ${zone.centerLat.toFixed(4)}, ${zone.centerLng?.toFixed(4)}`}
             </p>
+            <ZoneMultiplierEditor zoneId={zone.id} value={zone.priceMultiplier} canEdit={canEditPrice} />
             {zone.coveredAreas.length > 0 && (
               <p style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
                 Covers: {zone.coveredAreas.join(', ')}
@@ -61,4 +74,4 @@ export default function ZonesClient({ zones }: { zones: ZoneWithCount[] }) {
       </div>
     </div>
   )
-}
+}
