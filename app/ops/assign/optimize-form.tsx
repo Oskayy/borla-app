@@ -22,7 +22,7 @@ interface DriverProfile {
   currentLng: number | null
   homeLat: number | null
   homeLng: number | null
-  lastLocationAt: string | null
+    lastLocationAt: Date | string | null
 }
 
 interface Driver {
