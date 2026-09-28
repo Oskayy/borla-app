@@ -1,30 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
+import { readJson } from '@/lib/validate'
+import { computeQuote, parseOrderInput } from '@/lib/pricing'
 
 export async function POST(req: NextRequest) {
-  const { bagCount, wasteType, hazardous } = await req.json()
+  const auth = await requireAuth(['CUSTOMER'])
+  if (!auth.ok) return auth.response
 
-  const rule = await prisma.pricingRule.findFirst({
-    where: { active: true },
-    orderBy: { createdAt: 'desc' },
-  })
-
-  if (!rule) {
-    return NextResponse.json({ error: 'No active pricing rule found' }, { status: 500 })
+  if (await enforceRateLimit({ identifier: auth.user.id, action: 'quote', maxAttempts: 40, windowMinutes: 10 })) {
+    return tooManyRequests()
   }
 
-  let price = rule.baseFee + rule.volumeRate * bagCount * rule.zoneMultiplier
+  const input = parseOrderInput(await readJson(req))
+  if (!input) return NextResponse.json({ error: 'Invalid order details' }, { status: 400 })
 
-  if (hazardous) {
-    price += rule.hazardSurcharge
-  }
+  const quote = await computeQuote(input)
+  if (!quote) return NextResponse.json({ error: 'No active pricing rule found' }, { status: 500 })
 
-  if (wasteType === 'recyclable') {
-    price = price * (1 - rule.separatedDiscountPercent / 100)
-  }
-
-  return NextResponse.json({
-    price,
-    ruleId: rule.id,
-  })
+  return NextResponse.json(quote)
 }

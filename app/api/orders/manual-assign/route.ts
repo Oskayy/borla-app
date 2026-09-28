@@ -1,52 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth, OPS_ROLES } from '@/lib/auth'
+import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
+import { isUuid, readJson } from '@/lib/validate'
 
-// Assigns orders to a driver in the exact order they were selected,
-// without route optimization. Used for orders that have no coordinates
-// (so Mapbox can't route them) but still need to reach a driver.
 export async function POST(req: NextRequest) {
-  const { orderIds, driverId } = await req.json()
+  const auth = await requireAuth(OPS_ROLES)
+  if (!auth.ok) return auth.response
 
-  if (!orderIds || orderIds.length === 0 || !driverId) {
-    return NextResponse.json({ error: 'orderIds and driverId are required' }, { status: 400 })
+  if (await enforceRateLimit({ identifier: auth.user.id, action: 'assign_orders', maxAttempts: 30, windowMinutes: 60 })) {
+    return tooManyRequests()
   }
 
-  const orders = await prisma.order.findMany({
-    where: { id: { in: orderIds }, status: 'PAID' },
-  })
+  const body = await readJson(req)
+  const orderIds = body?.orderIds
+  const driverId = body?.driverId
 
-  if (orders.length === 0) {
-    return NextResponse.json({ error: 'No valid orders found' }, { status: 400 })
+  if (!Array.isArray(orderIds) || orderIds.length === 0 || orderIds.length > 40 || !orderIds.every(isUuid) || !isUuid(driverId)) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
+  const ids: string[] = Array.from(new Set(orderIds))
 
-  const route = await prisma.route.create({
-    data: { driverId },
+  const driver = await prisma.user.findFirst({
+    where: { id: driverId, role: 'DRIVER', driverProfile: { isActive: true } },
   })
+  if (!driver) return NextResponse.json({ error: 'Driver not found or inactive' }, { status: 400 })
 
-  await prisma.$transaction([
-    ...orders.map((order, index) =>
-      prisma.routeStop.create({
-        data: { routeId: route.id, orderId: order.id, sequence: index + 1 },
-      })
-    ),
-    ...orders.map((order) =>
-      prisma.order.update({
-        where: { id: order.id },
-        data: { driverId, status: 'ASSIGNED' },
-      })
-    ),
-    ...orders.map((order) =>
-      prisma.auditLog.create({
-        data: {
-          orderId: order.id,
-          actorId: null,
-          fromState: 'PAID',
-          toState: 'ASSIGNED',
-          reason: 'Manually assigned (no coordinates available for route optimization)',
-        },
-      })
-    ),
-  ])
+  try {
+    const routeId = await prisma.$transaction(
+      async (tx) => {
+        const claimed = await tx.order.updateMany({
+          where: { id: { in: ids }, status: 'PAID' },
+          data: { driverId, status: 'ASSIGNED' },
+        })
+        if (claimed.count !== ids.length) throw new Error('STATE_CHANGED')
 
-  return NextResponse.json({ success: true, routeId: route.id, stopCount: orders.length })
+        const route = await tx.route.create({ data: { driverId } })
+        await tx.routeStop.createMany({
+          data: ids.map((orderId, i) => ({ routeId: route.id, orderId, sequence: i + 1 })),
+        })
+        await tx.auditLog.createMany({
+          data: ids.map((orderId) => ({
+            orderId,
+            actorId: auth.user.id,
+            fromState: 'PAID',
+            toState: 'ASSIGNED',
+            reason: 'Manually assigned (no coordinates available for route optimization)',
+          })),
+        })
+        return route.id
+      },
+      { timeout: 15000 }
+    )
+    return NextResponse.json({ success: true, routeId, stopCount: ids.length })
+  } catch (e: any) {
+    if (e?.message === 'STATE_CHANGED') {
+      return NextResponse.json({ error: 'Some selected orders are no longer available. Refresh and try again.' }, { status: 409 })
+    }
+    console.error('[manual-assign] failed:', e)
+    return NextResponse.json({ error: 'Could not assign orders. Please try again.' }, { status: 500 })
+  }
 }

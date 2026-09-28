@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { prisma } from '@/lib/prisma'
 import { validatePasswordStrength, isPasswordBreached } from '@/lib/password'
 import { isRateLimited, recordAttempt, getClientIp } from '@/lib/rate-limit'
+import { cleanText, readJson } from '@/lib/validate'
+
+// Only these two roles can ever be created from the public signup form.
+const SELF_SERVICE_ROLES = ['CUSTOMER', 'DRIVER']
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^\+?[0-9 ()-]{9,20}$/
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req)
@@ -11,10 +18,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Too many signup attempts from this device. Please try again later.' }, { status: 429 })
   }
 
-  const { name, phone, email, password, role } = await req.json()
+  const body = await readJson(req)
+  const name = cleanText(body?.name, 100)
+  const phone = cleanText(body?.phone, 20)
+  const email = cleanText(body?.email, 254)?.toLowerCase()
+  const password = typeof body?.password === 'string' ? body.password : ''
+  const role = body?.role
 
-  if (!name || !phone || !email || !password || !role) {
+  if (!name || !phone || !email || !password || !SELF_SERVICE_ROLES.includes(role)) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
+  }
+  if (!EMAIL_RE.test(email)) {
+    return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 })
+  }
+  if (!PHONE_RE.test(phone)) {
+    return NextResponse.json({ error: 'Please enter a valid phone number' }, { status: 400 })
+  }
+  if (password.length > 128) {
+    return NextResponse.json({ error: 'Password is too long' }, { status: 400 })
   }
 
   const strength = validatePasswordStrength(password)
@@ -34,24 +55,35 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data, error: authError } = await supabase.auth.signUp({ email, password })
 
-  if (authError) {
+  if (authError || !data.user) {
     await recordAttempt(ip, 'signup', false)
-    return NextResponse.json({ error: authError.message }, { status: 400 })
+    return NextResponse.json({ error: authError?.message || 'Signup failed' }, { status: 400 })
   }
 
   try {
     await prisma.user.create({
-      data: { id: data.user!.id, name, phone, email, role },
+      data: { id: data.user.id, name, phone, email, role: role as 'CUSTOMER' | 'DRIVER' },
     })
 
     if (role === 'DRIVER') {
-      await prisma.driverProfile.create({
-        data: { userId: data.user!.id },
-      })
+      await prisma.driverProfile.create({ data: { userId: data.user.id } })
     }
-  } catch (e) {
+  } catch (e: any) {
+    console.error('[signup] profile creation failed:', e)
+
+    // Remove the half-created login so the person can simply try again.
+    try {
+      await createAdminClient().auth.admin.deleteUser(data.user.id)
+    } catch (cleanupError) {
+      console.error('[signup] cleanup failed:', cleanupError)
+    }
+
     await recordAttempt(ip, 'signup', false)
-    return NextResponse.json({ error: 'Account created, but profile setup failed. Contact support.' }, { status: 500 })
+    const message =
+      e?.code === 'P2002'
+        ? 'That phone number or email is already registered.'
+        : 'We could not finish creating your account. Please try again.'
+    return NextResponse.json({ error: message }, { status: e?.code === 'P2002' ? 400 : 500 })
   }
 
   await recordAttempt(ip, 'signup', true)

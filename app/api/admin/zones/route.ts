@@ -1,59 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
-
-const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
-
-async function requireOpsRole() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
-  if (!dbUser || !ALLOWED_ROLES.includes(dbUser.role)) return null
-
-  return dbUser
-}
+import { requireAuth, OPS_ROLES } from '@/lib/auth'
+import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
+import { readJson } from '@/lib/validate'
+import { parseZoneBody } from '@/lib/zones'
 
 export async function GET() {
-  const dbUser = await requireOpsRole()
-  if (!dbUser) {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
-  }
+  const auth = await requireAuth(OPS_ROLES)
+  if (!auth.ok) return auth.response
 
   const zones = await prisma.zone.findMany({ orderBy: { createdAt: 'desc' } })
   return NextResponse.json({ zones })
 }
 
 export async function POST(req: NextRequest) {
-  const dbUser = await requireOpsRole()
-  if (!dbUser) {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+  const auth = await requireAuth(OPS_ROLES)
+  if (!auth.ok) return auth.response
+
+  if (await enforceRateLimit({ identifier: auth.user.id, action: 'zone_change', maxAttempts: 30, windowMinutes: 60 })) {
+    return tooManyRequests()
   }
 
-  const { name, city, centerLat, centerLng, radiusKm, coveredAreas } = await req.json()
+  const data = parseZoneBody(await readJson(req))
+  if (!data) return NextResponse.json({ error: 'Please check the zone details' }, { status: 400 })
 
-  if (!name || !city) {
-    return NextResponse.json({ error: 'Name and city are required' }, { status: 400 })
-  }
-
-  const areasArray: string[] = Array.isArray(coveredAreas)
-    ? coveredAreas
-    : (coveredAreas || '')
-        .split(',')
-        .map((a: string) => a.trim())
-        .filter((a: string) => a.length > 0)
-
-  const zone = await prisma.zone.create({
-    data: {
-      name,
-      city,
-      centerLat: centerLat != null && centerLat !== '' ? Number(centerLat) : null,
-      centerLng: centerLng != null && centerLng !== '' ? Number(centerLng) : null,
-      radiusKm: radiusKm != null && radiusKm !== '' ? Number(radiusKm) : 3,
-      coveredAreas: areasArray,
-    },
-  })
-
+  const zone = await prisma.zone.create({ data })
   return NextResponse.json({ success: true, zone })
 }

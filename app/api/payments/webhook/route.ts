@@ -1,74 +1,116 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
+import { prisma } from '@/lib/prisma'
+import { isUuid } from '@/lib/validate'
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
 
-  console.log('[webhook] Received a call. PAYSTACK_SECRET_KEY present:', !!process.env.PAYSTACK_SECRET_KEY)
+  const secret = process.env.PAYSTACK_SECRET_KEY
+  if (!secret) {
+    console.error('[webhook] PAYSTACK_SECRET_KEY is not set')
+    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+  }
 
-  const signature = req.headers.get('x-paystack-signature')
-  const expectedSignature = crypto
-    .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY!)
-    .update(rawBody)
-    .digest('hex')
-
-  if (signature !== expectedSignature) {
-    console.error('[webhook] Signature mismatch. Received:', signature, 'Expected:', expectedSignature)
+  // Confirm this really came from Paystack.
+  const signature = req.headers.get('x-paystack-signature') ?? ''
+  const expected = crypto.createHmac('sha512', secret).update(rawBody).digest('hex')
+  const a = Buffer.from(signature)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  console.log('[webhook] Signature verified successfully.')
+  let event: any
+  try {
+    event = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
+  }
 
-  const event = JSON.parse(rawBody)
-  console.log('[webhook] Event type:', event.event)
+  if (event?.event !== 'charge.success') {
+    return NextResponse.json({ received: true })
+  }
 
-  if (event.event === 'charge.success') {
-    const orderId = event.data.metadata.orderId
-    const providerRef = event.data.reference
-    const amount = event.data.amount / 100
+  const data = event.data
+  const orderId = data?.metadata?.orderId
+  const providerRef = data?.reference
+  const paidPesewas = data?.amount
 
-    console.log('[webhook] Processing charge.success for order:', orderId, 'ref:', providerRef)
+  if (
+    !isUuid(orderId) ||
+    typeof providerRef !== 'string' ||
+    !Number.isInteger(paidPesewas) ||
+    data?.status !== 'success' ||
+    data?.currency !== 'GHS'
+  ) {
+    console.error('[webhook] Ignoring malformed charge.success event')
+    return NextResponse.json({ received: true })
+  }
 
-    try {
-      await prisma.$transaction(async (tx) => {
-        const order = await tx.order.findUnique({ where: { id: orderId } })
-        if (!order) {
-          console.error('[webhook] Order not found:', orderId)
-          return
-        }
+  const amount = paidPesewas / 100
 
-        const existing = await tx.payment.findUnique({ where: { providerRef } })
-        if (existing) {
-          console.log('[webhook] Payment already recorded, skipping (idempotent):', providerRef)
-          return
-        }
+  try {
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.payment.findUnique({ where: { providerRef } })
+      if (existing) return // already processed
 
+      const order = await tx.order.findUnique({ where: { id: orderId } })
+      if (!order) {
+        console.error('[webhook] Order not found for a successful payment:', orderId, providerRef)
+        return
+      }
+
+      const quote = order.quoteSnapshot as { price?: number } | null
+      const expectedPesewas = Math.round((quote?.price ?? -1) * 100)
+
+      // Paid amount must match the order price exactly.
+      if (paidPesewas !== expectedPesewas) {
         await tx.payment.create({
-          data: { orderId, provider: 'paystack', amount, status: 'success', providerRef },
+          data: { orderId, provider: 'paystack', amount, status: 'amount_mismatch', providerRef },
         })
-
-        await tx.ledgerEntry.create({
-          data: { orderId, type: 'customer_payment', amount, idempotencyKey: `payment-${providerRef}` },
-        })
-
-        await tx.order.update({ where: { id: orderId }, data: { status: 'PAID' } })
-
         await tx.auditLog.create({
           data: {
             orderId,
             actorId: null,
             fromState: order.status,
-            toState: 'PAID',
-            reason: 'Paystack webhook confirmed payment',
+            toState: order.status,
+            reason: `PAYMENT AMOUNT MISMATCH: paid GHS ${amount}, order price GHS ${quote?.price}. Needs manual review.`,
           },
         })
+        return
+      }
 
-        console.log('[webhook] Successfully marked order PAID:', orderId)
+      await tx.payment.create({
+        data: { orderId, provider: 'paystack', amount, status: 'success', providerRef },
       })
-    } catch (e) {
-      console.error('[webhook] Database transaction failed:', e)
-    }
+      await tx.ledgerEntry.create({
+        data: { orderId, type: 'customer_payment', amount, idempotencyKey: `payment-${providerRef}` },
+      })
+
+      // Only an unpaid order may become PAID.
+      const moved = await tx.order.updateMany({
+        where: { id: orderId, status: { in: ['DRAFT', 'PENDING_PAYMENT'] } },
+        data: { status: 'PAID' },
+      })
+
+      await tx.auditLog.create({
+        data: {
+          orderId,
+          actorId: null,
+          fromState: order.status,
+          toState: moved.count === 1 ? 'PAID' : order.status,
+          reason:
+            moved.count === 1
+              ? 'Paystack webhook confirmed payment'
+              : 'DUPLICATE OR LATE PAYMENT received for an order that was not awaiting payment. Review for refund.',
+        },
+      })
+    })
+  } catch (e: any) {
+    if (e?.code === 'P2002') return NextResponse.json({ received: true }) // duplicate delivery
+    console.error('[webhook] Database transaction failed:', e)
+    return NextResponse.json({ error: 'Processing failed' }, { status: 500 }) // Paystack will retry
   }
 
   return NextResponse.json({ received: true })

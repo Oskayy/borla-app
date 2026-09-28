@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 interface CheckOptions {
@@ -33,6 +34,28 @@ export async function recordAttempt(identifier: string, action: string, success:
   await prisma.rateLimitAttempt.create({
     data: { identifier, action, success },
   })
+}
+
+// Checks the limit and, if allowed, counts this request.
+// Returns true when the caller is OVER the limit and should be rejected.
+export async function enforceRateLimit(options: Omit<CheckOptions, 'onlyFailures'>): Promise<boolean> {
+  if (await isRateLimited(options)) return true
+  await recordAttempt(options.identifier, options.action, true)
+
+  // Occasional housekeeping so this table doesn't grow forever.
+  if (Math.random() < 0.01) {
+    await prisma.rateLimitAttempt.deleteMany({
+      where: { createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    })
+  }
+  return false
+}
+
+export function tooManyRequests() {
+  return NextResponse.json(
+    { error: 'Too many requests. Please slow down and try again shortly.' },
+    { status: 429 }
+  )
 }
 
 export function getClientIp(req: Request): string {

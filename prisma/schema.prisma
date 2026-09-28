@@ -238,3 +238,13 @@ model RateLimitAttempt {
 
   @@index([identifier, action, createdAt])
 }
+model AdminActionLog {
+  id        String   @id @default(uuid())
+  actorId   String
+  action    String
+  targetId  String?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+}

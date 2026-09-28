@@ -1,73 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
-
-const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
-
-async function requireOpsRole() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
-  if (!dbUser || !ALLOWED_ROLES.includes(dbUser.role)) return null
-
-  return dbUser
-}
+import { requireAuth, OPS_ROLES } from '@/lib/auth'
+import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
+import { isUuid, readJson } from '@/lib/validate'
+import { parseZoneBody } from '@/lib/zones'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const dbUser = await requireOpsRole()
-  if (!dbUser) {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+  const auth = await requireAuth(OPS_ROLES)
+  if (!auth.ok) return auth.response
+
+  if (await enforceRateLimit({ identifier: auth.user.id, action: 'zone_change', maxAttempts: 30, windowMinutes: 60 })) {
+    return tooManyRequests()
   }
 
   const { id } = await params
-  const { name, city, centerLat, centerLng, radiusKm, coveredAreas, active } = await req.json()
+  if (!isUuid(id)) return NextResponse.json({ error: 'Invalid zone' }, { status: 400 })
 
-  const areasArray: string[] | undefined = coveredAreas !== undefined
-    ? (Array.isArray(coveredAreas)
-        ? coveredAreas
-        : (coveredAreas || '')
-            .split(',')
-            .map((a: string) => a.trim())
-            .filter((a: string) => a.length > 0))
-    : undefined
+  const body = await readJson(req)
+  const data = parseZoneBody(body)
+  if (!data) return NextResponse.json({ error: 'Please check the zone details' }, { status: 400 })
 
-  const zone = await prisma.zone.update({
-    where: { id },
-    data: {
-      ...(name !== undefined ? { name } : {}),
-      ...(city !== undefined ? { city } : {}),
-      ...(centerLat !== undefined ? { centerLat: centerLat != null && centerLat !== '' ? Number(centerLat) : null } : {}),
-      ...(centerLng !== undefined ? { centerLng: centerLng != null && centerLng !== '' ? Number(centerLng) : null } : {}),
-      ...(radiusKm !== undefined ? { radiusKm: radiusKm != null && radiusKm !== '' ? Number(radiusKm) : 3 } : {}),
-      ...(areasArray !== undefined ? { coveredAreas: areasArray } : {}),
-      ...(active !== undefined ? { active } : {}),
-    },
-  })
+  const active = typeof body?.active === 'boolean' ? body.active : undefined
 
-  return NextResponse.json({ success: true, zone })
+  try {
+    const zone = await prisma.zone.update({
+      where: { id },
+      data: { ...data, ...(active !== undefined ? { active } : {}) },
+    })
+    return NextResponse.json({ success: true, zone })
+  } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ error: 'Zone not found' }, { status: 404 })
+    console.error('[zones] update failed:', e)
+    return NextResponse.json({ error: 'Could not update the zone' }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const dbUser = await requireOpsRole()
-  if (!dbUser) {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+  const auth = await requireAuth(OPS_ROLES)
+  if (!auth.ok) return auth.response
+
+  if (await enforceRateLimit({ identifier: auth.user.id, action: 'zone_change', maxAttempts: 30, windowMinutes: 60 })) {
+    return tooManyRequests()
   }
 
   const { id } = await params
+  if (!isUuid(id)) return NextResponse.json({ error: 'Invalid zone' }, { status: 400 })
 
   const driverCount = await prisma.driverProfile.count({ where: { zoneId: id } })
   const customerCount = await prisma.customerProfile.count({ where: { zoneId: id } })
+  const facilityCount = await prisma.facility.count({ where: { zoneId: id } })
 
-  if (driverCount > 0 || customerCount > 0) {
+  if (driverCount > 0 || customerCount > 0 || facilityCount > 0) {
     return NextResponse.json(
-      { error: `Cannot delete — ${driverCount} driver(s) and ${customerCount} customer(s) are still assigned to this zone. Reassign them first, or deactivate the zone instead.` },
+      { error: `Cannot delete: ${driverCount} driver(s), ${customerCount} customer(s) and ${facilityCount} facility(ies) are still linked to this zone. Reassign them first, or deactivate the zone instead.` },
       { status: 400 }
     )
   }
 
-  await prisma.zone.delete({ where: { id } })
-
-  return NextResponse.json({ success: true })
+  try {
+    await prisma.zone.delete({ where: { id } })
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ error: 'Zone not found' }, { status: 404 })
+    console.error('[zones] delete failed:', e)
+    return NextResponse.json({ error: 'Could not delete the zone' }, { status: 500 })
+  }
 }

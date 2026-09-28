@@ -1,38 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
-import { createAdminClient } from '@/lib/supabase-admin'
 import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
+import { cleanText, readJson } from '@/lib/validate'
+import { logAdminAction } from '@/lib/admin-log'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+  const auth = await requireAuth(['SUPER_ADMIN'])
+  if (!auth.ok) return auth.response
+
+  if (await enforceRateLimit({ identifier: auth.user.id, action: 'mfa_recovery', maxAttempts: 5, windowMinutes: 60 })) {
+    return tooManyRequests()
   }
 
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
-  if (!dbUser || dbUser.role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
-  }
+  const body = await readJson(req)
+  const email = cleanText(body?.targetEmail, 254)?.toLowerCase()
+  if (!email) return NextResponse.json({ error: 'Target email is required' }, { status: 400 })
 
-  const { targetEmail } = await req.json()
-  if (!targetEmail) {
-    return NextResponse.json({ error: 'Target email is required' }, { status: 400 })
-  }
+  const target = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+  })
+  if (!target) return NextResponse.json({ error: 'No user found with that email' }, { status: 404 })
 
-  const targetUser = await prisma.user.findUnique({ where: { email: targetEmail } })
-  if (!targetUser) {
-    return NextResponse.json({ error: 'No user found with that email' }, { status: 404 })
+  if (target.id === auth.user.id) {
+    return NextResponse.json({ error: 'Use your own account security page to change your 2FA' }, { status: 400 })
   }
 
   const admin = createAdminClient()
-
-  const { data: factorsData, error: listError } = await admin.auth.admin.mfa.listFactors({
-    userId: targetUser.id,
-  })
-
+  const { data: factorsData, error: listError } = await admin.auth.admin.mfa.listFactors({ userId: target.id })
   if (listError) {
-    return NextResponse.json({ error: listError.message }, { status: 400 })
+    console.error('[mfa-recovery] list failed:', listError)
+    return NextResponse.json({ error: 'Could not look up that user’s 2FA' }, { status: 400 })
   }
 
   const factors = factorsData?.factors ?? []
@@ -41,18 +40,10 @@ export async function POST(req: NextRequest) {
   }
 
   for (const factor of factors) {
-    await admin.auth.admin.mfa.deleteFactor({ id: factor.id, userId: targetUser.id })
+    await admin.auth.admin.mfa.deleteFactor({ id: factor.id, userId: target.id })
   }
 
-  await prisma.auditLog.create({
-    data: {
-      orderId: null,
-      actorId: user.id,
-      fromState: 'MFA_ENABLED',
-      toState: 'MFA_RESET',
-      reason: `Admin ${dbUser.name} reset 2FA for ${targetUser.name} (${targetEmail}) — recovery request`,
-    },
-  })
+  await logAdminAction(auth.user.id, 'MFA_RESET', target.id, `Reset 2FA for ${target.email} (${target.role})`)
 
   return NextResponse.json({ success: true, factorsRemoved: factors.length })
 }
