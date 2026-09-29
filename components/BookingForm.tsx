@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import Link from 'next/link'
 import PhotoCapture from '@/components/PhotoCapture'
 
 interface BinSizeOption {
@@ -33,7 +34,15 @@ interface Quote {
 
 const MAX_PER_SIZE = 20
 
-export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
+export default function BookingForm({
+  sizes,
+  home,
+}: {
+  sizes: BinSizeOption[]
+  home: { address: string } | null
+}) {
+  // With a saved home, bookings use it by default. The customer can switch to another address for one order.
+  const [useHome, setUseHome] = useState(!!home)
   const [address, setAddress] = useState('')
   const [wasteType, setWasteType] = useState('general')
   const [hazardous, setHazardous] = useState(false)
@@ -53,6 +62,7 @@ export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
 
   const supabase = createClient()
   const totalBins = Object.values(bins).reduce((a, b) => a + b, 0)
+  const pickupAddress = useHome && home ? home.address : address
 
   // Any change to the order details makes the old price out of date.
   function changed() {
@@ -66,11 +76,13 @@ export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
   }
 
   function orderBody() {
-    return { address, wasteType, hazardous, bins, gpsLat, gpsLng }
+    return useHome
+      ? { useHome: true, wasteType, hazardous, bins, gpsLat, gpsLng }
+      : { address, wasteType, hazardous, bins, gpsLat, gpsLng }
   }
 
   async function getQuote() {
-    if (!address.trim()) {
+    if (!useHome && !address.trim()) {
       setError('Please enter your pickup address')
       return
     }
@@ -123,7 +135,7 @@ export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
   }
 
   async function confirmBooking() {
-    if (!address.trim()) {
+    if (!useHome && !address.trim()) {
       setError('Please enter your pickup address')
       return
     }
@@ -197,7 +209,11 @@ export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
     setFile(null)
     setGpsLat(null)
     setGpsLng(null)
-    setError('Please update your address to match your location, then take a new photo and try again.')
+    setError(
+      useHome
+        ? 'Please check the pin on your home location page, or choose a different address for this order, then take a new photo.'
+        : 'Please update your address to match your location, then take a new photo and try again.'
+    )
   }
 
   if (pendingConfirm) {
@@ -208,7 +224,7 @@ export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
         <div className="panel">
           <p style={{ fontSize: 14, marginBottom: 16 }}>
             Your photo&apos;s location is about <strong>{Math.round(pendingConfirm.distanceMeters)}m</strong> from the
-            address you entered (<strong>{address}</strong>). This can happen if your phone&apos;s location is briefly
+            pickup address (<strong>{pickupAddress}</strong>). This can happen if your phone&apos;s location is briefly
             inaccurate, or if the address you typed doesn&apos;t quite match where you are.
           </p>
 
@@ -223,7 +239,7 @@ export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
           )}
 
           <p style={{ fontSize: 14, marginBottom: 20 }}>
-            Is <strong>{address}</strong> correct?
+            Is <strong>{pickupAddress}</strong> correct?
           </p>
 
           {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
@@ -255,16 +271,55 @@ export default function BookingForm({ sizes }: { sizes: BinSizeOption[] }) {
       </p>
 
       <div className="panel">
-        <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Pickup address (required)</label>
-        <input
-          placeholder="e.g. House 12, near Chemu Secondary School, Tema Community 4"
-          value={address}
-          onChange={(e) => {
-            setAddress(e.target.value)
-            changed()
-          }}
-          className="input-field"
-        />
+        <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Pickup address</label>
+        {home ? (
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 14, display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+              <input
+                type="radio"
+                checked={useHome}
+                onChange={() => {
+                  setUseHome(true)
+                  changed()
+                }}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                My home: <strong>{home.address}</strong>{' '}
+                <Link href="/dashboard/customer/home-location" style={{ fontSize: 12 }}>
+                  change
+                </Link>
+              </span>
+            </label>
+            <label style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="radio"
+                checked={!useHome}
+                onChange={() => {
+                  setUseHome(false)
+                  changed()
+                }}
+              />
+              A different address for this order
+            </label>
+          </div>
+        ) : (
+          <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+            Tip: <Link href="/dashboard/customer/home-location">save your home location</Link> once and you won&apos;t
+            need to type it again.
+          </p>
+        )}
+        {!useHome && (
+          <input
+            placeholder="e.g. House 12, near Chemu Secondary School, Tema Community 4"
+            value={address}
+            onChange={(e) => {
+              setAddress(e.target.value)
+              changed()
+            }}
+            className="input-field"
+          />
+        )}
 
         <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 8 }}>Your bins</label>
         {sizes.length === 0 && (

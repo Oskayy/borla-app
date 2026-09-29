@@ -56,9 +56,12 @@ model CustomerProfile {
   id         String @id @default(uuid())
   userId     String @unique
   user       User   @relation(fields: [userId], references: [id])
-  address    String
+  address    String // the customer's home address, as they typed it
   zoneId     String?
   zone       Zone?  @relation(fields: [zoneId], references: [id])
+  homeLat    Float? // the pin they placed on the map
+  homeLng    Float?
+  homeUpdatedAt DateTime?
 }
 
 model DriverProfile {

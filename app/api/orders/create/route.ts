@@ -3,8 +3,8 @@ import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
-import { cleanText, parseGps, readJson } from '@/lib/validate'
-import { buildQuote, parseOrderInput } from '@/lib/pricing'
+import { parseGps, readJson } from '@/lib/validate'
+import { parseOrderInput, quoteFromBooking } from '@/lib/pricing'
 
 const MAX_UNPAID_DRAFTS = 20
 
@@ -18,12 +18,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await readJson(req)
-  const address = cleanText(body?.address, 200)
-  const input = parseOrderInput(body)
+    const input = parseOrderInput(body)
   const gps = parseGps(body)
 
-  if (!address || !input || !gps.ok) {
-    return NextResponse.json({ error: 'Please check your address and order details' }, { status: 400 })
+  if (!input || !gps.ok) {
+    return NextResponse.json({ error: 'Please check your order details' }, { status: 400 })
   }
 
   const drafts = await prisma.order.count({ where: { customerId: user.id, status: 'DRAFT' } })
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   // The price, zone and shift are all worked out here on the server, never taken from the browser.
-  const result = await buildQuote(input, address, gps.lat, gps.lng)
+    const result = await quoteFromBooking(user.id, body, input, gps.lat, gps.lng)
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status })
 
   const order = await prisma.order.create({
