@@ -102,11 +102,26 @@ model Zone {
   drivers       DriverProfile[]
 }
 
+// A disposal site (landfill or transfer station) where drivers unload.
 model Facility {
   id        String   @id @default(uuid())
   name      String
-  zoneId    String
-  zone      Zone     @relation(fields: [zoneId], references: [id])
+  zoneId    String?  // optional: a site can serve several zones
+  zone      Zone?    @relation(fields: [zoneId], references: [id])
+  address   String?
+  lat       Float?
+  lng       Float?
+  geofenceRadiusM  Int      @default(150)  // disposal photos must be taken within this distance
+  open24Hours      Boolean  @default(true)
+  opensAtMinutes   Int?     // minutes after local midnight, e.g. 1140 = 19:00 (used when not 24 hours)
+  closesAtMinutes  Int?     // may be earlier than opensAt for overnight hours
+  acceptedWaste    String[] @default(["general", "recyclable"]) // general | recyclable | hazardous
+  status           String   @default("OPEN") // OPEN | CLOSED | FULL, switched by ops during the shift
+  avgUnloadMinutes Int      @default(15)
+  notes            String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
   verifications FacilityVerification[]
 }
 
