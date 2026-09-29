@@ -70,7 +70,7 @@ export default async function DriverDashboard() {
           <div key={order.id} className="panel" style={{ marginBottom: 12 }}>
             {order.routeStop && (
               <p style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 600, marginBottom: 2 }}>
-                STOP {order.routeStop.sequence}
+                TRIP {order.routeStop.tripNumber} · STOP {order.routeStop.sequence}
               </p>
             )}
             <p style={{ fontWeight: 500, marginBottom: 4 }}>{quote.address}</p>

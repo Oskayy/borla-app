@@ -4,7 +4,8 @@ import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
-import { getShiftSettings } from '@/lib/settings'
+import { getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
+import { inRange } from '@/lib/numbers'
 import { parseClock, toClock, validateShiftSettings, type ShiftSettings } from '@/lib/shift'
 
 // Changing the operating window affects every booking, so only senior ops can do it.
@@ -32,8 +33,12 @@ export async function POST(req: NextRequest) {
   if (start === null || end === null || snapshot === null || cutoff === null) {
     return NextResponse.json({ error: 'Please enter every time as HH:MM (24-hour clock)' }, { status: 400 })
   }
+  const trips = inRange(body?.maxTripsPerNight, 1, 8)
+  if (trips === null || !Number.isInteger(trips)) {
+    return NextResponse.json({ error: 'Trips per night must be a whole number from 1 to 8' }, { status: 400 })
+  }
 
-  const current = await getShiftSettings()
+  const [current, currentTrips] = await Promise.all([getShiftSettings(), getMaxTripsPerNight()])
   const next: ShiftSettings = {
     timezone: current.timezone,
     shiftStartMinutes: start,
@@ -46,13 +51,18 @@ export async function POST(req: NextRequest) {
 
   await prisma.operatingSettings.upsert({
     where: { id: 1 },
-    create: { id: 1, ...next },
-    update: next,
+    create: { id: 1, ...next, maxTripsPerNight: trips },
+    update: { ...next, maxTripsPerNight: trips },
   })
 
   const fmt = (s: ShiftSettings) =>
     `shift ${toClock(s.shiftStartMinutes)}-${toClock(s.shiftEndMinutes)}, snapshot ${toClock(s.planningSnapshotMinutes)}, cutoff ${toClock(s.hardCutoffMinutes)}`
-  await logAdminAction(auth.user.id, 'SHIFT_SETTINGS_CHANGED', null, `${fmt(current)} -> ${fmt(next)}`)
+  await logAdminAction(
+    auth.user.id,
+    'SHIFT_SETTINGS_CHANGED',
+    null,
+    `${fmt(current)}, ${currentTrips} trip(s) -> ${fmt(next)}, ${trips} trip(s)`
+  )
 
   return NextResponse.json({ success: true, settings: next })
 }

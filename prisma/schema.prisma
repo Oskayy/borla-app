@@ -175,6 +175,7 @@ model OperatingSettings {
   shiftEndMinutes         Int      @default(360)  // 06:00 next morning
   planningSnapshotMinutes Int      @default(1080) // 18:00
   hardCutoffMinutes       Int      @default(0)    // 00:00
+  maxTripsPerNight        Int      @default(3)    // round trips (collect -> unload) one driver can do in a shift
   updatedAt               DateTime @updatedAt
 }
 
@@ -297,6 +298,7 @@ model RouteStop {
   orderId   String   @unique
   order     Order    @relation(fields: [orderId], references: [id])
   sequence  Int
+  tripNumber Int     @default(1) // 1st, 2nd, 3rd load of the night; each trip ends at a disposal site
 }
 
 model RateLimitAttempt {

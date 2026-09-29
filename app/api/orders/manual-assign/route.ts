@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, readJson } from '@/lib/validate'
+import { checkAssignment } from '@/lib/dispatch-server'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(OPS_ROLES)
@@ -26,6 +27,17 @@ export async function POST(req: NextRequest) {
   })
   if (!driver) return NextResponse.json({ error: 'Driver not found or inactive' }, { status: 400 })
 
+  // Radius, online status and vehicle capacity are checked here too, not just on the page.
+  const toCheck = await prisma.order.findMany({
+    where: { id: { in: ids }, status: 'PAID' },
+    select: { id: true, latitude: true, longitude: true, quoteSnapshot: true },
+  })
+  if (toCheck.length !== ids.length) {
+    return NextResponse.json({ error: 'Some selected orders are no longer available. Refresh and try again.' }, { status: 409 })
+  }
+  const check = await checkAssignment(driverId, toCheck, body?.override, body?.overrideReason)
+  if (!check.ok) return NextResponse.json({ error: check.error }, { status: 409 })
+
   try {
     const routeId = await prisma.$transaction(
       async (tx) => {
@@ -45,7 +57,7 @@ export async function POST(req: NextRequest) {
             actorId: auth.user.id,
             fromState: 'PAID',
             toState: 'ASSIGNED',
-            reason: 'Manually assigned (no coordinates available for route optimization)',
+            reason: 'Manually assigned (no coordinates available for route optimization)' + check.note,
           })),
         })
         return route.id

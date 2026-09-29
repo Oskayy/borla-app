@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { getShiftSettings } from '@/lib/settings'
+import { getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
 import { formatClock, toClock } from '@/lib/shift'
 import ShiftSettingsForm from '@/components/ShiftSettingsForm'
 
@@ -16,7 +16,7 @@ export default async function ShiftSettingsPage() {
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
   if (!dbUser || !VIEW_ROLES.includes(dbUser.role)) redirect('/ops')
 
-  const s = await getShiftSettings()
+  const [s, trips] = await Promise.all([getShiftSettings(), getMaxTripsPerNight()])
 
   return (
     <div style={{ maxWidth: 700, margin: '0 auto' }}>
@@ -34,6 +34,7 @@ export default async function ShiftSettingsPage() {
             shiftEnd: toClock(s.shiftEndMinutes),
             planningSnapshot: toClock(s.planningSnapshotMinutes),
             hardCutoff: toClock(s.hardCutoffMinutes),
+            maxTripsPerNight: String(trips),
           }}
         />
       ) : (

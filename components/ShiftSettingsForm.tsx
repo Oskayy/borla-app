@@ -8,9 +8,10 @@ interface ShiftTimes {
   shiftEnd: string
   planningSnapshot: string
   hardCutoff: string
+  maxTripsPerNight: string
 }
 
-const FIELDS: { key: keyof ShiftTimes; label: string; hint: string }[] = [
+const FIELDS: { key: Exclude<keyof ShiftTimes, 'maxTripsPerNight'>; label: string; hint: string }[] = [
   { key: 'shiftStart', label: 'Shift starts', hint: 'When drivers start collecting (evening).' },
   { key: 'shiftEnd', label: 'Shift ends', hint: 'When collection stops the next morning.' },
   { key: 'planningSnapshot', label: 'Planning snapshot', hint: "Orders paid before this are planned into tonight's routes." },
@@ -57,6 +58,19 @@ export default function ShiftSettingsForm({ initial }: { initial: ShiftTimes }) 
           <p style={{ fontSize: 11, color: '#999', marginTop: -8, marginBottom: 12 }}>{f.hint}</p>
         </div>
       ))}
+
+      <label style={{ fontSize: 12, color: '#666' }}>Trips per night</label>
+      <input
+        type="number"
+        min={1}
+        max={8}
+        value={values.maxTripsPerNight}
+        onChange={(e) => setValues((v) => ({ ...v, maxTripsPerNight: e.target.value }))}
+        className="input-field"
+      />
+      <p style={{ fontSize: 11, color: '#999', marginTop: -8, marginBottom: 12 }}>
+        How many loads one driver can collect and unload in a shift. The planner gives each driver up to capacity × 90% × this.
+      </p>
 
       {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
       {saved && <p style={{ color: '#2F7A4D', fontSize: 13, marginBottom: 8 }}>Saved. New bookings use these hours now.</p>}

@@ -14,3 +14,9 @@ export async function getShiftSettings(): Promise<ShiftSettings> {
     hardCutoffMinutes: row.hardCutoffMinutes,
   }
 }
+
+// How many round trips (collect, then unload at a disposal site) one driver can do in a shift.
+export async function getMaxTripsPerNight(): Promise<number> {
+  const row = await prisma.operatingSettings.findUnique({ where: { id: 1 }, select: { maxTripsPerNight: true } })
+  return row?.maxTripsPerNight ?? 3
+}
