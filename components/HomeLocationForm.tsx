@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import ZoneMap from './ZoneMap'
+import PinPicker from './PinPicker'
 
 interface Zone {
   id: string
@@ -21,12 +21,15 @@ interface Home {
   lng: number | null
 }
 
+// `zones` is kept for the page that renders this form; the pin map doesn't draw them.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; initial: Home | null }) {
   const [address, setAddress] = useState(initial?.address ?? '')
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
     initial?.lat != null && initial?.lng != null ? { lat: initial.lat, lng: initial.lng } : null
   )
   const [info, setInfo] = useState('')
+  const [checked, setChecked] = useState(false)
   const [error, setError] = useState('')
   const [finding, setFinding] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -52,10 +55,11 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
         return
       }
       setPin({ lat: data.lat, lng: data.lng })
+      setChecked(false)
       setInfo(
         data.zoneName
-          ? `Found it, in ${data.zoneName}. If the pin isn't exactly on your house, tap the right spot on the map.`
-          : "Found it, but we don't collect in this area yet. If the pin is wrong, tap the right spot on the map."
+          ? `That's the area (${data.zoneName}). Map searches are only roughly right: drag the pin onto your own house or gate.`
+          : "That's the area, but we don't collect there yet. If it's wrong, drag the pin to the right spot."
       )
     } catch {
       setError('Could not reach Borla. Please check your connection and try again.')
@@ -64,8 +68,9 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
     }
   }
 
-  function handleMapClick(newPin: { lat: number; lng: number }) {
+  function handlePinChange(newPin: { lat: number; lng: number }) {
     setPin(newPin)
+    setChecked(false)
     setInfo('Pin moved. Save when it sits on your house or gate.')
   }
 
@@ -78,13 +83,17 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
       setError('Please place a pin on the map')
       return
     }
+    if (!checked) {
+      setError('Please zoom in and confirm the pin is on your house or gate')
+      return
+    }
     setError('')
     setSaving(true)
     try {
       const res = await fetch('/api/customer/home', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, lat: pin.lat, lng: pin.lng }),
+        body: JSON.stringify({ address, lat: pin.lat, lng: pin.lng, confirmed: true }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -119,11 +128,19 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
       </div>
 
       <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-        Tap the map to put the pin exactly on your house or gate. Drivers use this pin at night.
+        Drivers go exactly to this pin at night, so put it on your house or gate. At home? Use your location.
+        Otherwise zoom in on the map until you see your roof and tap it.
       </p>
-      <div style={{ marginBottom: 16 }}>
-        <ZoneMap zones={zones} pin={pin} onPinChange={handleMapClick} />
+      <div style={{ marginBottom: 12 }}>
+        <PinPicker pin={pin} onPinChange={handlePinChange} />
       </div>
+
+      {pin && (
+        <label style={{ fontSize: 14, display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} style={{ marginTop: 3 }} />
+          <span>I zoomed in and the pin is on my house or gate</span>
+        </label>
+      )}
 
       {info && <p style={{ fontSize: 13, color: '#2F7A4D', marginBottom: 12 }}>{info}</p>}
       {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}

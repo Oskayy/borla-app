@@ -50,6 +50,9 @@ model User {
   driverProfile   DriverProfile?
   ordersAsCustomer Order[] @relation("CustomerOrders")
   ordersAsDriver   Order[] @relation("DriverOrders")
+  orderDeclines    OrderDecline[]
+  notifications    Notification[]
+  pushSubscriptions PushSubscription[]
 }
 
 model CustomerProfile {
@@ -62,6 +65,7 @@ model CustomerProfile {
   homeLat    Float? // the pin they placed on the map
   homeLng    Float?
   homeUpdatedAt DateTime?
+  homePinConfirmedAt DateTime? // the customer confirmed the pin sits on their house or gate
 }
 
 model DriverProfile {
@@ -177,6 +181,8 @@ model OperatingSettings {
   planningSnapshotMinutes Int      @default(1080) // 18:00
   hardCutoffMinutes       Int      @default(0)    // 00:00
   maxTripsPerNight        Int      @default(3)    // round trips (collect -> unload) one driver can do in a shift
+  acceptMinutes           Int      @default(15)   // time a driver has to accept a stop before it goes to another driver
+  autoDispatch            Boolean  @default(true) // from shift start, assign waiting orders to the best drivers automatically
   updatedAt               DateTime @updatedAt
 }
 
@@ -199,8 +205,11 @@ model Order {
   zone        Zone?       @relation(fields: [zoneId], references: [id])
   shiftDate   DateTime?   @db.Date // the night this order is collected (shift starts 20:00 on this date)
   isLateOrder Boolean     @default(false)
+  rolloverCount Int       @default(0) // nights this order was moved on because it wasn't collected
   latitude    Float?
   longitude   Float?
+  driverAcceptedAt DateTime? // the assigned driver accepted this stop (cleared on reassignment)
+  offeredAt        DateTime? // when the stop was given to the current driver (the accept clock starts here, or at shift start)
   quoteSnapshot Json?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -213,8 +222,24 @@ model Order {
   auditLogs      AuditLog[]
   ledgerEntries  LedgerEntry[]
   payments       Payment[]
+  declines       OrderDecline[]
 
   @@index([shiftDate, status])
+  @@index([status, driverAcceptedAt, offeredAt])
+}
+
+// A driver turned down an assigned order. The order is not offered to that driver again.
+model OrderDecline {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  driverId  String
+  driver    User     @relation(fields: [driverId], references: [id])
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, driverId])
+  @@index([driverId])
 }
 
 model OrderEvidence {
@@ -350,4 +375,39 @@ model VehicleType {
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
   drivers         DriverProfile[]
+}
+
+// Messages for a user (e.g. "2 new stops for tonight"). Shown in the app and, if the phone allows it, sent as a push alert.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  url       String?
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([userId, readAt])
+}
+
+// A phone or browser that agreed to receive push alerts for a user.
+model PushSubscription {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+}
+
+// Nightly jobs that must run once per night (plan ready, shift start, rollover). The key is the lock.
+model JobRun {
+  key     String   @id // e.g. "rollover:2026-09-29"
+  ranAt   DateTime @default(now())
+  summary String?
 }

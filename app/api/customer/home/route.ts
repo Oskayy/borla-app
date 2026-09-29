@@ -23,14 +23,17 @@ export async function POST(req: NextRequest) {
   if (!isValidLat(lat) || !isValidLng(lng)) {
     return NextResponse.json({ error: 'Please place a pin on the map' }, { status: 400 })
   }
+  if (body?.confirmed !== true) {
+    return NextResponse.json({ error: 'Please confirm the pin is on your house or gate' }, { status: 400 })
+  }
 
   // Saving is allowed outside our zones (people move), but we tell them booking won't work there yet.
   const zone = await findZoneForPoint(lat, lng)
 
   await prisma.customerProfile.upsert({
     where: { userId: auth.user.id },
-    create: { userId: auth.user.id, address, homeLat: lat, homeLng: lng, zoneId: zone?.id ?? null, homeUpdatedAt: new Date() },
-    update: { address, homeLat: lat, homeLng: lng, zoneId: zone?.id ?? null, homeUpdatedAt: new Date() },
+    create: { userId: auth.user.id, address, homeLat: lat, homeLng: lng, zoneId: zone?.id ?? null, homeUpdatedAt: new Date(), homePinConfirmedAt: new Date() },
+    update: { address, homeLat: lat, homeLng: lng, zoneId: zone?.id ?? null, homeUpdatedAt: new Date(), homePinConfirmedAt: new Date() },
   })
 
   return NextResponse.json({ success: true, zoneName: zone?.name ?? null })

@@ -7,6 +7,11 @@ import { logAdminAction } from '@/lib/admin-log'
 import { checkAssignment, loadDispatchDrivers, loadPlanSites } from '@/lib/dispatch-server'
 import { orderLitres } from '@/lib/dispatch'
 import { buildDriverPlan, orderWasteKind, type PlanOrder } from '@/lib/planner'
+import { notifyUser } from '@/lib/notify'
+import { newStopsMessage } from '@/lib/offers'
+import { getAcceptMinutes } from '@/lib/settings'
+import { plannableOrderFilter } from '@/lib/schedule'
+import { getShiftSettings } from '@/lib/settings'
 
 const MAX_DRIVERS_PER_REQUEST = 50
 const MAX_ORDERS_PER_DRIVER = 60
@@ -42,6 +47,8 @@ export async function POST(req: NextRequest) {
 
   const results: { driverId: string; ok: boolean; message: string; stops?: number; trips?: number }[] = []
   const sites = await loadPlanSites()
+  // Only tonight's orders (or older) can be approved; later nights are planned on their own night.
+  const tonight = plannableOrderFilter(new Date(), await getShiftSettings())
   const siteIds = new Set((await prisma.facility.findMany({ where: { active: true }, select: { id: true } })).map((f) => f.id))
 
   for (const p of plans) {
@@ -49,11 +56,25 @@ export async function POST(req: NextRequest) {
     const ids: string[] = p.orderIds
 
     const orders = await prisma.order.findMany({
-      where: { id: { in: ids }, status: 'PAID' },
+      where: { id: { in: ids }, status: 'PAID', ...tonight },
       select: { id: true, latitude: true, longitude: true, quoteSnapshot: true, createdAt: true },
     })
     if (orders.length !== ids.length) {
-      results.push({ driverId, ok: false, message: 'Some orders were already assigned or changed. Refresh the plan.' })
+      results.push({
+        driverId,
+        ok: false,
+        message: 'Some orders were already assigned, changed, or are booked for a later night. Refresh the plan.',
+      })
+      continue
+    }
+
+    const declined = await prisma.orderDecline.count({ where: { driverId, orderId: { in: ids } } })
+    if (declined > 0) {
+      results.push({
+        driverId,
+        ok: false,
+        message: `This driver declined ${declined} of these orders earlier. Move them to another driver, or use manual assign if the driver has agreed.`,
+      })
       continue
     }
 
@@ -89,7 +110,7 @@ export async function POST(req: NextRequest) {
         async (tx) => {
           const claimed = await tx.order.updateMany({
             where: { id: { in: built.orderIds }, status: 'PAID' },
-            data: { driverId, status: 'ASSIGNED' },
+            data: { driverId, status: 'ASSIGNED', driverAcceptedAt: null, offeredAt: new Date() },
           })
           if (claimed.count !== built.orderIds.length) throw new Error('STATE_CHANGED')
 
@@ -133,6 +154,10 @@ export async function POST(req: NextRequest) {
   }
 
   const approved = results.filter((r) => r.ok)
+  if (approved.length > 0) {
+    const acceptMinutes = await getAcceptMinutes()
+    await Promise.all(approved.map((r) => notifyUser(r.driverId, newStopsMessage(r.stops ?? 0, acceptMinutes))))
+  }
   if (approved.length > 0) {
     await logAdminAction(
       auth.user.id,

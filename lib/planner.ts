@@ -16,6 +16,7 @@ export type WasteKind = 'general' | 'recyclable' | 'hazardous'
 export interface PlanOrder extends DispatchOrder {
   createdAt: string
   wasteKind?: WasteKind
+  declinedBy?: string[] // drivers who turned this order down; never offered to them again
 }
 
 // A disposal site as the planner sees it. `usable` is worked out on the server:
@@ -206,7 +207,8 @@ export function proposePlan(
   // Who could take each order on its own?
   const candidates = new Map<string, DispatchDriver[]>()
   for (const o of orders) {
-    candidates.set(o.id, drivers.filter((d) => assessDriver(d, [o], shiftRunning, now).eligible))
+    const declined = new Set(o.declinedBy ?? [])
+    candidates.set(o.id, drivers.filter((d) => !declined.has(d.id) && assessDriver(d, [o], shiftRunning, now).eligible))
   }
 
   const sorted = [...orders].sort((a, b) => {

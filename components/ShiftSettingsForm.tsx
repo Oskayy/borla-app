@@ -9,9 +9,11 @@ interface ShiftTimes {
   planningSnapshot: string
   hardCutoff: string
   maxTripsPerNight: string
+  acceptMinutes: string
+  autoDispatch: boolean
 }
 
-const FIELDS: { key: Exclude<keyof ShiftTimes, 'maxTripsPerNight'>; label: string; hint: string }[] = [
+const FIELDS: { key: Exclude<keyof ShiftTimes, 'maxTripsPerNight' | 'acceptMinutes' | 'autoDispatch'>; label: string; hint: string }[] = [
   { key: 'shiftStart', label: 'Shift starts', hint: 'When drivers start collecting (evening).' },
   { key: 'shiftEnd', label: 'Shift ends', hint: 'When collection stops the next morning.' },
   { key: 'planningSnapshot', label: 'Planning snapshot', hint: "Orders paid before this are planned into tonight's routes." },
@@ -70,6 +72,35 @@ export default function ShiftSettingsForm({ initial }: { initial: ShiftTimes }) 
       />
       <p style={{ fontSize: 11, color: '#999', marginTop: -8, marginBottom: 12 }}>
         How many loads one driver can collect and unload in a shift. The planner gives each driver up to capacity × 90% × this.
+      </p>
+
+      <label style={{ fontSize: 12, color: '#666' }}>Minutes a driver has to accept a stop</label>
+      <input
+        type="number"
+        min={5}
+        max={120}
+        value={values.acceptMinutes}
+        onChange={(e) => setValues((v) => ({ ...v, acceptMinutes: e.target.value }))}
+        className="input-field"
+      />
+      <p style={{ fontSize: 11, color: '#999', marginTop: -8, marginBottom: 12 }}>
+        Counted from when the stop is sent, or from the start of the shift for stops planned in advance. Stops not accepted
+        in time go to the next best driver automatically.
+      </p>
+
+      <label style={{ fontSize: 14, display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
+        <input
+          type="checkbox"
+          checked={values.autoDispatch}
+          onChange={(e) => setValues((v) => ({ ...v, autoDispatch: e.target.checked }))}
+          style={{ marginTop: 3 }}
+        />
+        <span>Assign waiting orders automatically once the shift starts</span>
+      </label>
+      <p style={{ fontSize: 11, color: '#999', marginBottom: 12 }}>
+        At the planning snapshot ops are told tonight&apos;s plan is ready to approve. With this on, anything not approved by
+        the shift start, and every late order after that, goes to the best online driver within a couple of minutes. Turn
+        it off to assign everything by hand.
       </p>
 
       {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}

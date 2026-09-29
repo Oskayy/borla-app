@@ -4,6 +4,11 @@ import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, readJson } from '@/lib/validate'
 import { checkAssignment } from '@/lib/dispatch-server'
+import { notifyUser } from '@/lib/notify'
+import { newStopsMessage } from '@/lib/offers'
+import { getAcceptMinutes } from '@/lib/settings'
+import { plannableOrderFilter } from '@/lib/schedule'
+import { getShiftSettings } from '@/lib/settings'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(OPS_ROLES)
@@ -27,9 +32,11 @@ export async function POST(req: NextRequest) {
   })
   if (!driver) return NextResponse.json({ error: 'Driver not found or inactive' }, { status: 400 })
 
+  // Only tonight's orders (or older) can be assigned; later nights are planned on their own night.
+  const tonight = plannableOrderFilter(new Date(), await getShiftSettings())
   // Radius, online status and vehicle capacity are checked here too, not just on the page.
   const toCheck = await prisma.order.findMany({
-    where: { id: { in: ids }, status: 'PAID' },
+    where: { id: { in: ids }, status: 'PAID', ...tonight },
     select: { id: true, latitude: true, longitude: true, quoteSnapshot: true },
   })
   if (toCheck.length !== ids.length) {
@@ -81,7 +88,7 @@ export async function POST(req: NextRequest) {
       async (tx) => {
         const claimed = await tx.order.updateMany({
           where: { id: { in: orderedSequence }, status: 'PAID' },
-          data: { driverId, status: 'ASSIGNED' },
+          data: { driverId, status: 'ASSIGNED', driverAcceptedAt: null, offeredAt: new Date() },
         })
         if (claimed.count !== orderedSequence.length) throw new Error('STATE_CHANGED')
 
@@ -102,6 +109,7 @@ export async function POST(req: NextRequest) {
       },
       { timeout: 15000 }
     )
+    await notifyUser(driverId, newStopsMessage(orderedSequence.length, await getAcceptMinutes()))
     return NextResponse.json({ success: true, routeId, stopCount: orderedSequence.length })
   } catch (e: any) {
     if (e?.message === 'STATE_CHANGED') {
@@ -110,4 +118,4 @@ export async function POST(req: NextRequest) {
     console.error('[optimize] failed:', e)
     return NextResponse.json({ error: 'Could not assign orders. Please try again.' }, { status: 500 })
   }
-}
+}

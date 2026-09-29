@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import PhotoCapture from '@/components/PhotoCapture'
+import PinPicker from '@/components/PinPicker'
 
 interface BinSizeOption {
   code: string
@@ -37,13 +38,16 @@ const MAX_PER_SIZE = 20
 export default function BookingForm({
   sizes,
   home,
+  homeNeedsCheck = false,
 }: {
   sizes: BinSizeOption[]
   home: { address: string } | null
+  homeNeedsCheck?: boolean // a home pin saved before pins had to be confirmed
 }) {
   // With a saved home, bookings use it by default. The customer can switch to another address for one order.
   const [useHome, setUseHome] = useState(!!home)
   const [address, setAddress] = useState('')
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null)
   const [wasteType, setWasteType] = useState('general')
   const [hazardous, setHazardous] = useState(false)
   const [bins, setBins] = useState<Record<string, number>>({})
@@ -78,12 +82,16 @@ export default function BookingForm({
   function orderBody() {
     return useHome
       ? { useHome: true, wasteType, hazardous, bins, gpsLat, gpsLng }
-      : { address, wasteType, hazardous, bins, gpsLat, gpsLng }
+      : { address, pinLat: pin?.lat, pinLng: pin?.lng, wasteType, hazardous, bins, gpsLat, gpsLng }
   }
 
   async function getQuote() {
     if (!useHome && !address.trim()) {
-      setError('Please enter your pickup address')
+      setError('Please describe the pickup place, with a landmark')
+      return
+    }
+    if (!useHome && !pin) {
+      setError('Please place the pin on the pickup spot on the map')
       return
     }
     if (totalBins < 1) {
@@ -136,7 +144,11 @@ export default function BookingForm({
 
   async function confirmBooking() {
     if (!useHome && !address.trim()) {
-      setError('Please enter your pickup address')
+      setError('Please describe the pickup place, with a landmark')
+      return
+    }
+    if (!useHome && !pin) {
+      setError('Please place the pin on the pickup spot on the map')
       return
     }
     if (!file) {
@@ -212,7 +224,7 @@ export default function BookingForm({
     setError(
       useHome
         ? 'Please check the pin on your home location page, or choose a different address for this order, then take a new photo.'
-        : 'Please update your address to match your location, then take a new photo and try again.'
+        : 'Please move the pin to the pickup spot, then take a new photo and try again.'
     )
   }
 
@@ -303,22 +315,43 @@ export default function BookingForm({
               A different address for this order
             </label>
           </div>
+        ) : homeNeedsCheck ? (
+          <p style={{ fontSize: 13, color: '#9A6415', background: '#FFF6E5', borderRadius: 4, padding: 8, marginBottom: 10 }}>
+            Drivers go exactly to your pin, so please{' '}
+            <Link href="/dashboard/customer/home-location">check your home pin</Link> once. Until then, place a pin for
+            this order below.
+          </p>
         ) : (
           <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
             Tip: <Link href="/dashboard/customer/home-location">save your home location</Link> once and you won&apos;t
-            need to type it again.
+            need to place a pin again.
           </p>
         )}
         {!useHome && (
-          <input
-            placeholder="e.g. House 12, near Chemu Secondary School, Tema Community 4"
-            value={address}
-            onChange={(e) => {
-              setAddress(e.target.value)
-              changed()
-            }}
-            className="input-field"
-          />
+          <>
+            <input
+              placeholder="Describe the place, e.g. House 12, blue gate, near Chemu SHS, Tema Comm. 4"
+              value={address}
+              onChange={(e) => {
+                setAddress(e.target.value)
+                changed()
+              }}
+              className="input-field"
+            />
+            <p style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
+              Put the pin exactly on the gate where the bins will be. The driver goes to this pin.
+            </p>
+            <div style={{ marginBottom: 16 }}>
+              <PinPicker
+                pin={pin}
+                height={260}
+                onPinChange={(p) => {
+                  setPin(p)
+                  changed()
+                }}
+              />
+            </div>
+          </>
         )}
 
         <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 8 }}>Your bins</label>

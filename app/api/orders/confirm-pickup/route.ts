@@ -35,6 +35,9 @@ export async function POST(req: NextRequest) {
   if (order.status !== 'ASSIGNED') {
     return NextResponse.json({ error: 'Order not eligible for pickup confirmation' }, { status: 400 })
   }
+  if (!order.driverAcceptedAt) {
+    return NextResponse.json({ error: 'Please accept this stop first' }, { status: 409 })
+  }
 
   if (!(await evidenceFileExists(photoPath))) {
     return NextResponse.json({ error: 'Photo upload not found. Please retake the photo and try again.' }, { status: 400 })

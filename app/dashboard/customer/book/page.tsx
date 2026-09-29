@@ -18,12 +18,15 @@ export default async function BookPickupPage() {
     }),
     prisma.customerProfile.findUnique({
       where: { userId: user.id },
-      select: { address: true, homeLat: true, homeLng: true },
+      select: { address: true, homeLat: true, homeLng: true, homePinConfirmedAt: true },
     }),
   ])
 
-  // Only offer "use my home" once the customer has actually pinned it on the map.
-  const home = profile && profile.homeLat != null && profile.homeLng != null ? { address: profile.address } : null
+  // Only offer "use my home" once the customer has pinned it on the map and confirmed the pin is on their gate.
+  // Homes saved before that check existed are asked to look at their pin again.
+  const pinned = !!profile && profile.homeLat != null && profile.homeLng != null
+  const home = pinned && profile!.homePinConfirmedAt ? { address: profile!.address } : null
+  const homeNeedsCheck = pinned && !profile!.homePinConfirmedAt
 
-  return <BookingForm sizes={sizes} home={home} />
+  return <BookingForm sizes={sizes} home={home} homeNeedsCheck={homeNeedsCheck} />
 }

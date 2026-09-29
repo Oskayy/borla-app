@@ -10,6 +10,7 @@ export interface PlanOrderRow extends PlanOrder {
   customerName: string
   isLate: boolean
   litresEstimated: boolean
+  rolloverCount?: number // nights this order has been moved on already
 }
 
 type DriverRow = Omit<DispatchDriver, 'lastLocationAt'> & { lastLocationAt: string | null }
@@ -232,6 +233,12 @@ export default function PlanBoard({
                           · {o.litres} L{o.litresEstimated ? '*' : ''}
                           {o.isLate ? ' · LATE' : ''}
                         </span>
+                        {(o.rolloverCount ?? 0) > 0 && (
+                          <span style={{ color: '#B3261E', fontSize: 12, fontWeight: 600 }}> · MISSED {o.rolloverCount}× BEFORE</span>
+                        )}
+                        {o.declinedBy?.includes(p.driverId) && (
+                          <span style={{ color: '#B3261E', fontSize: 12 }}> · this driver declined it</span>
+                        )}
                       </span>
                       <MoveSelect o={o} />
                     </div>

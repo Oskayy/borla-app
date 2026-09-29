@@ -2,6 +2,8 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import NoticeList from '@/components/NoticeList'
+import EnableAlerts from '@/components/EnableAlerts'
 
 const statusColors: Record<string, string> = {
   DRAFT: '#999',
@@ -19,19 +21,29 @@ export default async function CustomerDashboard() {
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
 
-    const [lastOrder, profile] = await Promise.all([
+  const [lastOrder, profile, notices] = await Promise.all([
     prisma.order.findFirst({
       where: { customerId: user.id },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.customerProfile.findUnique({ where: { userId: user.id }, select: { homeLat: true } }),
+    prisma.notification.findMany({
+      where: { userId: user.id, readAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { id: true, title: true, body: true },
+    }),
   ])
   const hasHome = profile?.homeLat != null
 
   return (
     <div style={{ maxWidth: 500, margin: '40px auto', padding: '0 20px' }}>
       <h1 style={{ fontSize: 26, marginBottom: 20 }}>Welcome, {dbUser?.name}</h1>
-            {!hasHome && (
+      <NoticeList notices={notices} />
+      {lastOrder && (
+        <EnableAlerts compact message="Turn on alerts to hear if your pickup night changes." />
+      )}
+      {!hasHome && (
         <div className="panel" style={{ marginBottom: 16, borderLeft: '4px solid var(--color-accent)' }}>
           <p style={{ fontWeight: 600, marginBottom: 4 }}>Set your home location</p>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
@@ -58,4 +70,4 @@ export default async function CustomerDashboard() {
       )}
     </div>
   )
-}
+}

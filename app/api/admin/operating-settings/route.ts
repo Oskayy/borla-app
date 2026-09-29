@@ -4,7 +4,8 @@ import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
-import { getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
+import { getAcceptMinutes, getAutoDispatch, getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
+import { MAX_ACCEPT_MINUTES, MIN_ACCEPT_MINUTES } from '@/lib/offers'
 import { inRange } from '@/lib/numbers'
 import { parseClock, toClock, validateShiftSettings, type ShiftSettings } from '@/lib/shift'
 
@@ -38,7 +39,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Trips per night must be a whole number from 1 to 8' }, { status: 400 })
   }
 
-  const [current, currentTrips] = await Promise.all([getShiftSettings(), getMaxTripsPerNight()])
+  const acceptMinutes = inRange(body?.acceptMinutes, MIN_ACCEPT_MINUTES, MAX_ACCEPT_MINUTES)
+  if (acceptMinutes === null || !Number.isInteger(acceptMinutes)) {
+    return NextResponse.json(
+      { error: `Minutes to accept must be a whole number from ${MIN_ACCEPT_MINUTES} to ${MAX_ACCEPT_MINUTES}` },
+      { status: 400 }
+    )
+  }
+
+  if (typeof body?.autoDispatch !== 'boolean') {
+    return NextResponse.json({ error: 'Please choose whether to assign orders automatically' }, { status: 400 })
+  }
+  const autoDispatch: boolean = body.autoDispatch
+
+  const [current, currentTrips, currentAccept, currentAuto] = await Promise.all([
+    getShiftSettings(),
+    getMaxTripsPerNight(),
+    getAcceptMinutes(),
+    getAutoDispatch(),
+  ])
   const next: ShiftSettings = {
     timezone: current.timezone,
     shiftStartMinutes: start,
@@ -51,8 +70,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.operatingSettings.upsert({
     where: { id: 1 },
-    create: { id: 1, ...next, maxTripsPerNight: trips },
-    update: { ...next, maxTripsPerNight: trips },
+    create: { id: 1, ...next, maxTripsPerNight: trips, acceptMinutes, autoDispatch },
+    update: { ...next, maxTripsPerNight: trips, acceptMinutes, autoDispatch },
   })
 
   const fmt = (s: ShiftSettings) =>
@@ -61,7 +80,8 @@ export async function POST(req: NextRequest) {
     auth.user.id,
     'SHIFT_SETTINGS_CHANGED',
     null,
-    `${fmt(current)}, ${currentTrips} trip(s) -> ${fmt(next)}, ${trips} trip(s)`
+    `${fmt(current)}, ${currentTrips} trip(s), ${currentAccept} min to accept, auto-assign ${currentAuto ? 'on' : 'off'} -> ` +
+      `${fmt(next)}, ${trips} trip(s), ${acceptMinutes} min to accept, auto-assign ${autoDispatch ? 'on' : 'off'}`
   )
 
   return NextResponse.json({ success: true, settings: next })

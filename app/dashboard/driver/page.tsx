@@ -7,6 +7,16 @@ import DriverOnlineToggle from '@/components/DriverOnlineToggle'
 import NavigateButtons from '@/components/NavigateButtons'
 import DriverRouteMap, { type RoutePoint } from '@/components/DriverRouteMap'
 import ConfirmTripUnload from '@/components/ConfirmTripUnload'
+import NextStopCard from '@/components/NextStopCard'
+import StopResponse from '@/components/StopResponse'
+import { nextPoint } from '@/lib/driver-next'
+import { pickupLocationSource } from '@/lib/navigation'
+import DriverLiveUpdates from '@/components/DriverLiveUpdates'
+import EnableAlerts from '@/components/EnableAlerts'
+import { sweepExpiredOffers } from '@/lib/offers-server'
+import { offerDeadline } from '@/lib/offers'
+import { driverRouteVersion } from '@/lib/driver-updates'
+import { getAcceptMinutes } from '@/lib/settings'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import { describeHours } from '@/lib/disposal-sites'
@@ -27,6 +37,10 @@ interface TripGroup {
     bins: string | null
     lat: number | null
     lng: number | null
+    accepted: boolean
+    deadline: string | null // when an unaccepted stop goes to another driver
+    approximate: boolean // the customer didn't pin this spot; the position was looked up from text
+    customerPhone: string | null
   }[]
   site: { name: string; lat: number | null; lng: number | null; hours: string; notes: string | null; status: string } | null
 }
@@ -50,6 +64,10 @@ export default async function DriverDashboard() {
   const override = hasActiveOverride(driverProfile, now)
   const canGoOnline = isWithinShift(now, settings) || override
 
+  // Move on any stops (anyone's) that weren't accepted in time, so this page shows the current picture.
+  await sweepExpiredOffers().catch((e) => console.error('[driver] sweep failed', e))
+  const [acceptMinutes, routeVersion] = await Promise.all([getAcceptMinutes(), driverRouteVersion(user.id)])
+
   const orders = await prisma.order.findMany({
     where: {
       driverId: user.id,
@@ -59,6 +77,7 @@ export default async function DriverDashboard() {
       routeStop: {
         include: { route: { include: { trips: { include: { facility: true } } } } },
       },
+      customer: { select: { phone: true } },
     },
     orderBy: [{ routeStop: { route: { createdAt: 'asc' } } }, { routeStop: { sequence: 'asc' } }],
   })
@@ -104,6 +123,13 @@ export default async function DriverDashboard() {
       bins: quote?.lines?.map((l) => `${l.count} × ${l.label}`).join(', ') ?? null,
       lat: order.latitude,
       lng: order.longitude,
+      accepted: order.driverAcceptedAt != null,
+      deadline:
+        order.status === 'ASSIGNED' && !order.driverAcceptedAt && order.offeredAt
+          ? offerDeadline(order.offeredAt, order.shiftDate, settings.shiftStartMinutes, settings.timezone, acceptMinutes).toISOString()
+          : null,
+      approximate: pickupLocationSource(order.quoteSnapshot) === 'approximate',
+      customerPhone: order.customer?.phone ?? null,
     })
   }
   // Number trips 1, 2, 3... across the whole night, even if they came from separate approvals.
@@ -119,10 +145,19 @@ export default async function DriverDashboard() {
       }
     }
     if (g.site?.lat != null && g.site?.lng != null) {
-      mapPoints.push({ kind: 'site', lat: g.site.lat, lng: g.site.lng, label: g.site.name, done: false })
+      const tripDone = !g.orders.some((o) => o.status === 'ASSIGNED' || o.status === 'PICKED_UP')
+      mapPoints.push({ kind: 'site', lat: g.site.lat, lng: g.site.lng, label: g.site.name, done: tripDone })
     }
   }
   const start = { lat: driverProfile.homeLat!, lng: driverProfile.homeLng! }
+
+  // What to do next: accept new stops, then collect in order, then unload at the trip's site.
+  const next = nextPoint(groups)
+  const waiting = groups.flatMap((g) => g.orders).filter((o) => o.status === 'ASSIGNED' && !o.accepted)
+  const waitingIds = waiting.map((o) => o.id)
+  const firstDeadline = waiting.map((o) => o.deadline).filter((d): d is string => !!d).sort()[0] ?? null
+  const nextPhone =
+    next?.kind === 'stop' ? groups.flatMap((g) => g.orders).find((o) => o.id === next.orderId)?.customerPhone ?? null : null
 
   stopNo = 0
   return (
@@ -134,6 +169,10 @@ export default async function DriverDashboard() {
         shiftLabel={windowLabel(settings)}
         overrideUntil={override ? driverProfile.onlineOverrideUntil!.toISOString() : null}
       />
+
+      <DriverLiveUpdates initialVersion={routeVersion} />
+      <EnableAlerts />
+      <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
 
       <div className="panel" style={{ marginBottom: 24, background: 'var(--color-primary)', border: 'none', color: 'white' }}>
         <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>Total earnings</p>
@@ -154,9 +193,9 @@ export default async function DriverDashboard() {
 
       {mapPoints.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <DriverRouteMap start={start} points={mapPoints} />
+          <DriverRouteMap start={start} points={mapPoints} live={online} />
           <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-            Numbers are stops in order · 🏁 = where to unload · faded = already collected
+            🔵 = you · numbers are stops in order · 🏁 = where to unload · faded = already collected
           </p>
         </div>
       )}
@@ -178,13 +217,22 @@ export default async function DriverDashboard() {
                     ? 'Collected, on board'
                     : order.status === 'DISPOSAL_PENDING'
                     ? 'Unloaded, waiting for ops to check the photo'
-                    : 'To collect'}
+                    : order.accepted
+                    ? 'To collect'
+                    : 'New: accept or decline'}
                   {order.price != null && <span style={{ color: '#999' }}> · GHS {order.price}</span>}
                 </p>
-                {order.status === 'ASSIGNED' && order.lat != null && order.lng != null && (
+                {order.status === 'ASSIGNED' && order.approximate && (
+                  <p style={{ fontSize: 12, color: '#9A6415', marginBottom: 8 }}>
+                    ⚠ Approximate location (no pin).{' '}
+                    {order.customerPhone && <a href={`tel:${order.customerPhone}`}>Call the customer</a>}
+                  </p>
+                )}
+                {order.status === 'ASSIGNED' && !order.accepted && <StopResponse orderId={order.id} deadline={order.deadline} />}
+                {order.status === 'ASSIGNED' && order.accepted && order.lat != null && order.lng != null && (
                   <NavigateButtons lat={order.lat} lng={order.lng} />
                 )}
-                {order.status === 'ASSIGNED' && <ConfirmPickupButton orderId={order.id} />}
+                {order.status === 'ASSIGNED' && order.accepted && <ConfirmPickupButton orderId={order.id} />}
                 {order.status === 'PICKED_UP' && !g.routeId && <ConfirmDisposalButton orderId={order.id} />}
               </div>
             )

@@ -20,3 +20,15 @@ export async function getMaxTripsPerNight(): Promise<number> {
   const row = await prisma.operatingSettings.findUnique({ where: { id: 1 }, select: { maxTripsPerNight: true } })
   return row?.maxTripsPerNight ?? 3
 }
+
+// Minutes a driver has to accept a stop before it is given to another driver.
+export async function getAcceptMinutes(): Promise<number> {
+  const row = await prisma.operatingSettings.findUnique({ where: { id: 1 }, select: { acceptMinutes: true } })
+  return row?.acceptMinutes ?? 15
+}
+
+// Whether waiting orders are assigned automatically from shift start (ops can still approve plans earlier).
+export async function getAutoDispatch(): Promise<boolean> {
+  const row = await prisma.operatingSettings.findUnique({ where: { id: 1 }, select: { autoDispatch: true } })
+  return row?.autoDispatch ?? true
+}

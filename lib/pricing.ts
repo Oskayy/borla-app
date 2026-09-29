@@ -3,8 +3,7 @@ import { getShiftSettings } from '@/lib/settings'
 import { classifyBooking, describeCollection } from '@/lib/shift'
 import { pickZone } from '@/lib/zone-match'
 import { geocodeAddress } from '@/lib/geocode'
-import { cleanText } from '@/lib/validate'
-
+import { cleanText, isValidLat, isValidLng } from '@/lib/validate'
 import {
   calculatePrice,
   type OrderInput,
@@ -28,6 +27,9 @@ export interface QuoteSnapshot extends PriceBreakdown {
   collectionLabel: string
   quotedAt: string
   requotedFrom?: { zoneId: string; zoneName: string; price: number }
+  // Where the pickup position came from: the customer's confirmed home pin, or a pin placed for this order.
+  // Missing on older orders, whose position was looked up from typed text and may be off.
+  locationSource?: 'home_pin' | 'pin'
 }
 
 // Same fields whether it worked or not (like lib/auth.ts), so it type-checks with strict mode off.
@@ -141,15 +143,15 @@ export async function buildQuote(
       "We couldn't find that address. Try adding a nearby landmark, or take the photo at the pickup spot so we can use your location."
     )
   }
-
-    return quoteAtPoint(input, address, point)
+  return quoteAtPoint(input, address, point)
 }
 
 // Quote for a pickup whose map position is already known (e.g. the customer's saved home pin).
 export async function quoteAtPoint(
   input: OrderInput,
   address: string,
-  point: { lat: number; lng: number }
+  point: { lat: number; lng: number },
+  locationSource?: 'home_pin' | 'pin'
 ): Promise<QuoteResult> {
   const zone = await findZoneForPoint(point.lat, point.lng)
   if (!zone) {
@@ -158,31 +160,39 @@ export async function quoteAtPoint(
 
   const priced = await quoteForZone(input, zone)
   if (!priced.ok) return priced
-  return { ...priced, quote: { ...priced.quote, address }, lat: point.lat, lng: point.lng }
+  const quote = locationSource ? { ...priced.quote, address, locationSource } : { ...priced.quote, address }
+  return { ...priced, quote, lat: point.lat, lng: point.lng }
 }
 
-
-// Prices an order from the booking form: the customer's saved home pin when `useHome` is true,
-// otherwise the address typed for this one order. The home pin is read from the database, never from the browser.
+// Prices an order from the booking form. The pickup position is always a pin the customer placed:
+// their confirmed home pin when `useHome` is true (read from the database, never from the browser),
+// otherwise a pin dropped for this one order. Typed text is only a description for the driver,
+// because looking text up on the map often lands on the middle of a neighbourhood.
 export async function quoteFromBooking(
   userId: string,
   body: any,
   input: OrderInput,
-  gpsLat: number | null,
-  gpsLng: number | null
+  _gpsLat: number | null,
+  _gpsLng: number | null
 ): Promise<QuoteResult> {
   if (body?.useHome === true) {
     const home = await prisma.customerProfile.findUnique({
       where: { userId },
-      select: { address: true, homeLat: true, homeLng: true },
+      select: { address: true, homeLat: true, homeLng: true, homePinConfirmedAt: true },
     })
     if (!home || home.homeLat == null || home.homeLng == null) {
-      return fail(400, 'Please set your home location first, or enter an address for this order.')
+      return fail(400, 'Please set your home location first, or choose a different address for this order.')
     }
-    return quoteAtPoint(input, home.address, { lat: home.homeLat, lng: home.homeLng })
+    if (!home.homePinConfirmedAt) {
+      return fail(400, 'Please check the pin on your home location page first, so the driver finds your gate.')
+    }
+    return quoteAtPoint(input, home.address, { lat: home.homeLat, lng: home.homeLng }, 'home_pin')
   }
 
   const address = cleanText(body?.address, 200)
-  if (!address) return fail(400, 'Please enter your pickup address')
-  return buildQuote(input, address, gpsLat, gpsLng)
+  if (!address) return fail(400, 'Please describe the pickup place, with a landmark')
+  if (!isValidLat(body?.pinLat) || !isValidLng(body?.pinLng)) {
+    return fail(400, 'Please place the pin on the pickup spot on the map')
+  }
+  return quoteAtPoint(input, address, { lat: body.pinLat, lng: body.pinLng }, 'pin')
 }
