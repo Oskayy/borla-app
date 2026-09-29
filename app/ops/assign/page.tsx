@@ -1,7 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
-import { loadDispatchDrivers } from '@/lib/dispatch-server'
+import { loadDispatchDrivers, loadPlanSites } from '@/lib/dispatch-server'
+import { orderWasteKind } from '@/lib/planner'
 import { orderLitres } from '@/lib/dispatch'
 import OptimizeForm from './optimize-form'
 import PlanBoard from '@/components/PlanBoard'
@@ -20,13 +21,14 @@ export default async function AssignOrdersPage() {
     redirect('/dashboard')
   }
 
-  const [paidOrders, dispatch] = await Promise.all([
+  const [paidOrders, dispatch, sites] = await Promise.all([
     prisma.order.findMany({
       where: { status: 'PAID' },
       orderBy: [{ shiftDate: 'asc' }, { createdAt: 'asc' }],
       include: { customer: { select: { name: true } }, zone: { select: { name: true } } },
     }),
     loadDispatchDrivers(),
+    loadPlanSites(),
   ])
 
   const orders = paidOrders.map((o) => {
@@ -45,6 +47,7 @@ export default async function AssignOrdersPage() {
       shiftDate: o.shiftDate ? o.shiftDate.toISOString().slice(0, 10) : null,
       isLate: o.isLateOrder,
       createdAt: o.createdAt.toISOString(),
+      wasteKind: orderWasteKind(o.quoteSnapshot),
     }
   })
 
@@ -70,7 +73,13 @@ export default async function AssignOrdersPage() {
       )}
       {orders.length > 0 && (
         <>
-          <PlanBoard orders={orders} drivers={drivers} shiftRunning={dispatch.shiftRunning} nowIso={dispatch.now.toISOString()} />
+          <PlanBoard
+            orders={orders}
+            drivers={drivers}
+            sites={sites}
+            shiftRunning={dispatch.shiftRunning}
+            nowIso={dispatch.now.toISOString()}
+          />
 
           <details style={{ marginTop: 24 }}>
             <summary style={{ cursor: 'pointer', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>

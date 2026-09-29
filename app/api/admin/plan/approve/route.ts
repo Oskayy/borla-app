@@ -4,9 +4,9 @@ import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
-import { checkAssignment, loadDispatchDrivers } from '@/lib/dispatch-server'
+import { checkAssignment, loadDispatchDrivers, loadPlanSites } from '@/lib/dispatch-server'
 import { orderLitres } from '@/lib/dispatch'
-import { buildDriverPlan, type PlanOrder } from '@/lib/planner'
+import { buildDriverPlan, orderWasteKind, type PlanOrder } from '@/lib/planner'
 
 const MAX_DRIVERS_PER_REQUEST = 50
 const MAX_ORDERS_PER_DRIVER = 60
@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
   }
 
   const results: { driverId: string; ok: boolean; message: string; stops?: number; trips?: number }[] = []
+  const sites = await loadPlanSites()
+  const siteIds = new Set((await prisma.facility.findMany({ where: { active: true }, select: { id: true } })).map((f) => f.id))
 
   for (const p of plans) {
     const driverId: string = p.driverId
@@ -69,8 +71,16 @@ export async function POST(req: NextRequest) {
       longitude: o.longitude,
       litres: orderLitres(o.quoteSnapshot).litres,
       createdAt: o.createdAt.toISOString(),
+      wasteKind: orderWasteKind(o.quoteSnapshot),
     }))
-    const built = buildDriverPlan(drivers[0], planOrders, shiftRunning, now)
+    const built = buildDriverPlan(drivers[0], planOrders, shiftRunning, now, sites)
+
+    // Ops may pick a different site for a trip on the plan page ({ tripNumber: siteId }).
+    const choices = p.siteChoices && typeof p.siteChoices === 'object' ? p.siteChoices : {}
+    const siteFor = (tripNumber: number, planned: string | null) => {
+      const chosen = choices[String(tripNumber)]
+      return typeof chosen === 'string' && siteIds.has(chosen) ? chosen : planned
+    }
     const tripOf = new Map<string, number>()
     built.trips.forEach((t) => t.orderIds.forEach((id) => tripOf.set(id, t.tripNumber)))
 
@@ -90,6 +100,13 @@ export async function POST(req: NextRequest) {
               orderId,
               sequence: i + 1,
               tripNumber: tripOf.get(orderId) ?? 1,
+            })),
+          })
+          await tx.routeTrip.createMany({
+            data: built.trips.map((t) => ({
+              routeId: route.id,
+              tripNumber: t.tripNumber,
+              facilityId: siteFor(t.tripNumber, t.siteId),
             })),
           })
           await tx.auditLog.createMany({

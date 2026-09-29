@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
-import { isDriverAvailable, isWithinShift } from '@/lib/shift'
+import { isDriverAvailable, isWithinShift, localParts } from '@/lib/shift'
+import { coversShift, isOpenAt } from '@/lib/disposal-sites'
+import type { PlanSite } from '@/lib/planner'
 import { assessDriver, orderLitres, type DispatchDriver, type DispatchOrder, type DriverFit } from '@/lib/dispatch'
 
 // Orders that are on a driver's vehicle or on their list and not yet unloaded.
@@ -93,4 +95,28 @@ export async function checkAssignment(
     return { ok: false, error: 'Please give a reason for overriding the driver checks', note: '', fit }
   }
   return { ok: true, error: '', note: ` [OVERRIDE: ${fit.reasons.join('; ')}. Reason: ${reason}]`, fit }
+}
+
+// Disposal sites for the planner. A site is usable if it is active, marked OPEN, and
+// either open for the whole shift (when planning ahead) or open right now (during the shift).
+export async function loadPlanSites(): Promise<PlanSite[]> {
+  const now = new Date()
+  const settings = await getShiftSettings()
+  const shiftRunning = isWithinShift(now, settings)
+  const minutesNow = localParts(now, settings.timezone).minutes
+
+  const sites = await prisma.facility.findMany({
+    where: { active: true, lat: { not: null }, lng: { not: null } },
+    orderBy: { name: 'asc' },
+  })
+  return sites.map((f) => ({
+    id: f.id,
+    name: f.name,
+    lat: f.lat!,
+    lng: f.lng!,
+    acceptedWaste: f.acceptedWaste,
+    usable:
+      f.status === 'OPEN' &&
+      (shiftRunning ? isOpenAt(f, minutesNow) : coversShift(f, settings.shiftStartMinutes, settings.shiftEndMinutes)),
+  }))
 }

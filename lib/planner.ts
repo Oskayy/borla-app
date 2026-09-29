@@ -11,14 +11,31 @@
 import { distanceInMeters } from './geo'
 import { assessDriver, driverPosition, nightCapacity, tripCapacity, type DispatchDriver, type DispatchOrder } from './dispatch'
 
+export type WasteKind = 'general' | 'recyclable' | 'hazardous'
+
 export interface PlanOrder extends DispatchOrder {
   createdAt: string
+  wasteKind?: WasteKind
+}
+
+// A disposal site as the planner sees it. `usable` is worked out on the server:
+// active, marked OPEN, and open for tonight's shift (or open right now during the shift).
+export interface PlanSite {
+  id: string
+  name: string
+  lat: number
+  lng: number
+  acceptedWaste: string[]
+  usable: boolean
 }
 
 export interface PlannedTrip {
   tripNumber: number
   orderIds: string[]
   litres: number
+  siteId: string | null // where this load is unloaded
+  siteName: string | null
+  siteProblem: string | null // e.g. no open site takes hazardous waste
 }
 
 export interface DriverPlan {
@@ -33,6 +50,54 @@ export interface DriverPlan {
 export interface Plan {
   drivers: DriverPlan[]
   unassigned: { orderId: string; reason: string }[]
+}
+
+// What kind of waste an order is, from its price snapshot.
+export function orderWasteKind(snapshot: unknown): WasteKind {
+  const s = snapshot as { wasteType?: unknown; hazardous?: unknown } | null
+  if (s?.hazardous === true) return 'hazardous'
+  return s?.wasteType === 'recyclable' ? 'recyclable' : 'general'
+}
+
+// Hazardous waste needs a site that takes hazardous waste. Recyclables go to a recycling site,
+// or to a general site if none is available. General waste needs a general site.
+export function siteAccepts(site: PlanSite, kinds: WasteKind[]): boolean {
+  return kinds.every((k) =>
+    k === 'recyclable' ? site.acceptedWaste.includes('recyclable') || site.acceptedWaste.includes('general') : site.acceptedWaste.includes(k)
+  )
+}
+
+// The nearest usable site that accepts everything on this trip, measured from the trip's last stop.
+export function chooseSite(
+  tripOrders: PlanOrder[],
+  sites: PlanSite[],
+  from: { lat: number; lng: number } | null
+): { site: PlanSite | null; problem: string | null } {
+  if (sites.length === 0) return { site: null, problem: 'No disposal sites set up' }
+  const kinds = Array.from(new Set(tripOrders.map((o) => o.wasteKind ?? 'general'))) as WasteKind[]
+  const open = sites.filter((s) => s.usable)
+  if (open.length === 0) return { site: null, problem: 'No disposal site is open tonight' }
+  const accepting = open.filter((s) => siteAccepts(s, kinds))
+  if (accepting.length === 0) {
+    return { site: null, problem: `No open site accepts ${kinds.includes('hazardous') ? 'hazardous' : kinds.join(' and ')} waste` }
+  }
+  if (!from) return { site: accepting[0], problem: null }
+  const nearest = accepting.reduce((best, s) =>
+    distanceInMeters(from.lat, from.lng, s.lat, s.lng) < distanceInMeters(from.lat, from.lng, best.lat, best.lng) ? s : best
+  )
+  // Prefer a dedicated recycling site for all-recyclable loads when one is about as close.
+  if (kinds.length === 1 && kinds[0] === 'recyclable' && !nearest.acceptedWaste.includes('recyclable')) {
+    const recyclers = accepting.filter((s) => s.acceptedWaste.includes('recyclable'))
+    if (recyclers.length > 0) {
+      const r = recyclers.reduce((best, s) =>
+        distanceInMeters(from.lat, from.lng, s.lat, s.lng) < distanceInMeters(from.lat, from.lng, best.lat, best.lng) ? s : best
+      )
+      if (distanceInMeters(from.lat, from.lng, r.lat, r.lng) <= distanceInMeters(from.lat, from.lng, nearest.lat, nearest.lng) * 1.5) {
+        return { site: r, problem: null }
+      }
+    }
+  }
+  return { site: nearest, problem: null }
 }
 
 const km = (aLat: number, aLng: number, bLat: number, bLng: number) => distanceInMeters(aLat, aLng, bLat, bLng) / 1000
@@ -68,12 +133,13 @@ export function orderStops(start: { lat: number; lng: number } | null, orders: P
 // The first trip is shorter if the driver already has orders on board.
 export function splitIntoTrips(stops: PlanOrder[], perTrip: number, alreadyLoaded: number): PlannedTrip[] {
   const trips: PlannedTrip[] = []
-  let current: PlannedTrip = { tripNumber: 1, orderIds: [], litres: 0 }
+  const blank = (n: number): PlannedTrip => ({ tripNumber: n, orderIds: [], litres: 0, siteId: null, siteName: null, siteProblem: null })
+  let current: PlannedTrip = blank(1)
   let room = perTrip > 0 ? Math.max(0, perTrip - (alreadyLoaded % perTrip)) : Infinity
   for (const o of stops) {
     if (current.orderIds.length > 0 && o.litres > room) {
       trips.push(current)
-      current = { tripNumber: current.tripNumber + 1, orderIds: [], litres: 0 }
+      current = blank(current.tripNumber + 1)
       room = perTrip
     }
     current.orderIds.push(o.id)
@@ -100,11 +166,25 @@ export function buildDriverPlan(
   driver: DispatchDriver,
   orders: PlanOrder[],
   shiftRunning: boolean,
-  now: Date
+  now: Date,
+  sites: PlanSite[] = []
 ): DriverPlan {
   const start = driverPosition(driver, shiftRunning, now)
   const stops = orderStops(start ? { lat: start.lat, lng: start.lng } : null, orders)
   const trips = splitIntoTrips(stops, tripCapacity(driver), driver.loadLitres)
+
+  // End each trip at the best site for its load, measured from the trip's last stop.
+  const byId = new Map(orders.map((o) => [o.id, o]))
+  let lastPoint = start ? { lat: start.lat, lng: start.lng } : null
+  for (const t of trips) {
+    const tripOrders = t.orderIds.map((id) => byId.get(id)!)
+    for (const o of tripOrders) if (o.latitude != null && o.longitude != null) lastPoint = { lat: o.latitude, lng: o.longitude }
+    const { site, problem } = chooseSite(tripOrders, sites, lastPoint)
+    t.siteId = site?.id ?? null
+    t.siteName = site?.name ?? null
+    t.siteProblem = problem
+    if (site) lastPoint = { lat: site.lat, lng: site.lng } // the next trip starts from the site
+  }
   const fit = orders.length > 0 ? assessDriver(driver, orders, shiftRunning, now) : null
   return {
     driverId: driver.id,
@@ -116,7 +196,13 @@ export function buildDriverPlan(
   }
 }
 
-export function proposePlan(drivers: DispatchDriver[], orders: PlanOrder[], shiftRunning: boolean, now: Date): Plan {
+export function proposePlan(
+  drivers: DispatchDriver[],
+  orders: PlanOrder[],
+  shiftRunning: boolean,
+  now: Date,
+  sites: PlanSite[] = []
+): Plan {
   // Who could take each order on its own?
   const candidates = new Map<string, DispatchDriver[]>()
   for (const o of orders) {
@@ -181,7 +267,7 @@ export function proposePlan(drivers: DispatchDriver[], orders: PlanOrder[], shif
 
   const plans = drivers
     .filter((d) => assigned.has(d.id))
-    .map((d) => buildDriverPlan(d, assigned.get(d.id)!, shiftRunning, now))
+    .map((d) => buildDriverPlan(d, assigned.get(d.id)!, shiftRunning, now, sites))
     .sort((a, b) => b.orderIds.length - a.orderIds.length)
 
   return { drivers: plans, unassigned }

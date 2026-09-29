@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { proposePlan, buildDriverPlan, type PlanOrder } from '@/lib/planner'
+import { proposePlan, buildDriverPlan, type PlanOrder, type PlanSite } from '@/lib/planner'
 import { assessDriver, nightCapacity, type DispatchDriver } from '@/lib/dispatch'
 
 export interface PlanOrderRow extends PlanOrder {
@@ -19,11 +19,13 @@ const UNASSIGNED = ''
 export default function PlanBoard({
   orders,
   drivers,
+  sites,
   shiftRunning,
   nowIso,
 }: {
   orders: PlanOrderRow[]
   drivers: DriverRow[]
+  sites: PlanSite[]
   shiftRunning: boolean
   nowIso: string
 }) {
@@ -31,7 +33,7 @@ export default function PlanBoard({
   const router = useRouter()
 
   // The system's suggestion, worked out once when the page loads.
-  const suggestion = useMemo(() => proposePlan(drivers, orders, shiftRunning, now), [drivers, orders, shiftRunning, now])
+  const suggestion = useMemo(() => proposePlan(drivers, orders, shiftRunning, now, sites), [drivers, orders, shiftRunning, now, sites])
   const suggestedMap = useMemo(() => {
     const m: Record<string, string> = {}
     orders.forEach((o) => (m[o.id] = UNASSIGNED))
@@ -47,8 +49,14 @@ export default function PlanBoard({
   // orderId -> driverId ('' = unassigned). Starts as the suggestion; edits change it.
   const [assignment, setAssignment] = useState<Record<string, string>>(suggestedMap)
   // After an approval the page reloads with fewer orders: start again from the new suggestion.
-  useEffect(() => setAssignment(suggestedMap), [suggestedMap])
+  useEffect(() => {
+    setAssignment(suggestedMap)
+    setSiteChoices({})
+  }, [suggestedMap])
   const [reasons, setReasons] = useState<Record<string, string>>({})
+  // Sites ops picked by hand: { driverId: { tripNumber: siteId } }
+  const [siteChoices, setSiteChoices] = useState<Record<string, Record<string, string>>>({})
+  const siteById = useMemo(() => Object.fromEntries(sites.map((st) => [st.id, st])), [sites])
   const [busy, setBusy] = useState(false)
   const [messages, setMessages] = useState<{ ok: boolean; text: string }[]>([])
 
@@ -65,9 +73,9 @@ export default function PlanBoard({
     }
     return Object.entries(groups)
       .filter(([id]) => driverById[id])
-      .map(([id, os]) => buildDriverPlan(driverById[id], os, shiftRunning, now))
+      .map(([id, os]) => buildDriverPlan(driverById[id], os, shiftRunning, now, sites))
       .sort((a, b) => b.orderIds.length - a.orderIds.length)
-  }, [assignment, orders, driverById, shiftRunning, now])
+  }, [assignment, orders, driverById, shiftRunning, now, sites])
 
   const unassignedOrders = orders.filter((o) => !assignment[o.id])
   const cleanPlans = plans.filter((p) => p.problems.length === 0 || (reasons[p.driverId] ?? '').trim().length >= 3)
@@ -90,6 +98,7 @@ export default function PlanBoard({
       .map((p) => ({
         driverId: p.driverId,
         orderIds: p.orderIds,
+        siteChoices: siteChoices[p.driverId] ?? {},
         ...(p.problems.length > 0 ? { override: true, overrideReason: reasons[p.driverId] ?? '' } : {}),
       }))
     if (toSend.length === 0) return
@@ -211,7 +220,7 @@ export default function PlanBoard({
             {p.trips.map((t) => (
               <div key={t.tripNumber} style={{ marginTop: 10 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>
-                  Trip {t.tripNumber} · {t.litres} L, then unload
+                  Trip {t.tripNumber} · {t.litres} L
                 </p>
                 {t.orderIds.map((id, i) => {
                   const o = orderById[id]
@@ -228,6 +237,37 @@ export default function PlanBoard({
                     </div>
                   )
                 })}
+                {(() => {
+                  const chosen = siteChoices[p.driverId]?.[String(t.tripNumber)] ?? t.siteId ?? ''
+                  const chosenSite = chosen ? siteById[chosen] : null
+                  const warning = chosenSite ? (chosenSite.usable ? null : 'This site is closed or full tonight') : t.siteProblem
+                  return (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '6px 0' }}>
+                      <span style={{ fontSize: 13 }}>
+                        🏁 Unload at <strong>{chosenSite?.name ?? 'no site chosen'}</strong>
+                        {warning && <span style={{ color: '#B3261E', fontSize: 12 }}> · ⚠ {warning}</span>}
+                      </span>
+                      <select
+                        value={chosen}
+                        onChange={(e) =>
+                          setSiteChoices((c) => ({ ...c, [p.driverId]: { ...(c[p.driverId] ?? {}), [String(t.tripNumber)]: e.target.value } }))
+                        }
+                        style={selectStyle}
+                        aria-label={`Disposal site for trip ${t.tripNumber}`}
+                      >
+                        <option value="">No site</option>
+                        {[...sites]
+                          .sort((a, b) => Number(b.usable) - Number(a.usable))
+                          .map((st) => (
+                            <option key={st.id} value={st.id}>
+                              {st.usable ? '' : '(closed) '}
+                              {st.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  )
+                })()}
               </div>
             ))}
           </div>
