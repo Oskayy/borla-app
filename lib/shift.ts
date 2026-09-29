@@ -149,3 +149,28 @@ export function validateShiftSettings(s: ShiftSettings): string | null {
   }
   return null
 }
+
+// Is collection happening right now (e.g. between 20:00 and 06:00 local time)?
+export function isWithinShift(now: Date, s: ShiftSettings): boolean {
+  const { minutes } = localParts(now, s.timezone)
+  if (s.shiftStartMinutes > s.shiftEndMinutes) {
+    return minutes >= s.shiftStartMinutes || minutes < s.shiftEndMinutes // overnight
+  }
+  return minutes >= s.shiftStartMinutes && minutes < s.shiftEndMinutes
+}
+
+// A driver counts as available only if they switched online AND either the shift is running
+// or ops gave them an override that hasn't expired. This means drivers drop offline by
+// themselves when the shift ends, even if nobody presses a button.
+export function isDriverAvailable(
+  driver: { isOnline: boolean; onlineOverrideUntil: Date | null },
+  now: Date,
+  s: ShiftSettings
+): boolean {
+  if (!driver.isOnline) return false
+  return isWithinShift(now, s) || hasActiveOverride(driver, now)
+}
+
+export function hasActiveOverride(driver: { onlineOverrideUntil: Date | null }, now: Date): boolean {
+  return !!driver.onlineOverrideUntil && driver.onlineOverrideUntil.getTime() > now.getTime()
+}

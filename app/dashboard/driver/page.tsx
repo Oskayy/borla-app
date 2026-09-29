@@ -3,7 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import ConfirmPickupButton from './confirm-pickup-button'
 import ConfirmDisposalButton from './confirm-disposal-button'
-import DriverLocationTracker from '@/components/DriverLocationTracker'
+import DriverOnlineToggle from '@/components/DriverOnlineToggle'
+import { getShiftSettings } from '@/lib/settings'
+import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 
 export default async function DriverDashboard() {
   const supabase = await createClient()
@@ -12,9 +14,17 @@ export default async function DriverDashboard() {
 
   const driverProfile = await prisma.driverProfile.findUnique({ where: { userId: user.id } })
 
-  if (!driverProfile || !driverProfile.vehicleType) {
+  // Drivers need a vehicle and a home base before they can be planned into routes.
+  if (!driverProfile || !driverProfile.vehicleTypeId || driverProfile.homeLat == null) {
     redirect('/dashboard/driver/profile-setup')
   }
+
+  // Online only counts during the shift (or with an ops override), so drivers drop offline when the shift ends.
+  const settings = await getShiftSettings()
+  const now = new Date()
+  const online = isDriverAvailable(driverProfile, now, settings)
+  const override = hasActiveOverride(driverProfile, now)
+  const canGoOnline = isWithinShift(now, settings) || override
 
   const orders = await prisma.order.findMany({
     where: {
@@ -37,7 +47,12 @@ export default async function DriverDashboard() {
   return (
     <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
       <h1 style={{ fontSize: 26, marginBottom: 4 }}>Driver Dashboard</h1>
-      <DriverLocationTracker />
+      <DriverOnlineToggle
+        initialOnline={online}
+        canGoOnline={canGoOnline}
+        shiftLabel={windowLabel(settings)}
+        overrideUntil={override ? driverProfile.onlineOverrideUntil!.toISOString() : null}
+      />
 
       <div className="panel" style={{ marginBottom: 24, background: 'var(--color-primary)', border: 'none', color: 'white' }}>
         <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>Total earnings</p>

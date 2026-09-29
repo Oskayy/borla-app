@@ -82,6 +82,9 @@ model DriverProfile {
   currentLat       Float?
   currentLng       Float?
   lastLocationAt   DateTime?
+  isOnline         Boolean   @default(false) // driver pressed "Go online"
+  wentOnlineAt     DateTime?
+  onlineOverrideUntil DateTime? // ops let this driver work outside shift hours until this time
 }
 
 model Zone {
