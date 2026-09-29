@@ -6,6 +6,7 @@ import ConfirmDisposalButton from './confirm-disposal-button'
 import DriverOnlineToggle from '@/components/DriverOnlineToggle'
 import NavigateButtons from '@/components/NavigateButtons'
 import DriverRouteMap, { type RoutePoint } from '@/components/DriverRouteMap'
+import ConfirmTripUnload from '@/components/ConfirmTripUnload'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import { describeHours } from '@/lib/disposal-sites'
@@ -14,7 +15,9 @@ export const dynamic = 'force-dynamic'
 
 interface TripGroup {
   key: string
-  tripNumber: number
+  routeId: string | null
+  routeTripNumber: number // the trip number stored on the route (used when confirming)
+  tripNumber: number // shown to the driver, counted across the whole night
   orders: {
     id: string
     status: string
@@ -50,7 +53,7 @@ export default async function DriverDashboard() {
   const orders = await prisma.order.findMany({
     where: {
       driverId: user.id,
-      status: { in: ['ASSIGNED', 'PICKED_UP'] },
+      status: { in: ['ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING'] },
     },
     include: {
       routeStop: {
@@ -81,6 +84,8 @@ export default async function DriverDashboard() {
       const f = trip?.facility
       group = {
         key,
+        routeId: stop?.routeId ?? null,
+        routeTripNumber: tripNumber,
         tripNumber,
         orders: [],
         site: f
@@ -110,7 +115,7 @@ export default async function DriverDashboard() {
     for (const o of g.orders) {
       stopNo++
       if (o.lat != null && o.lng != null) {
-        mapPoints.push({ kind: 'stop', lat: o.lat, lng: o.lng, label: String(stopNo), done: o.status === 'PICKED_UP' })
+        mapPoints.push({ kind: 'stop', lat: o.lat, lng: o.lng, label: String(stopNo), done: o.status !== 'ASSIGNED' })
       }
     }
     if (g.site?.lat != null && g.site?.lng != null) {
@@ -169,14 +174,18 @@ export default async function DriverDashboard() {
                 {order.bins && <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>{order.bins}</p>}
                 <p style={{ fontSize: 13, marginBottom: 10 }}>
                   <span className="status-dot" style={{ background: 'var(--color-accent)' }} />
-                  {order.status === 'PICKED_UP' ? 'Collected, on board' : 'To collect'}
+                  {order.status === 'PICKED_UP'
+                    ? 'Collected, on board'
+                    : order.status === 'DISPOSAL_PENDING'
+                    ? 'Unloaded, waiting for ops to check the photo'
+                    : 'To collect'}
                   {order.price != null && <span style={{ color: '#999' }}> · GHS {order.price}</span>}
                 </p>
                 {order.status === 'ASSIGNED' && order.lat != null && order.lng != null && (
                   <NavigateButtons lat={order.lat} lng={order.lng} />
                 )}
                 {order.status === 'ASSIGNED' && <ConfirmPickupButton orderId={order.id} />}
-                {order.status === 'PICKED_UP' && <ConfirmDisposalButton orderId={order.id} />}
+                {order.status === 'PICKED_UP' && !g.routeId && <ConfirmDisposalButton orderId={order.id} />}
               </div>
             )
           })}
@@ -196,6 +205,19 @@ export default async function DriverDashboard() {
             ) : (
               <p style={{ fontSize: 13, color: '#B3261E' }}>🏁 No disposal site set for this trip. Please call ops before unloading.</p>
             )}
+            {(() => {
+              const collected = g.orders.filter((o) => o.status === 'PICKED_UP')
+              if (!g.routeId || collected.length === 0) return null
+              return (
+                <ConfirmTripUnload
+                  routeId={g.routeId}
+                  tripNumber={g.routeTripNumber}
+                  photoOrderId={collected[0].id}
+                  collectedCount={collected.length}
+                  waitingCount={g.orders.filter((o) => o.status === 'ASSIGNED').length}
+                />
+              )
+            })()}
           </div>
         </div>
       ))}

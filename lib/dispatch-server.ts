@@ -6,7 +6,8 @@ import type { PlanSite } from '@/lib/planner'
 import { assessDriver, orderLitres, type DispatchDriver, type DispatchOrder, type DriverFit } from '@/lib/dispatch'
 
 // Orders that are on a driver's vehicle or on their list and not yet unloaded.
-export const LOAD_STATUSES = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP', 'DISPOSAL_PENDING'] as const
+// (DISPOSAL_PENDING is left out: the load is already off the vehicle, only the paperwork is waiting.)
+export const LOAD_STATUSES = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP'] as const
 
 // Loads drivers with everything the dispatch rules need, including their current load in litres.
 export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ drivers: DispatchDriver[]; shiftRunning: boolean; now: Date }> {

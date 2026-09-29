@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Order not eligible for disposal confirmation' }, { status: 400 })
   }
 
+  // Orders on a planned route are unloaded per trip, with the site's geofence check (see /api/driver/trip-disposal).
+  if (await prisma.routeStop.count({ where: { orderId } })) {
+    return NextResponse.json(
+      { error: 'This order is on a trip. Use "Confirm unload" at the disposal site for the whole trip.' },
+      { status: 409 }
+    )
+  }
+
   if (!(await evidenceFileExists(photoPath))) {
     return NextResponse.json({ error: 'Photo upload not found. Please retake the photo and try again.' }, { status: 400 })
   }

@@ -7,6 +7,7 @@ const links = [
   { href: '/ops', label: 'Dashboard' },
   { href: '/ops/assign', label: 'Assign Orders' },
   { href: '/ops/exceptions', label: 'Exceptions' },
+  { href: '/ops/disposal-review', label: 'Unloads to Check' },
   { href: '/ops/pricing', label: 'Pricing Rules' },
   { href: '/ops/payouts', label: 'Payout Rules' },
   { href: '/ops/mfa-recovery', label: '2FA Recovery' },
