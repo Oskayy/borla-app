@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150" role="img" aria-label="Tipper truck (placeholder illustration)">
+  <title>Tipper truck</title>
+  <ellipse cx="120" cy="136" rx="112" ry="6" fill="#1B2321" opacity="0.12"/>
+  <!-- tipper body, slightly raised at the back -->
+  <path d="M84 40 h140 l-8 66 h-132 z" fill="#0F3D3E"/>
+  <path d="M84 40 h140 l-1 9 h-139 z" fill="#165556"/>
+  <line x1="118" y1="49" x2="116" y2="106" stroke="#165556" stroke-width="3"/>
+  <line x1="152" y1="49" x2="150" y2="106" stroke="#165556" stroke-width="3"/>
+  <line x1="186" y1="49" x2="184" y2="106" stroke="#165556" stroke-width="3"/>
+  <!-- load -->
+  <path d="M92 40 q10 -24 28 -16 q14 -12 26 6 q12 -14 30 -4 q16 -10 28 8 q10 -2 12 6 z" fill="#3E4A47"/>
+  <path d="M150 40 q6 -14 18 -10 q10 2 10 10 z" fill="#E8A33D"/>
+  <!-- cab -->
+  <path d="M16 108 v-46 q0 -8 6 -12 l18 -12 q4 -2 8 -2 h26 q6 0 6 6 v66 z" fill="#E8A33D"/>
+  <path d="M30 60 l14 -10 h22 v22 h-36 z" fill="#CFE3E0"/>
+  <rect x="50" y="84" width="14" height="4" rx="2" fill="#1B2321" opacity="0.5"/>
+  <rect x="10" y="96" width="12" height="9" rx="2" fill="#F7D98B"/>
+  <!-- chassis -->
+  <rect x="12" y="106" width="214" height="9" rx="3" fill="#1B2321"/>
+  <!-- wheels: front plus double rear axle -->
+  <circle cx="48" cy="121" r="16" fill="#1B2321"/>
+  <circle cx="48" cy="121" r="7" fill="#D8D3C7"/>
+  <circle cx="160" cy="121" r="16" fill="#1B2321"/>
+  <circle cx="160" cy="121" r="7" fill="#D8D3C7"/>
+  <circle cx="198" cy="121" r="16" fill="#1B2321"/>
+  <circle cx="198" cy="121" r="7" fill="#D8D3C7"/>
+</svg>

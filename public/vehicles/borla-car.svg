@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150" role="img" aria-label="Borla car (placeholder illustration)">
+  <title>Borla car</title>
+  <ellipse cx="120" cy="134" rx="108" ry="6" fill="#1B2321" opacity="0.12"/>
+  <!-- open cargo bed -->
+  <path d="M96 52 h124 v54 h-124 z" fill="#0F3D3E"/>
+  <rect x="96" y="52" width="124" height="9" fill="#165556"/>
+  <line x1="127" y1="61" x2="127" y2="106" stroke="#165556" stroke-width="3"/>
+  <line x1="158" y1="61" x2="158" y2="106" stroke="#165556" stroke-width="3"/>
+  <line x1="189" y1="61" x2="189" y2="106" stroke="#165556" stroke-width="3"/>
+  <!-- load -->
+  <path d="M104 52 q8 -22 24 -16 q12 -10 22 8 q10 -14 24 -4 q14 -8 22 6 q8 -2 10 6 z" fill="#3E4A47"/>
+  <path d="M140 52 q6 -14 18 -10 q8 2 8 10 z" fill="#E8A33D"/>
+  <!-- cab -->
+  <path d="M28 106 v-34 q0 -6 5 -9 l22 -16 q4 -3 9 -3 h26 q6 0 6 6 v56 z" fill="#E8A33D"/>
+  <path d="M42 66 l16 -12 h24 v20 h-40 z" fill="#CFE3E0"/>
+  <rect x="62" y="84" width="14" height="4" rx="2" fill="#1B2321" opacity="0.5"/>
+  <rect x="22" y="96" width="12" height="8" rx="2" fill="#F7D98B"/>
+  <!-- chassis -->
+  <rect x="24" y="104" width="200" height="8" rx="3" fill="#1B2321"/>
+  <!-- wheels -->
+  <circle cx="60" cy="118" r="16" fill="#1B2321"/>
+  <circle cx="60" cy="118" r="7" fill="#D8D3C7"/>
+  <circle cx="180" cy="118" r="16" fill="#1B2321"/>
+  <circle cx="180" cy="118" r="7" fill="#D8D3C7"/>
+</svg>

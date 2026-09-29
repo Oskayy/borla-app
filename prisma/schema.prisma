@@ -68,7 +68,10 @@ model DriverProfile {
   id               String    @id @default(uuid())
   userId           String    @unique
   user             User      @relation(fields: [userId], references: [id])
-  vehicleType      String?   // "Borla car" | "Aboboyaa tricycle"
+  vehicleType      String?   // "Borla car" | "Aboboyaa tricycle" (display name; kept for older screens)
+  vehicleTypeId    String?
+  vehicleTypeRef   VehicleType? @relation(fields: [vehicleTypeId], references: [id])
+  radiusKm         Float?    // how far from their position this driver will take orders
   vehiclePlate     String?
   isActive         Boolean   @default(true)
   zoneId           String?
@@ -296,4 +299,20 @@ model AdminActionLog {
   createdAt DateTime @default(now())
 
   @@index([actorId, createdAt])
+}
+
+// Kinds of collection vehicle (aboboyaa, borla car, tipper truck). Capacity drives how many
+// orders fit on one trip; the radius limits how far from a driver orders are offered.
+model VehicleType {
+  id              String   @id @default(uuid())
+  code            String   @unique // "aboboyaa" | "borla-car" | "tipper-truck"
+  name            String   // shown to drivers and ops, e.g. "Aboboyaa tricycle"
+  capacityLitres  Int      // usable load space
+  defaultRadiusKm Float    // radius a new driver of this type starts with
+  maxRadiusKm     Float    // drivers can't set a radius above this
+  imagePath       String?  // picture under /public, e.g. /vehicles/aboboyaa.svg
+  sortOrder       Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  drivers         DriverProfile[]
 }

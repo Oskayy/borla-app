@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150" role="img" aria-label="Aboboyaa tricycle (placeholder illustration)">
+  <title>Aboboyaa tricycle</title>
+  <!-- ground shadow -->
+  <ellipse cx="125" cy="134" rx="105" ry="6" fill="#1B2321" opacity="0.12"/>
+  <!-- cargo box -->
+  <rect x="108" y="58" width="118" height="46" rx="3" fill="#0F3D3E"/>
+  <rect x="108" y="58" width="118" height="8" rx="2" fill="#165556"/>
+  <line x1="136" y1="66" x2="136" y2="104" stroke="#165556" stroke-width="3"/>
+  <line x1="166" y1="66" x2="166" y2="104" stroke="#165556" stroke-width="3"/>
+  <line x1="196" y1="66" x2="196" y2="104" stroke="#165556" stroke-width="3"/>
+  <!-- rubbish bags peeking over the top -->
+  <path d="M118 58 q6 -20 18 -16 q10 -8 16 6 z" fill="#3E4A47"/>
+  <path d="M150 58 q4 -24 20 -20 q14 -6 18 20 z" fill="#E8A33D"/>
+  <path d="M186 58 q6 -16 18 -12 q12 -2 14 12 z" fill="#3E4A47"/>
+  <!-- chassis joining box to bike -->
+  <rect x="84" y="98" width="40" height="7" rx="3" fill="#1B2321"/>
+  <!-- rider seat and tank -->
+  <path d="M62 78 h34 q6 0 6 6 v8 h-44 z" fill="#E8A33D"/>
+  <rect x="70" y="70" width="26" height="9" rx="4" fill="#1B2321"/>
+  <!-- engine block -->
+  <rect x="70" y="92" width="26" height="14" rx="3" fill="#3E4A47"/>
+  <!-- front fork and handlebars -->
+  <line x1="44" y1="116" x2="60" y2="66" stroke="#1B2321" stroke-width="6" stroke-linecap="round"/>
+  <line x1="52" y1="62" x2="70" y2="62" stroke="#1B2321" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="58" cy="74" r="5" fill="#F7D98B"/>
+  <!-- wheels -->
+  <g>
+    <circle cx="44" cy="116" r="16" fill="#1B2321"/>
+    <circle cx="44" cy="116" r="7" fill="#D8D3C7"/>
+  </g>
+  <g>
+    <circle cx="186" cy="116" r="16" fill="#1B2321"/>
+    <circle cx="186" cy="116" r="7" fill="#D8D3C7"/>
+  </g>
+</svg>
