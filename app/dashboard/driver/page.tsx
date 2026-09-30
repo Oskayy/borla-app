@@ -18,6 +18,8 @@ import { sweepExpiredOffers } from '@/lib/offers-server'
 import { offerDeadline } from '@/lib/offers'
 import { driverRouteVersion } from '@/lib/driver-updates'
 import { getAcceptMinutes } from '@/lib/settings'
+import Link from 'next/link'
+import { getWalletSummary } from '@/lib/wallet-server'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import { describeHours } from '@/lib/disposal-sites'
@@ -57,6 +59,10 @@ export default async function DriverDashboard() {
   if (!driverProfile || !driverProfile.vehicleTypeId || driverProfile.homeLat == null) {
     redirect('/dashboard/driver/profile-setup')
   }
+  // New drivers are checked before their first pickup.
+  if (driverProfile.approvalStatus !== 'APPROVED') {
+    redirect('/dashboard/driver/verification')
+  }
 
   // Online only counts during the shift (or with an ops override), so drivers drop offline when the shift ends.
   const settings = await getShiftSettings()
@@ -83,14 +89,7 @@ export default async function DriverDashboard() {
     orderBy: [{ routeStop: { route: { createdAt: 'asc' } } }, { routeStop: { sequence: 'asc' } }],
   })
 
-  const earningsEntries = await prisma.ledgerEntry.findMany({
-    where: {
-      type: { in: ['driver_payout_pickup', 'driver_payout_disposal'] },
-      order: { driverId: user.id },
-    },
-  })
-
-  const totalEarnings = earningsEntries.reduce((sum, entry) => sum + entry.amount, 0)
+  const wallet = await getWalletSummary(user.id)
 
   // Group the night's orders into trips: the stops, then where to unload.
   const groups: TripGroup[] = []
@@ -176,12 +175,17 @@ export default async function DriverDashboard() {
       <EnableAlerts />
       <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
 
-      <div className="panel" style={{ marginBottom: 24, background: 'var(--color-primary)', border: 'none', color: 'white' }}>
-        <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>Total earnings</p>
+      <Link
+        href="/dashboard/driver/earnings"
+        className="panel"
+        style={{ display: 'block', textDecoration: 'none', marginBottom: 24, background: 'var(--color-primary)', border: 'none', color: 'white' }}
+      >
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>Balance to withdraw</p>
         <p style={{ margin: 0, fontSize: 28, fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
-          GHS {totalEarnings.toFixed(2)}
+          GHS {wallet.available.toFixed(2)}
         </p>
-      </div>
+        <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>Earned GHS {wallet.earned.toFixed(2)} in total · tap to withdraw →</p>
+      </Link>
 
       <h2 style={{ fontSize: 16, marginBottom: 12, color: '#666' }}>
         Tonight&apos;s route{orders.length > 0 && ` · ${orders.length} stop(s) · ${groups.length} trip(s)`}

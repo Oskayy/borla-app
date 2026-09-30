@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyCustomersCompleted } from '@/lib/customer-updates'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
         },
       })
       await tx.ledgerEntry.create({
-        data: { orderId, type: 'driver_payout_disposal', amount: payoutAmount, idempotencyKey },
+        data: { orderId, type: 'driver_payout_disposal', amount: payoutAmount, idempotencyKey, driverId: user.id },
       })
       await tx.auditLog.create({
         data: {
@@ -99,5 +100,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not confirm disposal. Please try again.' }, { status: 500 })
   }
 
+  await notifyCustomersCompleted([orderId])
   return NextResponse.json({ success: true, payoutAmount })
 }

@@ -1,0 +1,61 @@
+import { createClient } from '@/utils/supabase/server'
+import { prisma } from '@/lib/prisma'
+import { redirect } from 'next/navigation'
+import { PAYOUT_ROLES, getWalletSummary } from '@/lib/wallet-server'
+import WithdrawalsClient, { type WithdrawalRow } from '@/components/WithdrawalsClient'
+
+export const dynamic = 'force-dynamic'
+
+export default async function WithdrawalsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+  if (!dbUser || !PAYOUT_ROLES.includes(dbUser.role)) redirect('/ops')
+
+  const [open, recent] = await Promise.all([
+    prisma.withdrawal.findMany({
+      where: { status: { in: ['REQUESTED', 'PROCESSING'] } },
+      orderBy: { requestedAt: 'asc' },
+      include: { driver: { select: { name: true, phone: true } } },
+    }),
+    prisma.withdrawal.findMany({
+      where: { status: { in: ['PAID', 'FAILED', 'REJECTED'] } },
+      orderBy: { requestedAt: 'desc' },
+      take: 30,
+      include: { driver: { select: { name: true, phone: true } } },
+    }),
+  ])
+
+  // Each waiting driver's balance, as a sense check before paying.
+  const balances = new Map<string, number>()
+  for (const w of open) {
+    if (!balances.has(w.driverId)) balances.set(w.driverId, (await getWalletSummary(w.driverId)).earned)
+  }
+
+  const toRow = (w: any): WithdrawalRow => ({
+    id: w.id,
+    driverName: w.driver?.name ?? 'Driver',
+    driverPhone: w.driver?.phone ?? '',
+    amount: w.amount,
+    status: w.status,
+    momo: `${w.momoProvider} ${w.momoNumber} (${w.momoName})`,
+    note: w.note,
+    method: w.method,
+    requestedAt: w.requestedAt.toISOString(),
+    paidAt: w.paidAt ? w.paidAt.toISOString() : null,
+    totalEarned: balances.get(w.driverId) ?? null,
+  })
+
+  return (
+    <div style={{ maxWidth: 820, margin: '0 auto' }}>
+      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Driver Withdrawals</h1>
+      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
+        Drivers ask for their earnings to be sent to their mobile money wallet. <strong>Send</strong> pays through Paystack
+        from your Paystack balance. If Paystack transfers aren&apos;t switched on for your account yet, pay from your MoMo
+        business wallet and use <strong>Mark paid</strong> with the transaction ID.
+      </p>
+      <WithdrawalsClient open={open.map(toRow)} recent={recent.map(toRow)} />
+    </div>
+  )
+}

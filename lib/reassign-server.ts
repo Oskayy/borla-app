@@ -6,6 +6,7 @@ import { pickReplacement, placeOnRoute, type RouteTripLoad } from '@/lib/reassig
 import { notifyUser, notifyOps } from '@/lib/notify'
 import { newStopsMessage } from '@/lib/offers'
 import { getAcceptMinutes } from '@/lib/settings'
+import { notifyCustomersAssigned } from '@/lib/customer-updates'
 
 const LOAD = new Set<string>(LOAD_STATUSES)
 
@@ -21,6 +22,18 @@ export interface AttachableOrder {
 // and has room, otherwise on a new trip ending at the best disposal site. Creates a route if they have none.
 // The driver then has to accept it. Throws Error('STATE_CHANGED') if the order was taken in the meantime.
 export async function attachOrderToDriver(
+  order: AttachableOrder,
+  driver: DispatchDriver,
+  sites: PlanSite[],
+  actorId: string | null,
+  describe: (tripNumber: number, newTrip: boolean) => string
+): Promise<number> {
+  const trip = await attachInner(order, driver, sites, actorId, describe)
+  await notifyCustomersAssigned([order.id])
+  return trip
+}
+
+async function attachInner(
   order: AttachableOrder,
   driver: DispatchDriver,
   sites: PlanSite[],

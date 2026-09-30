@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const profile = await prisma.driverProfile.findUnique({
     where: { userId: auth.user.id },
-    select: { isOnline: true, isActive: true, vehicleTypeId: true, homeLat: true, onlineOverrideUntil: true },
+    select: { isOnline: true, isActive: true, vehicleTypeId: true, homeLat: true, onlineOverrideUntil: true, approvalStatus: true },
   })
   if (!profile) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
 
@@ -38,6 +38,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, online: false })
   }
 
+  if (profile.approvalStatus !== 'APPROVED') {
+    return NextResponse.json({ error: 'Your account is waiting for approval. We’ll message you when you can start.' }, { status: 403 })
+  }
   if (!profile.isActive) {
     return NextResponse.json({ error: 'Your account is paused. Please contact Borla support.' }, { status: 403 })
   }

@@ -8,6 +8,8 @@ const links = [
   { href: '/ops/assign', label: 'Assign Orders' },
   { href: '/ops/exceptions', label: 'Exceptions' },
   { href: '/ops/disposal-review', label: 'Unloads to Check' },
+  { href: '/ops/withdrawals', label: 'Withdrawals' },
+  { href: '/ops/driver-approvals', label: 'Driver Approvals' },
   { href: '/ops/pricing', label: 'Pricing Rules' },
   { href: '/ops/payouts', label: 'Payout Rules' },
   { href: '/ops/mfa-recovery', label: '2FA Recovery' },
@@ -16,6 +18,7 @@ const links = [
   { href: '/ops/vehicles', label: 'Vehicles' },
     { href: '/ops/disposal-sites', label: 'Disposal Sites' },
   { href: '/ops/shift', label: 'Shift Hours' },
+  { href: '/ops/staff', label: 'Staff' },
 ]
 
 export default function OpsNav() {
@@ -29,6 +32,8 @@ export default function OpsNav() {
         display: 'flex',
         alignItems: 'center',
         gap: 24,
+        rowGap: 8,
+        flexWrap: 'wrap',
       }}
     >
       <span

@@ -3,7 +3,10 @@ import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { isUuid } from '@/lib/validate'
 import { getShiftSettings } from '@/lib/settings'
-import { classifyBooking } from '@/lib/shift'
+import { classifyBooking, describeCollection, formatClock, localParts } from '@/lib/shift'
+import { refundStatusFromPaystack } from '@/lib/refunds'
+import { markRefundProcessed } from '@/lib/refunds-server'
+import { notifyOps, notifyUser } from '@/lib/notify'
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -30,7 +33,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
   }
 
-  if (event?.event !== 'charge.success') {
+  const name = typeof event?.event === 'string' ? event.event : ''
+  try {
+    if (name.startsWith('transfer.')) {
+      await handleTransfer(name, event.data)
+      return NextResponse.json({ received: true })
+    }
+    if (name.startsWith('refund.')) {
+      await handleRefund(event.data)
+      return NextResponse.json({ received: true })
+    }
+  } catch (e) {
+    console.error(`[webhook] ${name} failed:`, e)
+    return NextResponse.json({ error: 'Processing failed' }, { status: 500 }) // Paystack will retry
+  }
+
+  if (name !== 'charge.success') {
     return NextResponse.json({ received: true })
   }
 
@@ -54,8 +72,11 @@ export async function POST(req: NextRequest) {
 
   // The shift is decided by when payment lands: before the planning snapshot -> tonight's planned batch,
   // snapshot to cutoff -> tonight as a late order, after the cutoff -> the next night.
-  const booking = classifyBooking(new Date(), await getShiftSettings())
+  const settings = await getShiftSettings()
+  const now = new Date()
+  const booking = classifyBooking(now, settings)
   const shiftDate = new Date(`${booking.shiftDate}T00:00:00.000Z`)
+  let paidCustomerId: string | null = null
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -101,6 +122,8 @@ export async function POST(req: NextRequest) {
         data: { status: 'PAID', shiftDate, isLateOrder: booking.isLate },
       })
 
+      if (moved.count === 1) paidCustomerId = order.customerId
+
       // Borla's platform fee, recorded once per order.
       const platformFee = quote?.platformFee
       if (moved.count === 1 && typeof platformFee === 'number' && platformFee > 0) {
@@ -128,5 +151,90 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 }) // Paystack will retry
   }
 
+  if (paidCustomerId) {
+    const described = describeCollection(booking.shiftDate, localParts(now, settings.timezone).date, settings)
+    const when = described.charAt(0).toLowerCase() + described.slice(1)
+    const start = formatClock(settings.shiftStartMinutes)
+    await notifyUser(paidCustomerId, {
+      title: 'Payment received',
+      body: `Thank you. Your pickup is booked for ${when}. Please put your bins out before the collection starts.`,
+      url: `/dashboard/customer/orders/${orderId}`,
+      sms: `Borla: payment of GHS ${amount.toFixed(2)} received. Your pickup is ${when}. Please put your bins out by ${start}.`,
+    })
+  }
+
   return NextResponse.json({ received: true })
+}
+
+// Driver withdrawals: Paystack tells us whether the money reached the wallet.
+async function handleTransfer(name: string, data: any) {
+  const reference = data?.reference
+  if (typeof reference !== 'string') return
+  const w = await prisma.withdrawal.findUnique({ where: { reference } })
+  if (!w || w.status === 'REJECTED' || w.status === 'FAILED') return
+  const amountLabel = `GHS ${w.amount.toFixed(2)}`
+  // A reversal can come after a success; anything else about a paid withdrawal is old news.
+  if (w.status === 'PAID' && (name !== 'transfer.reversed' || w.method === 'manual')) return
+
+  if (name === 'transfer.success') {
+    await prisma.withdrawal.update({
+      where: { id: w.id },
+      data: { status: 'PAID', paidAt: new Date(), transferCode: data?.transfer_code ?? w.transferCode, note: null },
+    })
+    await notifyUser(w.driverId, {
+      title: 'Earnings sent',
+      body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
+      url: '/dashboard/driver/earnings',
+      sms: `Borla: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}.`,
+    })
+  } else if (['transfer.failed', 'transfer.reversed', 'transfer.abandoned', 'transfer.rejected', 'transfer.blocked'].includes(name)) {
+    // Failed money goes back into the driver's balance (FAILED withdrawals don't count against it).
+    await prisma.withdrawal.update({
+      where: { id: w.id },
+      data: { status: 'FAILED', note: `Paystack: ${name === 'transfer.reversed' ? 'transfer reversed' : 'transfer failed'}${data?.reason ? ` (${String(data.reason).slice(0, 100)})` : ''}` },
+    })
+    await notifyUser(w.driverId, {
+      title: 'Withdrawal failed',
+      body: `We couldn't send ${amountLabel} to ${w.momoNumber}. The money is back in your Borla balance. Please check your wallet details and try again.`,
+      url: '/dashboard/driver/earnings',
+    })
+  }
+}
+
+// Customer refunds: Paystack reports progress until the money is back with the customer.
+async function handleRefund(data: any) {
+  const status = refundStatusFromPaystack(data?.status)
+  const paystackId = data?.id != null ? String(data.id) : null
+  let refund = paystackId ? await prisma.refund.findUnique({ where: { paystackRefundId: paystackId } }) : null
+  if (!refund && typeof data?.transaction_reference === 'string') {
+    // We don't know Paystack's id for it yet (e.g. the create call timed out). Match it only when that's unambiguous:
+    // one open refund without an id on this payment, preferring the same amount.
+    const payment = await prisma.payment.findUnique({ where: { providerRef: data.transaction_reference } })
+    if (payment) {
+      const open = await prisma.refund.findMany({
+        where: { paymentId: payment.id, paystackRefundId: null, status: { in: ['PENDING', 'PROCESSING', 'NEEDS_ATTENTION'] } },
+      })
+      const pesewas = Number(data?.amount)
+      const sameAmount = open.filter((r: { amount: number }) => Number.isFinite(pesewas) && Math.round(r.amount * 100) === pesewas)
+      refund = sameAmount.length === 1 ? sameAmount[0] : open.length === 1 ? open[0] : null
+      if (!refund && open.length > 1) {
+        // Answer with an error so Paystack sends it again later, by when our side has saved Paystack's refund id.
+        throw new Error(`refund event matches ${open.length} open refunds on ${data?.transaction_reference}`)
+      }
+    }
+  }
+  if (!refund || refund.status === 'PROCESSED' || refund.status === 'FAILED') return
+
+  if (status === 'PROCESSED') {
+    await markRefundProcessed(refund.id)
+  } else {
+    await prisma.refund.update({ where: { id: refund.id }, data: { status, paystackRefundId: refund.paystackRefundId ?? paystackId } })
+    if (status === 'FAILED' || status === 'NEEDS_ATTENTION') {
+      await notifyOps({
+        title: status === 'FAILED' ? 'Refund failed' : 'Refund needs attention',
+        body: `A refund of GHS ${refund.amount.toFixed(2)} ${status === 'FAILED' ? 'failed' : 'needs action in the Paystack dashboard'}. See the Exceptions page.`,
+        url: '/ops/exceptions',
+      })
+    }
+  }
 }

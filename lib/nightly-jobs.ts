@@ -174,7 +174,22 @@ async function shiftStartNotice(shiftDate: string, auto: boolean): Promise<strin
       url: '/ops/assign',
     })
   }
-  return `${waiting} waiting, ${unaccepted.length} driver(s) reminded`
+  // Every customer with a pickup tonight gets a reminder to put their bins out (SMS as well).
+  const tonight = await prisma.order.findMany({
+    where: { status: { in: ['PAID', 'ASSIGNED'] }, shiftDate: dbDate(shiftDate) },
+    select: { customerId: true },
+  })
+  const customers = Array.from(new Set(tonight.map((o: { customerId: string }) => o.customerId)))
+  for (const c of customers) {
+    await notifyUser(c as string, {
+      title: 'Your pickup is tonight',
+      body: 'Borla is collecting tonight. Please put your bins out now, where the driver can reach them.',
+      url: '/dashboard/customer/orders',
+      sms: 'Borla: your pickup is tonight. Please put your bins out now where the driver can reach them. Thank you!',
+    })
+  }
+
+  return `${waiting} waiting, ${unaccepted.length} driver(s) reminded, ${customers.length} customer(s) reminded`
 }
 
 // Assigns waiting orders to online drivers, using the same rules as the suggested plan.
@@ -241,6 +256,7 @@ async function rollOver(endedShiftDate: string): Promise<number> {
             shiftDate: dbDate(next),
             isLateOrder: false,
             rolloverCount: { increment: 1 },
+            assignedNoticeAt: null,
           },
         })
         // Only remove route stops of orders that were actually moved (not ones collected a moment ago).
@@ -266,6 +282,7 @@ async function rollOver(endedShiftDate: string): Promise<number> {
         title: 'Your pickup has moved to tonight',
         body: `Sorry, we couldn't collect on ${nightName(endedShiftDate)} night. Your pickup is now booked for ${nightName(next)} night. Please leave your bins out again. There's nothing extra to pay.`,
         url: '/dashboard/customer/orders',
+        sms: `Borla: sorry, we couldn't collect last night. Your pickup is now booked for ${nightName(next)} night at no extra cost. Please put your bins out again.`,
       })
     }
     if (batch.length < 200) break

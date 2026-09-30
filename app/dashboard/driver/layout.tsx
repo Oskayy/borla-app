@@ -15,7 +15,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           Borla
         </span>
         <Link href="/dashboard/driver" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>Dashboard</Link>
-                <Link href="/dashboard/driver/profile-setup" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>My Vehicle &amp; Area</Link>
+        <Link href="/dashboard/driver/earnings" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>Earnings</Link>
+        <Link href="/dashboard/driver/profile-setup" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>My Vehicle &amp; Area</Link>
       </nav>
       {children}
     </div>

@@ -15,8 +15,13 @@ export default async function DashboardPage() {
     where: { id: user.id },
   })
 
-  if (!dbUser) {
+  if (!dbUser || !dbUser.active) {
     redirect('/login')
+  }
+
+  // Staff created with a temporary password choose their own first.
+  if (dbUser.mustChangePassword) {
+    redirect('/reset-password?first=1')
   }
 
   if (dbUser.role === 'CUSTOMER') {
@@ -26,8 +31,11 @@ export default async function DashboardPage() {
     if (dbUser.role === 'DRIVER') {
     const driverProfile = await prisma.driverProfile.findUnique({ where: { userId: dbUser.id } })
 
-        if (!driverProfile || !driverProfile.vehicleTypeId || driverProfile.homeLat == null) {
+    if (!driverProfile || !driverProfile.vehicleTypeId || driverProfile.homeLat == null) {
       redirect('/dashboard/driver/profile-setup')
+    }
+    if (driverProfile.approvalStatus !== 'APPROVED') {
+      redirect('/dashboard/driver/verification')
     }
 
     redirect('/dashboard/driver')

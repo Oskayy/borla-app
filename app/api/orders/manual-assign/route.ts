@@ -7,6 +7,7 @@ import { checkAssignment } from '@/lib/dispatch-server'
 import { notifyUser } from '@/lib/notify'
 import { newStopsMessage } from '@/lib/offers'
 import { getAcceptMinutes } from '@/lib/settings'
+import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   const ids: string[] = Array.from(new Set(orderIds))
 
   const driver = await prisma.user.findFirst({
-    where: { id: driverId, role: 'DRIVER', driverProfile: { isActive: true } },
+    where: { id: driverId, role: 'DRIVER', active: true, driverProfile: { isActive: true, approvalStatus: 'APPROVED' } },
   })
   if (!driver) return NextResponse.json({ error: 'Driver not found or inactive' }, { status: 400 })
 
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
       { timeout: 15000 }
     )
     await notifyUser(driverId, newStopsMessage(ids.length, await getAcceptMinutes()))
+    await notifyCustomersAssigned(ids)
     return NextResponse.json({ success: true, routeId, stopCount: ids.length })
   } catch (e: any) {
     if (e?.message === 'STATE_CHANGED') {

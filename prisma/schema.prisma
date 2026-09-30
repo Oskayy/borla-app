@@ -53,6 +53,10 @@ model User {
   orderDeclines    OrderDecline[]
   notifications    Notification[]
   pushSubscriptions PushSubscription[]
+  withdrawals      Withdrawal[]
+  driverDocuments  DriverDocument[]
+  active             Boolean @default(true)  // false = suspended: cannot sign in or use the app
+  mustChangePassword Boolean @default(false) // staff created with a temporary password
 }
 
 model CustomerProfile {
@@ -89,6 +93,16 @@ model DriverProfile {
   isOnline         Boolean   @default(false) // driver pressed "Go online"
   wentOnlineAt     DateTime?
   onlineOverrideUntil DateTime? // ops let this driver work outside shift hours until this time
+  approvalStatus   String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  approvalNote     String?   // why a driver was rejected, shown to them
+  submittedAt      DateTime? // documents sent for review
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  momoNumber       String?   // where earnings are paid (mobile money)
+  momoProvider     String?   // Paystack telco code: MTN | VOD | ATL
+  momoName         String?   // name on the MoMo wallet
+  paystackRecipientCode String? // Paystack transfer recipient for the number above
+  recipientFor     String?   // "<provider>:<number>" the recipient code was made for
 }
 
 model Zone {
@@ -206,6 +220,9 @@ model Order {
   shiftDate   DateTime?   @db.Date // the night this order is collected (shift starts 20:00 on this date)
   isLateOrder Boolean     @default(false)
   rolloverCount Int       @default(0) // nights this order was moved on because it wasn't collected
+  assignedNoticeAt DateTime? // customer was told a driver is assigned (cleared on rollover)
+  cancelledAt   DateTime?
+  cancelReason  String?
   latitude    Float?
   longitude   Float?
   driverAcceptedAt DateTime? // the assigned driver accepted this stop (cleared on reassignment)
@@ -223,6 +240,7 @@ model Order {
   ledgerEntries  LedgerEntry[]
   payments       Payment[]
   declines       OrderDecline[]
+  refunds        Refund[]
 
   @@index([shiftDate, status])
   @@index([status, driverAcceptedAt, offeredAt])
@@ -274,17 +292,22 @@ model Payment {
   amount        Float
   status        String   // "success" | "failed" | "refunded"
   providerRef   String   @unique
+  refundedAmount Float   @default(0) // money sent back to the customer from this payment
   createdAt     DateTime @default(now())
+  refunds       Refund[]
 }
 
 model LedgerEntry {
   id          String   @id @default(uuid())
   orderId     String
   order       Order    @relation(fields: [orderId], references: [id])
-  type        String   // "customer_payment" | "driver_payout_pickup" | "driver_payout_disposal" | "refund"
+  type        String   // "customer_payment" | "platform_fee" | "driver_payout_pickup" | "driver_payout_disposal" | "refund"
   amount      Float
+  driverId    String?  // for driver payouts: the driver who earned it
   idempotencyKey String @unique
   createdAt   DateTime @default(now())
+
+  @@index([driverId])
 }
 
 model Dispute {
@@ -410,4 +433,58 @@ model JobRun {
   key     String   @id // e.g. "rollover:2026-09-29"
   ranAt   DateTime @default(now())
   summary String?
+}
+
+// A driver asks for their earnings to be sent to their mobile money wallet.
+model Withdrawal {
+  id            String    @id @default(uuid())
+  driverId      String
+  driver        User      @relation(fields: [driverId], references: [id])
+  amount        Float
+  status        String    @default("REQUESTED") // REQUESTED | PROCESSING | PAID | FAILED | REJECTED
+  momoNumber    String
+  momoProvider  String
+  momoName      String
+  reference     String    @unique // our transfer reference (also sent to Paystack)
+  transferCode  String?   // Paystack's transfer code
+  method        String?   // "paystack" | "manual"
+  note          String?   // reason for rejection/failure, or the manual payment reference
+  reviewedBy    String?
+  requestedAt   DateTime  @default(now())
+  reviewedAt    DateTime?
+  paidAt        DateTime?
+
+  @@index([driverId, status])
+  @@index([status])
+}
+
+// Money sent back to a customer for a payment (full or part).
+model Refund {
+  id              String    @id @default(uuid())
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id])
+  paymentId       String
+  payment         Payment   @relation(fields: [paymentId], references: [id])
+  amount          Float
+  reason          String
+  status          String    @default("PENDING") // PENDING | PROCESSING | PROCESSED | FAILED | NEEDS_ATTENTION
+  paystackRefundId String?  @unique
+  requestedBy     String    // user id (customer or staff)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// Identity and vehicle documents a driver uploads for approval (private storage bucket).
+model DriverDocument {
+  id        String   @id @default(uuid())
+  driverId  String
+  driver    User     @relation(fields: [driverId], references: [id])
+  type      String   // ghana_card | profile_photo | vehicle_photo | drivers_licence
+  path      String   // path in the private driver-documents bucket
+  createdAt DateTime @default(now())
+
+  @@index([driverId, type])
 }

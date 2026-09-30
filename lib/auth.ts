@@ -36,6 +36,7 @@ export async function requireAuth(allowedRoles?: string[]): Promise<AuthResult> 
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
   if (!dbUser) return deny(401, 'Account not found')
+  if (!dbUser.active) return deny(403, 'This account is suspended. Please contact Borla.')
 
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
 

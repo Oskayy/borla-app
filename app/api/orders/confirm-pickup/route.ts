@@ -6,6 +6,7 @@ import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
 import { driverPoolFromSnapshot } from '@/lib/pricing-core'
 import { distanceInMeters, GEOFENCE_THRESHOLD_METERS } from '@/lib/geo'
+import { notifyCustomerCollected } from '@/lib/customer-updates'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
         },
       })
       await tx.ledgerEntry.create({
-        data: { orderId, type: 'driver_payout_pickup', amount: payoutAmount, idempotencyKey },
+        data: { orderId, type: 'driver_payout_pickup', amount: payoutAmount, idempotencyKey, driverId: user.id },
       })
       await tx.auditLog.create({
         data: { orderId, actorId: user.id, fromState: 'ASSIGNED', toState: 'PICKED_UP', reason: auditReason },
@@ -100,5 +101,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not confirm pickup. Please try again.' }, { status: 500 })
   }
 
+  await notifyCustomerCollected(orderId)
   return NextResponse.json({ success: true, payoutAmount, flagged, distanceMeters })
 }

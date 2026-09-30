@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { validatePasswordStrength, isPasswordBreached } from '@/lib/password'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { readJson } from '@/lib/validate'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -41,6 +42,9 @@ export async function POST(req: NextRequest) {
 
   // Sign out every other device that might be using the old password.
   await supabase.auth.signOut({ scope: 'others' })
+
+  // Staff who were given a temporary password have now chosen their own.
+  await prisma.user.updateMany({ where: { id: user.id, mustChangePassword: true }, data: { mustChangePassword: false } })
 
   return NextResponse.json({ success: true })
 }

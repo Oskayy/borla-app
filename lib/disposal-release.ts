@@ -36,7 +36,7 @@ export async function releaseDisposal(
     const amount = Math.round(pool * args.disposalPercent) / 100
     total += amount
     await tx.ledgerEntry.create({
-      data: { orderId: o.id, type: 'driver_payout_disposal', amount, idempotencyKey: `disposal-${o.id}` },
+      data: { orderId: o.id, type: 'driver_payout_disposal', amount, idempotencyKey: `disposal-${o.id}`, driverId: args.driverId },
     })
     if (args.facilityId) {
       await tx.facilityVerification.create({ data: { orderId: o.id, facilityId: args.facilityId, method: args.method } })

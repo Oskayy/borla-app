@@ -16,7 +16,8 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
   const shiftRunning = isWithinShift(now, settings)
 
   const users = await prisma.user.findMany({
-    where: { role: 'DRIVER', ...(onlyDriverId ? { id: onlyDriverId } : {}), driverProfile: { isNot: null } },
+    // Only approved drivers with an active account can be given work.
+    where: { role: 'DRIVER', active: true, ...(onlyDriverId ? { id: onlyDriverId } : {}), driverProfile: { is: { approvalStatus: 'APPROVED' } } },
     orderBy: { name: 'asc' },
     select: {
       id: true,

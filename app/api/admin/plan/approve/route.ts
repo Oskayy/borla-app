@@ -10,6 +10,7 @@ import { buildDriverPlan, orderWasteKind, type PlanOrder } from '@/lib/planner'
 import { notifyUser } from '@/lib/notify'
 import { newStopsMessage } from '@/lib/offers'
 import { getAcceptMinutes } from '@/lib/settings'
+import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
 
@@ -143,6 +144,7 @@ export async function POST(req: NextRequest) {
         { timeout: 20000 }
       )
       results.push({ driverId, ok: true, message: 'Approved', stops: built.orderIds.length, trips: built.trips.length })
+      await notifyCustomersAssigned(built.orderIds)
     } catch (e: any) {
       if (e?.message === 'STATE_CHANGED') {
         results.push({ driverId, ok: false, message: 'Some orders were already assigned or changed. Refresh the plan.' })

@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
+import { notifyCustomersCompleted } from '@/lib/customer-updates'
 import { DISPOSAL_REVIEW_ROLES, releaseDisposal } from '@/lib/disposal-release'
 
 // Ops decide on unloads that couldn't be checked automatically (photo outside the site's geofence, or no GPS).
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
         { timeout: 20000 }
       )
       await logAdminAction(auth.user.id, 'DISPOSAL_APPROVED', driverId, `${orders.length} order(s), GHS ${paid} released${note ? `: ${note}` : ''}`)
+      await notifyCustomersCompleted(ids)
       return NextResponse.json({ success: true, paid })
     }
 

@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
+import { notifyOps, notifyUser } from '@/lib/notify'
 
 const ISSUE_TYPES = ['LOCKED_GATE', 'SPILL_HAZARD']
 
@@ -88,6 +89,21 @@ export async function POST(req: NextRequest) {
     console.error('[report-issue] failed:', e)
     return NextResponse.json({ error: 'Could not submit the report. Please try again.' }, { status: 500 })
   }
+
+  const address = (order.quoteSnapshot as { address?: string } | null)?.address ?? 'An order'
+  if (issueType === 'LOCKED_GATE') {
+    await notifyUser(order.customerId, {
+      title: 'We couldn’t reach your bins',
+      body: 'Our driver found the gate locked or the bins out of reach. Borla will contact you about another try.',
+      url: `/dashboard/customer/orders/${orderId}`,
+      sms: 'Borla: our driver couldn’t reach your bins tonight (gate locked or bins not out). We’ll contact you about another try.',
+    })
+  }
+  await notifyOps({
+    title: issueType === 'LOCKED_GATE' ? 'Pickup failed: gate locked' : 'Pickup problem: spill or hazard',
+    body: `${address}${note ? `: ${note}` : ''}. See the Exceptions page.`,
+    url: '/ops/exceptions',
+  })
 
   return NextResponse.json({ success: true, status: newStatus })
 }

@@ -48,7 +48,9 @@ export default function ResetPasswordPage() {
     }
 
     setDone(true)
-    setTimeout(() => router.push('/login'), 2000)
+    // First sign-in with a temporary password: carry on into the app (2FA setup comes next for staff).
+    const first = new URLSearchParams(window.location.search).get('first') === '1'
+    setTimeout(() => router.push(first ? '/dashboard' : '/login'), 2000)
   }
 
   return (

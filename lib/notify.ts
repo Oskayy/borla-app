@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { sendSms } from '@/lib/sms'
 
 // Sends a message to a user: always saved for the in-app banner, and pushed to their phone
 // if they turned alerts on. Never throws: a failed alert must not undo the work that triggered it.
@@ -7,6 +8,7 @@ export interface Message {
   title: string
   body: string
   url?: string
+  sms?: string // also send this text by SMS (keep it short; only for key messages)
 }
 
 let webpush: any = null
@@ -37,6 +39,14 @@ async function getPush(): Promise<any> {
 }
 
 export async function notifyUser(userId: string, msg: Message): Promise<void> {
+  if (msg.sms) {
+    try {
+      const u = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } })
+      await sendSms(u?.phone, msg.sms)
+    } catch (e) {
+      console.error('[notify] sms failed', e)
+    }
+  }
   try {
     await prisma.notification.create({
       data: { userId, title: msg.title.slice(0, 120), body: msg.body.slice(0, 500), url: msg.url ?? null },
