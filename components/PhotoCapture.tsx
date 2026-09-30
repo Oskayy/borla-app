@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { compressImage } from "@/lib/compress-image";
 
 interface PhotoCaptureProps {
   onCapture: (file: File, gpsLat: number | null, gpsLng: number | null) => void;
@@ -12,12 +13,15 @@ export default function PhotoCapture({ onCapture, label = "Take Photo" }: PhotoC
   const [gettingLocation, setGettingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const original = e.target.files?.[0];
+    if (!original) return;
+    // Reset so selecting the same file again still fires onChange
+    e.target.value = "";
 
     setError(null);
     setGettingLocation(true);
+    const file = await compressImage(original);
 
     if (!navigator.geolocation) {
       setGettingLocation(false);
@@ -38,9 +42,6 @@ export default function PhotoCapture({ onCapture, label = "Take Photo" }: PhotoC
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-
-    // Reset so selecting the same file again still fires onChange
-    e.target.value = "";
   }
 
   return (
@@ -66,4 +67,4 @@ export default function PhotoCapture({ onCapture, label = "Take Photo" }: PhotoC
       )}
     </div>
   );
-}
+}

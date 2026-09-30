@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { validatePasswordStrength, isPasswordBreached } from '@/lib/password'
 import { isRateLimited, recordAttempt, getClientIp } from '@/lib/rate-limit'
 import { cleanText, readJson } from '@/lib/validate'
+import { siteUrl } from '@/lib/site-url'
 
 // Only these two roles can ever be created from the public signup form.
 const SELF_SERVICE_ROLES = ['CUSTOMER', 'DRIVER']
@@ -53,11 +54,24 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await createClient()
-  const { data, error: authError } = await supabase.auth.signUp({ email, password })
+  // With "Confirm email" on in Supabase, this sends a confirmation email whose link comes back to /auth/confirm.
+  const { data, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: `${siteUrl(req)}/auth/confirm?next=${encodeURIComponent('/dashboard')}` },
+  })
 
   if (authError || !data.user) {
     await recordAttempt(ip, 'signup', false)
     return NextResponse.json({ error: authError?.message || 'Signup failed' }, { status: 400 })
+  }
+
+  // With email confirmation on, Supabase answers a sign-up for an email that already has an account with a
+  // placeholder user (no identities) and sends no email. Answer exactly as for a new sign-up, so this form
+  // can't be used to find out who has an account.
+  if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    await recordAttempt(ip, 'signup', false)
+    return NextResponse.json({ success: true, confirmEmail: true })
   }
 
   try {
@@ -87,5 +101,6 @@ export async function POST(req: NextRequest) {
   }
 
   await recordAttempt(ip, 'signup', true)
-  return NextResponse.json({ success: true })
-}
+  // No session yet means Supabase is waiting for the email to be confirmed.
+  return NextResponse.json({ success: true, confirmEmail: !data.session })
+}

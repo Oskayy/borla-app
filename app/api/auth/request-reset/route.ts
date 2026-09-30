@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { isRateLimited, recordAttempt, getClientIp } from '@/lib/rate-limit'
+import { siteUrl } from '@/lib/site-url'
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json()
@@ -25,12 +26,10 @@ export async function POST(req: NextRequest) {
     await recordAttempt(ip, 'password_reset', true)
 
     const supabase = await createClient()
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-
     await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/auth/confirm?next=/reset-password`,
+      redirectTo: `${siteUrl(req)}/auth/confirm?next=/reset-password`,
     })
   }
 
   return NextResponse.json({ success: true })
-}
+}

@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 const OPEN_PATHS = [
   '/', '/login', '/signup', '/forgot-password', '/reset-password',
   '/privacy-policy', '/terms', '/cookie-policy', '/refund-policy',
+  '/manifest.webmanifest', '/sw.js',
 ]
 const OPEN_PREFIXES = ['/api/auth/', '/auth/', '/api/payments/webhook']
 
@@ -74,4 +75,4 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
-}
+}

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import NoticeList from '@/components/NoticeList'
 import EnableAlerts from '@/components/EnableAlerts'
+import InstallPrompt from '@/components/InstallPrompt'
 
 const statusColors: Record<string, string> = {
   DRAFT: '#999',
@@ -40,6 +41,7 @@ export default async function CustomerDashboard() {
     <div style={{ maxWidth: 500, margin: '40px auto', padding: '0 20px' }}>
       <h1 style={{ fontSize: 26, marginBottom: 20 }}>Welcome, {dbUser?.name}</h1>
       <NoticeList notices={notices} />
+      <InstallPrompt />
       {lastOrder && (
         <EnableAlerts compact message="Turn on alerts to hear if your pickup night changes." />
       )}
@@ -70,4 +72,4 @@ export default async function CustomerDashboard() {
       )}
     </div>
   )
-}
+}

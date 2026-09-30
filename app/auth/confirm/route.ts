@@ -12,13 +12,21 @@ export async function GET(req: NextRequest) {
       ? rawNext
       : '/'
 
+  const isReset = next.startsWith('/reset-password')
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    // Email confirmation: Supabase has already confirmed the address before sending the person here.
+    // The sign-in part can fail if the link was opened on another phone or browser, which is fine:
+    // they just log in.
+    if (!isReset) {
+      return NextResponse.redirect(`${origin}/login?confirmed=1`)
+    }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=reset-link-invalid`)
-}
+  return NextResponse.redirect(`${origin}/login?error=${isReset ? 'reset-link-invalid' : 'confirm-link-invalid'}`)
+}

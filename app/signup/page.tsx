@@ -22,6 +22,7 @@ export default function SignupPage() {
   const [role, setRole] = useState('CUSTOMER')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkEmail, setCheckEmail] = useState(false)
 
   const router = useRouter()
   const strengthChecks = checkStrength(password)
@@ -50,7 +51,27 @@ export default function SignupPage() {
       return
     }
 
+    if (data.confirmEmail) {
+      setCheckEmail(true)
+      return
+    }
     router.push('/login')
+  }
+
+  if (checkEmail) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
+          <h1 style={{ fontSize: 24, marginBottom: 8 }}>Check your email</h1>
+          <p style={{ fontSize: 14, color: '#444', marginBottom: 12 }}>
+            We sent a link to <strong>{email}</strong>. Tap it to confirm your address, then you can start using Borla.
+          </p>
+          <p style={{ fontSize: 13, color: '#666' }}>
+            Nothing after a few minutes? Check your spam folder, or go to the login page and ask for the email again.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -113,4 +134,4 @@ export default function SignupPage() {
       </div>
     </div>
   )
-}
+}

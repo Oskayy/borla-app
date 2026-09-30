@@ -36,6 +36,14 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient()
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
+    if (authError?.code === 'email_not_confirmed') {
+        // Right password, but the email address hasn't been confirmed yet.
+        return NextResponse.json(
+          { error: 'Please confirm your email address first. Check your inbox (and spam) for the link from Borla.', notConfirmed: true },
+          { status: 403 }
+        )
+    }
+
     if (authError) {
         await recordAttempt(email.toLowerCase(), 'login', false)
         await recordAttempt(ip, 'login', false)
@@ -62,4 +70,4 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, mfaRequired: false })
-}
+}

@@ -13,6 +13,7 @@ import { nextPoint } from '@/lib/driver-next'
 import { pickupLocationSource } from '@/lib/navigation'
 import DriverLiveUpdates from '@/components/DriverLiveUpdates'
 import EnableAlerts from '@/components/EnableAlerts'
+import InstallPrompt from '@/components/InstallPrompt'
 import { sweepExpiredOffers } from '@/lib/offers-server'
 import { offerDeadline } from '@/lib/offers'
 import { driverRouteVersion } from '@/lib/driver-updates'
@@ -171,6 +172,7 @@ export default async function DriverDashboard() {
       />
 
       <DriverLiveUpdates initialVersion={routeVersion} />
+      <InstallPrompt />
       <EnableAlerts />
       <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
 
