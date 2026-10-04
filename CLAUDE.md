@@ -71,9 +71,15 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 ## Open work (as of Oct 2026)
 
-**Setup still to confirm on this machine:** `npx prisma migrate deploy` (latest migration `20261001090000_launch_gaps`),
-`npx prisma generate`, `npm run build`; the `driver-documents` bucket exists in Supabase; Paystack transfers enabled;
-Arkesel env set; latest work committed and pushed. Email confirmation is deliberately **off** while testing with made-up emails.
+**Setup (checked 4 Oct 2026):** database migrations up to date (latest `20261001090000_launch_gaps`), build and lint
+pass, `driver-documents` bucket exists and is private, work committed and pushed. Still open:
+- Paystack: turn off "Confirm transfers before sending" (OTP) in Preferences → Transfers, in Test and later Live mode,
+  or withdrawals get stuck waiting for an OTP.
+- **Parked: Arkesel SMS.** `ARKESEL_API_KEY` and `SMS_SENDER_ID` are not set yet, on purpose. The app runs without them:
+  SMS is skipped (one `[sms] SMS is off` warning in the server log) and in-app + push alerts still go out.
+  Needed before launch, and before security fix F1 (which texts the old MoMo number).
+
+Email confirmation is deliberately **off** while testing with made-up emails.
 
 **Security fixes, in priority order** (full plan: Security and Compliance Test Plan):
 1. F1 (High): changing the driver MoMo payout number takes effect at once. Add an SMS to the old number,
