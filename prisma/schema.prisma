@@ -103,6 +103,7 @@ model DriverProfile {
   momoName         String?   // name on the MoMo wallet
   paystackRecipientCode String? // Paystack transfer recipient for the number above
   recipientFor     String?   // "<provider>:<number>" the recipient code was made for
+  momoChangedAt    DateTime? // when the wallet above last replaced an earlier one; withdrawals wait 24 h after
 }
 
 model Zone {
@@ -269,9 +270,12 @@ model OrderEvidence {
   gpsLat       Float?
   gpsLng       Float?
   gpsAccuracy  Float?
+  photoHash    String?  // SHA-256 of the photo file, to spot the same photo used for two orders
   capturedAt   DateTime
   aiAssessment Json?
   createdAt    DateTime @default(now())
+
+  @@index([photoHash])
 }
 
 model FacilityVerification {
@@ -441,7 +445,7 @@ model Withdrawal {
   driverId      String
   driver        User      @relation(fields: [driverId], references: [id])
   amount        Float
-  status        String    @default("REQUESTED") // REQUESTED | PROCESSING | PAID | FAILED | REJECTED
+  status        String    @default("REQUESTED") // REQUESTED | PROCESSING | CONFIRMING | PAID | FAILED | REJECTED
   momoNumber    String
   momoProvider  String
   momoName      String
@@ -449,6 +453,8 @@ model Withdrawal {
   transferCode  String?   // Paystack's transfer code
   method        String?   // "paystack" | "manual"
   note          String?   // reason for rejection/failure, or the manual payment reference
+  markedPaidBy  String?   // manual payments: who recorded it (status CONFIRMING); a different person confirms it
+  markedPaidAt  DateTime?
   reviewedBy    String?
   requestedAt   DateTime  @default(now())
   reviewedAt    DateTime?
@@ -467,9 +473,12 @@ model Refund {
   payment         Payment   @relation(fields: [paymentId], references: [id])
   amount          Float
   reason          String
-  status          String    @default("PENDING") // PENDING | PROCESSING | PROCESSED | FAILED | NEEDS_ATTENTION
+  status          String    @default("PENDING") // AWAITING_APPROVAL | PENDING | PROCESSING | PROCESSED | FAILED | NEEDS_ATTENTION
   paystackRefundId String?  @unique
   requestedBy     String    // user id (customer or staff)
+  cancelOrder     Boolean   @default(false) // also cancel the order once the refund is sent
+  approvedBy      String?   // large staff refunds: the second person who approved it
+  approvedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

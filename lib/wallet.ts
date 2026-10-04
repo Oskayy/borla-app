@@ -4,8 +4,23 @@
 export const MIN_WITHDRAWAL_GHS = 10 // placeholder: smallest amount a driver can withdraw
 export const MAX_WITHDRAWAL_GHS = 5000 // placeholder: largest single withdrawal
 
-// Withdrawals that use up balance: waiting, being sent, or sent.
-export const HOLDING_STATUSES = ['REQUESTED', 'PROCESSING', 'PAID']
+// Withdrawals still on their way: waiting, being sent, or paid by hand and waiting for a second person
+// to confirm it (CONFIRMING). While one is open the driver can't ask for another or change their wallet.
+export const OPEN_WITHDRAWAL_STATUSES = ['REQUESTED', 'PROCESSING', 'CONFIRMING']
+
+// Withdrawals that use up balance: open ones, and sent ones.
+export const HOLDING_STATUSES = [...OPEN_WITHDRAWAL_STATUSES, 'PAID']
+
+// After a driver replaces their MoMo wallet, withdrawals wait this long, so a stolen phone or password
+// can't be used to redirect earnings straight away (the driver is alerted and can contact Trashit).
+export const PAYOUT_CHANGE_HOLD_HOURS = 24
+
+// When the hold after a wallet change ends, or null if there is no hold now.
+export function payoutHoldEndsAt(changedAt: Date | null | undefined, now: Date): Date | null {
+  if (!changedAt) return null
+  const ends = new Date(changedAt.getTime() + PAYOUT_CHANGE_HOLD_HOURS * 3600_000)
+  return ends.getTime() > now.getTime() ? ends : null
+}
 
 export function toPesewas(ghs: number): number {
   return Math.round(ghs * 100)
@@ -25,7 +40,7 @@ export function summarizeWallet(
   const earned = earnings.reduce((s, a) => s + toPesewas(a), 0)
   const paid = withdrawals.filter((w) => w.status === 'PAID').reduce((s, w) => s + toPesewas(w.amount), 0)
   const pending = withdrawals
-    .filter((w) => w.status === 'REQUESTED' || w.status === 'PROCESSING')
+    .filter((w) => OPEN_WITHDRAWAL_STATUSES.includes(w.status))
     .reduce((s, w) => s + toPesewas(w.amount), 0)
   return {
     earned: earned / 100,

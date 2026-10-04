@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { createAdminClient } from '@/lib/supabase-admin'
 
 export const EVIDENCE_BUCKET = 'pickup-evidence'
@@ -12,6 +13,13 @@ export function isValidEvidencePath(path: unknown, orderId: string): path is str
     !path.includes('..') &&
     /^[A-Za-z0-9/_\-.]+$/.test(path)
   )
+}
+
+/// SHA-256 of an uploaded photo, used to spot the same file sent as proof for two orders. Null if unreadable.
+export async function evidenceFileHash(path: string): Promise<string | null> {
+  const { data, error } = await createAdminClient().storage.from(EVIDENCE_BUCKET).download(path)
+  if (error || !data) return null
+  return createHash('sha256').update(Buffer.from(await data.arrayBuffer())).digest('hex')
 }
 
 // Checks the file was actually uploaded to storage.

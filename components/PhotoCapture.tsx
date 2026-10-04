@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { compressImage } from "@/lib/compress-image";
 
 interface PhotoCaptureProps {
-  onCapture: (file: File, gpsLat: number | null, gpsLng: number | null) => void;
+  onCapture: (file: File, gpsLat: number | null, gpsLng: number | null, gpsAccuracyM?: number | null) => void;
   label?: string;
 }
 
@@ -33,7 +33,7 @@ export default function PhotoCapture({ onCapture, label = "Take Photo" }: PhotoC
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setGettingLocation(false);
-        onCapture(file, position.coords.latitude, position.coords.longitude);
+        onCapture(file, position.coords.latitude, position.coords.longitude, position.coords.accuracy);
       },
       (err) => {
         setGettingLocation(false);

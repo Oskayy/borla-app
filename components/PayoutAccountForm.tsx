@@ -13,6 +13,11 @@ export default function PayoutAccountForm({
   locked: boolean // a withdrawal is in progress
 }) {
   const [values, setValues] = useState(initial)
+  const [password, setPassword] = useState('')
+  const changed =
+    values.momoNumber !== initial.momoNumber || values.momoProvider !== initial.momoProvider || values.momoName !== initial.momoName
+  // Only replacing a saved wallet starts the 24-hour pause; the first one works straight away.
+  const replacing = !!initial.momoNumber
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const router = useRouter()
@@ -24,10 +29,15 @@ export default function PayoutAccountForm({
       const res = await fetch('/api/driver/payout-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, password }),
       })
       const data = await res.json().catch(() => ({}))
-      setMsg(res.ok ? { ok: true, text: 'Saved.' } : { ok: false, text: data.error || 'Could not save' })
+      setMsg(
+        res.ok
+          ? { ok: true, text: data.holdHours ? `Saved. For your safety, withdrawals are paused for ${data.holdHours} hours.` : 'Saved.' }
+          : { ok: false, text: data.error || 'Could not save' }
+      )
+      setPassword('')
       if (res.ok) router.refresh()
     } catch {
       setMsg({ ok: false, text: 'Could not reach Trashit. Please try again.' })
@@ -68,10 +78,30 @@ export default function PayoutAccountForm({
         placeholder="As registered with the network"
         disabled={locked}
       />
+      {!locked && changed && (
+        <>
+          <label htmlFor="payout-password" style={{ fontSize: 12, color: '#666' }}>
+            Your Trashit password (to confirm it&apos;s you)
+          </label>
+          <input
+            id="payout-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input-field"
+          />
+          {replacing && (
+            <p style={{ fontSize: 12, color: '#9A6415', marginBottom: 8 }}>
+              Changing your wallet pauses withdrawals for 24 hours, and we&apos;ll alert you about the change.
+            </p>
+          )}
+        </>
+      )}
       {locked ? (
         <p style={{ fontSize: 12, color: '#666' }}>You can change your wallet once your current withdrawal is finished.</p>
       ) : (
-        <button onClick={save} disabled={busy} className="btn-primary" style={{ width: '100%' }}>
+        <button onClick={save} disabled={busy || !changed || !password} className="btn-primary" style={{ width: '100%' }}>
           {busy ? 'Saving...' : 'Save wallet'}
         </button>
       )}

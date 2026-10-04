@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { OPEN_WITHDRAWAL_STATUSES } from '@/lib/wallet'
 import { redirect } from 'next/navigation'
 import { PAYOUT_ROLES, getWalletSummary } from '@/lib/wallet-server'
 import WithdrawalsClient, { type WithdrawalRow } from '@/components/WithdrawalsClient'
@@ -15,7 +16,7 @@ export default async function WithdrawalsPage() {
 
   const [open, recent] = await Promise.all([
     prisma.withdrawal.findMany({
-      where: { status: { in: ['REQUESTED', 'PROCESSING'] } },
+      where: { status: { in: OPEN_WITHDRAWAL_STATUSES } },
       orderBy: { requestedAt: 'asc' },
       include: { driver: { select: { name: true, phone: true } } },
     }),
@@ -45,6 +46,7 @@ export default async function WithdrawalsPage() {
     requestedAt: w.requestedAt.toISOString(),
     paidAt: w.paidAt ? w.paidAt.toISOString() : null,
     totalEarned: balances.get(w.driverId) ?? null,
+    markedByMe: w.markedPaidBy === dbUser.id,
   })
 
   return (

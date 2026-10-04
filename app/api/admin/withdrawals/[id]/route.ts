@@ -6,11 +6,14 @@ import { cleanText, isUuid, readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
 import { PAYOUT_ROLES } from '@/lib/wallet-server'
 import { createMomoRecipient, initiateTransfer, verifyTransfer } from '@/lib/paystack'
-import { notifyUser } from '@/lib/notify'
+import { notifyUser, notifyUsers } from '@/lib/notify'
 
 // Finance acts on a withdrawal request:
 //   send       -> sends the money to the driver's MoMo wallet through Paystack
-//   mark_paid  -> the money was sent some other way (e.g. by hand from the MoMo app); a reference is required
+///   mark_paid  -> the money was sent some other way (e.g. by hand from the MoMo app); a reference is required.
+//                 It then waits (CONFIRMING) until a different finance user checks the payment:
+//   confirm_paid -> second person: the payment is there; the withdrawal is PAID and the driver is told
+//   dispute_paid -> second person: can't find the payment; back to REQUESTED with a note
 //   reject     -> refused, with a note the driver can see; the amount goes back to their balance
 //   check      -> asks Paystack what happened to a transfer that is still "being sent" (e.g. after a timeout)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -59,10 +62,41 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ success: true, status: 'PROCESSING', paystackStatus: s })
   }
 
+  const amountLabel = `GHS ${w.amount.toFixed(2)}`
+
+  if (action === 'confirm_paid' || action === 'dispute_paid') {
+    if (w.status !== 'CONFIRMING') return NextResponse.json({ error: 'This withdrawal is not waiting for confirmation' }, { status: 409 })
+    if (w.markedPaidBy === auth.user.id) {
+      return NextResponse.json({ error: 'A different finance team member must check a payment you recorded' }, { status: 403 })
+    }
+    if (action === 'dispute_paid') {
+      if (!note || note.length < 3) return NextResponse.json({ error: 'Please say what you found' }, { status: 400 })
+      const moved = await prisma.withdrawal.updateMany({
+        where: { id, status: 'CONFIRMING', markedPaidBy: w.markedPaidBy },
+        data: { status: 'REQUESTED', method: null, markedPaidBy: null, markedPaidAt: null, note: `Manual payment "${w.note}" not confirmed: ${note}` },
+      })
+      if (moved.count !== 1) return NextResponse.json({ error: 'This withdrawal was just updated. Please refresh.' }, { status: 409 })
+      await logAdminAction(auth.user.id, 'WITHDRAWAL_MANUAL_DISPUTED', id, `${amountLabel}, reference ${w.note}: ${note}`)
+      return NextResponse.json({ success: true, status: 'REQUESTED' })
+    }
+    const moved = await prisma.withdrawal.updateMany({
+      where: { id, status: 'CONFIRMING', markedPaidBy: w.markedPaidBy },
+      data: { status: 'PAID', reviewedBy: auth.user.id, reviewedAt: new Date(), paidAt: w.markedPaidAt ?? new Date() },
+    })
+    if (moved.count !== 1) return NextResponse.json({ error: 'This withdrawal was just updated. Please refresh.' }, { status: 409 })
+    await logAdminAction(auth.user.id, 'WITHDRAWAL_MANUAL_CONFIRMED', id, `${amountLabel}, reference ${w.note}`)
+    await notifyUser(w.driverId, {
+      title: 'Earnings sent',
+      body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
+      url: '/dashboard/driver/earnings',
+      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}. Ref ${w.note}.`,
+    })
+    return NextResponse.json({ success: true, status: 'PAID' })
+  }
+
   if (w.status !== 'REQUESTED') {
     return NextResponse.json({ error: `This withdrawal is already ${w.status.toLowerCase()}` }, { status: 409 })
   }
-  const amountLabel = `GHS ${w.amount.toFixed(2)}`
 
   if (action === 'reject') {
     if (!note || note.length < 3) return NextResponse.json({ error: 'Please give a reason' }, { status: 400 })
@@ -86,17 +120,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     const moved = await prisma.withdrawal.updateMany({
       where: { id, status: 'REQUESTED' },
-      data: { status: 'PAID', method: 'manual', note, reviewedBy: auth.user.id, reviewedAt: new Date(), paidAt: new Date() },
+      data: { status: 'CONFIRMING', method: 'manual', note, markedPaidBy: auth.user.id, markedPaidAt: new Date() },
     })
     if (moved.count !== 1) return NextResponse.json({ error: 'This withdrawal was just updated. Please refresh.' }, { status: 409 })
-    await logAdminAction(auth.user.id, 'WITHDRAWAL_MARKED_PAID', id, `${amountLabel}, reference ${note}`)
-    await notifyUser(w.driverId, {
-      title: 'Earnings sent',
-      body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
-      url: '/dashboard/driver/earnings',
-      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}. Ref ${note}.`,
+    await logAdminAction(auth.user.id, 'WITHDRAWAL_MARKED_PAID', id, `${amountLabel}, reference ${note} (waiting for a second check)`)
+    const others = await prisma.user.findMany({
+      where: { role: { in: PAYOUT_ROLES }, active: true, id: { not: auth.user.id } },
+      select: { id: true },
     })
-    return NextResponse.json({ success: true, status: 'PAID' })
+    await notifyUsers(
+      others.map((s: { id: string }) => s.id),
+      { title: 'Payment to confirm', body: `Please check a manual payment of ${amountLabel} (reference ${note}) and confirm it.`, url: '/ops/withdrawals' }
+    )
+    return NextResponse.json({ success: true, status: 'CONFIRMING' })
   }
 
   if (action !== 'send') return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

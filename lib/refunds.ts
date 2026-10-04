@@ -2,11 +2,21 @@
 
 import { zonedInstant } from './offers'
 import type { ShiftSettings } from './shift'
+import type { UserRole } from '@prisma/client'
 
-export const REFUND_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'FINANCE']
+export const REFUND_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPS_MANAGER', 'FINANCE']
 
-// Refunds that still hold money (not failed).
-export const LIVE_REFUND_STATUSES = ['PENDING', 'PROCESSING', 'PROCESSED', 'NEEDS_ATTENTION']
+// Refunds that still hold money (not failed). AWAITING_APPROVAL holds it too, so nothing else can
+// refund the same money while a large refund waits for its second approver.
+export const LIVE_REFUND_STATUSES = ['AWAITING_APPROVAL', 'PENDING', 'PROCESSING', 'PROCESSED', 'NEEDS_ATTENTION']
+
+// Staff refunds at or above this need a second staff member to approve them before any money moves.
+// Placeholder: about twice an average order today. Customer self-cancellations never need approval.
+export const REFUND_APPROVAL_THRESHOLD_GHS = 100
+
+export function needsSecondApprover(amountGhs: number): boolean {
+  return Math.round(amountGhs * 100) >= REFUND_APPROVAL_THRESHOLD_GHS * 100
+}
 
 // How much of a payment can still be refunded.
 export function refundable(paymentAmount: number, liveRefunds: number[]): number {

@@ -1,13 +1,14 @@
 import { prisma } from '@/lib/prisma'
 import { createRefund } from '@/lib/paystack'
-import { LIVE_REFUND_STATUSES, refundable, refundStatusFromPaystack } from '@/lib/refunds'
-import { notifyUser } from '@/lib/notify'
+import { LIVE_REFUND_STATUSES, needsSecondApprover, REFUND_APPROVAL_THRESHOLD_GHS, REFUND_ROLES, refundable, refundStatusFromPaystack } from '@/lib/refunds'
+import { notifyUser, notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
 
 export interface RefundOutcome {
   ok: boolean
   error: string
   refunded: number
+  awaitingApproval?: number // a large staff refund of this amount is held until a second person approves it
 }
 
 // Refunds money for an order through Paystack. `amount` null = everything still refundable.
@@ -19,6 +20,7 @@ export async function refundOrder(args: {
   actorId: string
   cancel: boolean
   paymentId?: string // a specific payment (e.g. a duplicate payment); default: the order's successful payment
+  staffApproval?: boolean // a staff refund: at or above REFUND_APPROVAL_THRESHOLD_GHS it waits for a second approver
 }): Promise<RefundOutcome> {
   const order = await prisma.order.findUnique({
     where: { id: args.orderId },
@@ -40,7 +42,7 @@ export async function refundOrder(args: {
 
   // Work out what's left and record the refund (holding the amount) in one serializable step,
   // so two refunds at the same moment (e.g. a double tap) can't both take the full amount.
-  let refund: { id: string; amount: number }
+  let refund: { id: string; amount: number; status: string }
   try {
     refund = await prisma.$transaction(
       async (tx) => {
@@ -52,9 +54,10 @@ export async function refundOrder(args: {
         const amount = args.amount == null ? available : Math.round(args.amount * 100) / 100
         if (amount <= 0) throw new Error('NOTHING_LEFT')
         if (amount > available) throw new Error(`TOO_MUCH:${available.toFixed(2)}`)
+        const status = args.staffApproval === true && needsSecondApprover(amount) ? 'AWAITING_APPROVAL' : 'PENDING'
         return tx.refund.create({
-          data: { orderId: order.id, paymentId: payment.id, amount, reason: args.reason, requestedBy: args.actorId },
-          select: { id: true, amount: true },
+          data: { orderId: order.id, paymentId: payment.id, amount, reason: args.reason, requestedBy: args.actorId, cancelOrder: args.cancel, status },
+          select: { id: true, amount: true, status: true },
         })
       },
       { isolationLevel: 'Serializable', timeout: 15000 }
@@ -69,6 +72,44 @@ export async function refundOrder(args: {
     throw err
   }
   const amount = refund.amount
+
+  if (refund.status === 'AWAITING_APPROVAL') {
+    await prisma.auditLog.create({
+      data: {
+        orderId: order.id,
+        actorId: args.actorId,
+        fromState: order.status,
+        toState: order.status,
+        reason: `REFUND of GHS ${amount.toFixed(2)} waiting for a second approver${args.cancel ? ' (then cancel)' : ''}: ${args.reason}`,
+      },
+    })
+    const others = await prisma.user.findMany({
+      where: { role: { in: REFUND_ROLES }, active: true, id: { not: args.actorId } },
+      select: { id: true },
+    })
+    await notifyUsers(
+      others.map((s: { id: string }) => s.id),
+      {
+        title: 'Refund to approve',
+        body: `A refund of GHS ${amount.toFixed(2)} (GHS ${REFUND_APPROVAL_THRESHOLD_GHS} or more) needs a second approver.`,
+        url: '/ops/exceptions',
+      }
+    )
+    return { ok: true, error: '', refunded: 0, awaitingApproval: amount }
+  }
+
+  return sendRefund({ refund, amount, payment, order, args })
+}
+
+// Sends a recorded (PENDING) refund to Paystack; then cancels the order if asked and tells the customer.
+async function sendRefund(p: {
+  refund: { id: string }
+  amount: number
+  payment: { providerRef: string }
+  order: { id: string; status: string; customerId: string }
+  args: { reason: string; actorId: string; cancel: boolean }
+}): Promise<RefundOutcome> {
+  const { refund, amount, payment, order, args } = p
 
   const r = await createRefund({
     transaction: payment.providerRef,
@@ -119,6 +160,56 @@ export async function refundOrder(args: {
     sms: `Trashit: a refund of GHS ${amount.toFixed(2)} is on its way to the account you paid with.`,
   })
   return { ok: true, error: '', refunded: amount }
+}
+
+// A second staff member approves a large refund: it is sent to Paystack now (and the order cancelled if
+// that was asked). The person who asked for the refund can't approve it.
+export async function approveRefund(refundId: string, approverId: string): Promise<RefundOutcome> {
+  const r = await prisma.refund.findUnique({
+    where: { id: refundId },
+    select: {
+      id: true,
+      amount: true,
+      status: true,
+      reason: true,
+      requestedBy: true,
+      cancelOrder: true,
+      payment: { select: { providerRef: true } },
+      order: { select: { id: true, status: true, customerId: true } },
+    },
+  })
+  if (!r) return { ok: false, error: 'Refund not found', refunded: 0 }
+  if (r.status !== 'AWAITING_APPROVAL') return { ok: false, error: 'This refund is not waiting for approval', refunded: 0 }
+  if (r.requestedBy === approverId) return { ok: false, error: 'A different staff member must approve a refund you asked for', refunded: 0 }
+
+  const claimed = await prisma.refund.updateMany({
+    where: { id: refundId, status: 'AWAITING_APPROVAL', requestedBy: { not: approverId } },
+    data: { status: 'PENDING', approvedBy: approverId, approvedAt: new Date() },
+  })
+  if (claimed.count !== 1) return { ok: false, error: 'This refund was just updated. Please refresh.', refunded: 0 }
+
+  return sendRefund({
+    refund: { id: r.id },
+    amount: r.amount,
+    payment: r.payment,
+    order: r.order,
+    args: { reason: r.reason, actorId: approverId, cancel: r.cancelOrder },
+  })
+}
+
+// Turns down a large refund that is waiting for approval: nothing is sent and the amount is released.
+export async function declineRefund(refundId: string, actorId: string, note: string): Promise<RefundOutcome> {
+  const r = await prisma.refund.findUnique({ where: { id: refundId }, select: { orderId: true, amount: true, reason: true, status: true, order: { select: { status: true } } } })
+  if (!r) return { ok: false, error: 'Refund not found', refunded: 0 }
+  const moved = await prisma.refund.updateMany({
+    where: { id: refundId, status: 'AWAITING_APPROVAL' },
+    data: { status: 'FAILED', reason: `${r.reason} [not approved: ${note}]`, approvedBy: actorId, approvedAt: new Date() },
+  })
+  if (moved.count !== 1) return { ok: false, error: 'This refund is not waiting for approval', refunded: 0 }
+  await prisma.auditLog.create({
+    data: { orderId: r.orderId, actorId, fromState: r.order.status, toState: r.order.status, reason: `REFUND of GHS ${r.amount.toFixed(2)} not approved: ${note}` },
+  })
+  return { ok: true, error: '', refunded: 0 }
 }
 
 // Takes an order out of service: off any driver's route, status CANCELLED.

@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { getEarningsHistory, getWalletSummary } from '@/lib/wallet-server'
-import { MIN_WITHDRAWAL_GHS } from '@/lib/wallet'
+import { MIN_WITHDRAWAL_GHS, OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
 import { MOMO_PROVIDERS } from '@/lib/phone'
 import PayoutAccountForm from '@/components/PayoutAccountForm'
 import WithdrawForm from '@/components/WithdrawForm'
@@ -12,9 +12,16 @@ export const dynamic = 'force-dynamic'
 const WITHDRAWAL_LABELS: Record<string, { text: string; color: string }> = {
   REQUESTED: { text: 'Waiting for approval', color: '#9A6415' },
   PROCESSING: { text: 'Being sent', color: '#9A6415' },
+  CONFIRMING: { text: 'Being sent', color: '#9A6415' },
   PAID: { text: 'Sent', color: '#2F7A4D' },
   FAILED: { text: 'Failed, money returned to balance', color: '#B3261E' },
   REJECTED: { text: 'Not approved, money returned to balance', color: '#B3261E' },
+}
+
+// When the safety pause after a wallet change ends, as Accra time (or null). Outside the component: reads the clock.
+function holdEndsLabel(changedAt: Date | null): string | null {
+  const ends = payoutHoldEndsAt(changedAt, new Date())
+  return ends ? ends.toLocaleString('en-GB', { timeZone: 'Africa/Accra', weekday: 'short', hour: 'numeric', minute: '2-digit' }) : null
 }
 
 export default async function DriverEarningsPage() {
@@ -24,7 +31,7 @@ export default async function DriverEarningsPage() {
 
   const profile = await prisma.driverProfile.findUnique({
     where: { userId: user.id },
-    select: { momoNumber: true, momoProvider: true, momoName: true, approvalStatus: true },
+    select: { momoNumber: true, momoProvider: true, momoName: true, approvalStatus: true, momoChangedAt: true },
   })
   if (!profile) redirect('/dashboard/driver/profile-setup')
 
@@ -33,7 +40,8 @@ export default async function DriverEarningsPage() {
     getEarningsHistory(user.id),
     prisma.withdrawal.findMany({ where: { driverId: user.id }, orderBy: { requestedAt: 'desc' }, take: 20 }),
   ])
-  const hasOpen = withdrawals.some((w: { status: string }) => w.status === 'REQUESTED' || w.status === 'PROCESSING')
+  const hasOpen = withdrawals.some((w: { status: string }) => OPEN_WITHDRAWAL_STATUSES.includes(w.status))
+  const holdUntil = holdEndsLabel(profile.momoChangedAt)
   const providerName = MOMO_PROVIDERS.find((p) => p.code === profile.momoProvider)?.name ?? profile.momoProvider
 
   return (
@@ -57,6 +65,11 @@ export default async function DriverEarningsPage() {
           <p style={{ fontSize: 13, color: '#666' }}>Add your MoMo wallet below first.</p>
         ) : hasOpen ? (
           <p style={{ fontSize: 13, color: '#666' }}>You have a withdrawal in progress. You can ask for another once it&apos;s finished.</p>
+        ) : holdUntil ? (
+          <p style={{ fontSize: 13, color: '#9A6415' }}>
+            Your wallet was changed recently, so withdrawals are paused until {holdUntil} for your safety. If you didn&apos;t make
+            this change, contact Trashit straight away.
+          </p>
         ) : wallet.available < MIN_WITHDRAWAL_GHS ? (
           <p style={{ fontSize: 13, color: '#666' }}>The smallest withdrawal is GHS {MIN_WITHDRAWAL_GHS}. Keep collecting!</p>
         ) : (

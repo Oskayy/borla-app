@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { EXCEPTION_ROLES } from '@/lib/exceptions'
 import { REFUND_ROLES, LIVE_REFUND_STATUSES, refundable } from '@/lib/refunds'
+import { PICKUP_CHECK_MARKER } from '@/lib/plausibility'
 import ExceptionsClient, { type ExceptionItem, type RefundRow } from '@/components/ExceptionsClient'
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,8 @@ export default async function ExceptionsPage() {
   if (!dbUser || !EXCEPTION_ROLES.includes(dbUser.role)) redirect('/dashboard')
   const canRefund = REFUND_ROLES.includes(dbUser.role)
 
+  const pickupCheckReasons = [{ reason: { contains: 'GPS MISMATCH' } }, { reason: { contains: PICKUP_CHECK_MARKER } }]
+
   const paymentSelect = {
     select: { id: true, amount: true, status: true, refunds: { select: { amount: true, status: true } } },
     orderBy: { createdAt: 'asc' as const },
@@ -40,15 +43,16 @@ export default async function ExceptionsPage() {
       },
       orderBy: { updatedAt: 'desc' },
     }),
-    // Pickups that went through, but the driver's photo was further from the pin than expected.
+    // Pickups that went through, but the proof looked off: photo far from the pin, no or weak GPS,
+    // impossible travel since the last pickup, or a photo already used for another order.
     prisma.order.findMany({
       where: {
-        auditLogs: { some: { reason: { contains: 'GPS MISMATCH' } }, none: { reason: { startsWith: 'GPS REVIEWED' } } },
+        auditLogs: { some: { OR: pickupCheckReasons }, none: { reason: { startsWith: 'GPS REVIEWED' } } },
       },
       include: {
         customer: { select: { name: true, phone: true } },
         driver: { select: { name: true } },
-        auditLogs: { where: { reason: { contains: 'GPS MISMATCH' } }, orderBy: { createdAt: 'desc' }, take: 1 },
+        auditLogs: { where: { OR: pickupCheckReasons }, orderBy: { createdAt: 'desc' }, take: 1 },
         payments: paymentSelect,
       },
       orderBy: { updatedAt: 'desc' },
@@ -75,7 +79,7 @@ export default async function ExceptionsPage() {
       take: 50,
     }),
     prisma.refund.findMany({
-      where: { OR: [{ status: { in: ['PENDING', 'PROCESSING', 'NEEDS_ATTENTION', 'FAILED'] } }, { createdAt: { gte: daysAgo(14) } }] },
+      where: { OR: [{ status: { in: ['AWAITING_APPROVAL', 'PENDING', 'PROCESSING', 'NEEDS_ATTENTION', 'FAILED'] } }, { createdAt: { gte: daysAgo(14) } }] },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: { order: { select: { id: true, quoteSnapshot: true, customer: { select: { name: true } } } } },
@@ -110,7 +114,7 @@ export default async function ExceptionsPage() {
   const items: ExceptionItem[] = [
     ...flagged.map((o) => toItem(o, 'flagged', o.disputes[0]?.reason ?? o.auditLogs[0]?.reason ?? 'No reason recorded')),
     ...paymentProblems.map((o) => toItem(o, 'payment', o.auditLogs[0]?.reason ?? 'Payment problem')),
-    ...gps.map((o) => toItem(o, 'gps', o.auditLogs[0]?.reason ?? 'GPS mismatch')),
+    ...gps.map((o) => toItem(o, 'gps', o.auditLogs[0]?.reason ?? 'Pickup check')),
   ]
   const refundRows: RefundRow[] = refunds.map((r) => ({
     id: r.id,
@@ -121,6 +125,7 @@ export default async function ExceptionsPage() {
     status: r.status,
     reason: r.reason,
     createdAt: r.createdAt.toISOString(),
+    requestedByMe: r.requestedBy === dbUser.id,
   }))
 
   return (

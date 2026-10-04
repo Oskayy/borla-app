@@ -39,7 +39,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { refunds: { orderBy: { createdAt: 'desc' }, select: { id: true, amount: true, status: true, createdAt: true } } },
+    include: {
+      refunds: {
+        // Staff refunds still waiting for, or turned down at, the second approval never reached the customer.
+        where: { NOT: [{ status: 'AWAITING_APPROVAL' }, { status: 'FAILED', approvedBy: { not: null } }] },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, amount: true, status: true, createdAt: true },
+      },
+    },
   })
 
   if (!order || order.customerId !== user.id) {

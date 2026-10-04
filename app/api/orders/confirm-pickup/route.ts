@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
-import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
+import { evidenceFileExists, evidenceFileHash, isValidEvidencePath } from '@/lib/storage'
+import { PICKUP_CHECK_MARKER, pickupFlags } from '@/lib/plausibility'
 import { driverPoolFromSnapshot } from '@/lib/pricing-core'
 import { distanceInMeters, GEOFENCE_THRESHOLD_METERS } from '@/lib/geo'
 import { notifyCustomerCollected } from '@/lib/customer-updates'
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
   const orderId = body?.orderId
   const photoPath = body?.photoPath
   const gps = parseGps(body)
+  const accuracy = typeof body?.gpsAccuracy === 'number' && Number.isFinite(body.gpsAccuracy) && body.gpsAccuracy >= 0 ? body.gpsAccuracy : null
 
   if (!isUuid(orderId) || !gps.ok) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
@@ -54,6 +56,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'This order has an invalid price' }, { status: 400 })
   }
 
+  // `flagged` (shown to the driver) is only the distance from the pin, as before. The other checks below
+  // go to ops only, so the app doesn't explain how to get round them.
   let flagged = false
   let distanceMeters: number | null = null
   if (gps.lat != null && gps.lng != null && order.latitude != null && order.longitude != null) {
@@ -61,10 +65,37 @@ export async function POST(req: NextRequest) {
     flagged = distanceMeters > GEOFENCE_THRESHOLD_METERS
   }
 
+  const now = new Date()
+  const [photoHash, previous] = await Promise.all([
+    evidenceFileHash(photoPath),
+    prisma.orderEvidence.findFirst({
+      where: {
+        type: 'driver_pickup',
+        order: { driverId: user.id },
+        gpsLat: { not: null },
+        gpsLng: { not: null },
+        capturedAt: { gte: new Date(now.getTime() - 6 * 3600_000) },
+      },
+      orderBy: { capturedAt: 'desc' },
+      select: { gpsLat: true, gpsLng: true, capturedAt: true },
+    }),
+  ])
+  const reused = photoHash
+    ? await prisma.orderEvidence.findFirst({ where: { photoHash, orderId: { not: orderId } }, select: { id: true } })
+    : null
+  const checks = pickupFlags({
+    gps: gps.lat != null && gps.lng != null ? { lat: gps.lat, lng: gps.lng } : null,
+    accuracyM: accuracy,
+    pin: order.latitude != null && order.longitude != null ? { lat: order.latitude, lng: order.longitude } : null,
+    previous: previous ? { lat: previous.gpsLat!, lng: previous.gpsLng!, at: previous.capturedAt } : null,
+    at: now,
+    photoUsedElsewhere: !!reused,
+  })
+
   const payoutAmount = Math.round(driverPool * rule.pickupPercent) / 100
   const idempotencyKey = `pickup-${orderId}`
-  const auditReason = flagged
-    ? `Driver confirmed pickup with photo evidence (GPS MISMATCH: photo taken ~${Math.round(distanceMeters as number)}m from pickup address)`
+  const auditReason = checks.length
+    ? `Driver confirmed pickup with photo evidence (${PICKUP_CHECK_MARKER}: ${checks.join('; ')})`
     : 'Driver confirmed pickup with photo evidence'
 
   try {
@@ -83,7 +114,9 @@ export async function POST(req: NextRequest) {
           photoUrl: photoPath,
           gpsLat: gps.lat,
           gpsLng: gps.lng,
-          capturedAt: new Date(),
+          gpsAccuracy: accuracy,
+          photoHash,
+          capturedAt: now,
         },
       })
       await tx.ledgerEntry.create({

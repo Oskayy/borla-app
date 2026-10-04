@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { readJson } from '@/lib/validate'
-import { checkWithdrawal, transferReference } from '@/lib/wallet'
+import { checkWithdrawal, OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt, transferReference } from '@/lib/wallet'
 import { getWalletSummary, PAYOUT_ROLES } from '@/lib/wallet-server'
 import { notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const amount = (await readJson(req))?.amount
   const profile = await prisma.driverProfile.findUnique({
     where: { userId: auth.user.id },
-    select: { momoNumber: true, momoProvider: true, momoName: true, approvalStatus: true },
+    select: { momoNumber: true, momoProvider: true, momoName: true, approvalStatus: true, momoChangedAt: true },
   })
   if (!profile?.momoNumber || !profile.momoProvider || !profile.momoName) {
     return NextResponse.json({ error: 'Please add your mobile money wallet first' }, { status: 400 })
@@ -29,12 +29,20 @@ export async function POST(req: NextRequest) {
   if (profile.approvalStatus !== 'APPROVED') {
     return NextResponse.json({ error: 'Your account must be approved before you can withdraw' }, { status: 403 })
   }
+  const holdEnds = payoutHoldEndsAt(profile.momoChangedAt, new Date())
+  if (holdEnds) {
+    const when = holdEnds.toLocaleString('en-GB', { timeZone: 'Africa/Accra', weekday: 'short', hour: 'numeric', minute: '2-digit' })
+    return NextResponse.json(
+      { error: `Your payout wallet was changed recently, so withdrawals are paused until ${when} for your safety.` },
+      { status: 403 }
+    )
+  }
 
   let created: { id: string; amount: number } | null = null
   try {
     created = await prisma.$transaction(
       async (tx) => {
-        const open = await tx.withdrawal.count({ where: { driverId: auth.user.id, status: { in: ['REQUESTED', 'PROCESSING'] } } })
+        const open = await tx.withdrawal.count({ where: { driverId: auth.user.id, status: { in: OPEN_WITHDRAWAL_STATUSES } } })
         if (open > 0) throw new Error('OPEN_REQUEST')
         const wallet = await getWalletSummary(auth.user.id, tx)
         const problem = checkWithdrawal(amount, wallet.available)

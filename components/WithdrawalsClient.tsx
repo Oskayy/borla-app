@@ -15,24 +15,25 @@ export interface WithdrawalRow {
   requestedAt: string
   paidAt: string | null
   totalEarned: number | null
+  markedByMe: boolean // this user recorded the manual payment, so someone else must confirm it
 }
 
-const COLORS: Record<string, string> = { PAID: '#2F7A4D', FAILED: '#B3261E', REJECTED: '#B3261E', PROCESSING: '#9A6415', REQUESTED: '#9A6415' }
+const COLORS: Record<string, string> = { PAID: '#2F7A4D', FAILED: '#B3261E', REJECTED: '#B3261E', PROCESSING: '#9A6415', REQUESTED: '#9A6415', CONFIRMING: '#9A6415' }
 
 export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRow[]; recent: WithdrawalRow[] }) {
-  const [active, setActive] = useState<{ id: string; action: 'mark_paid' | 'reject' } | null>(null)
+  const [active, setActive] = useState<{ id: string; action: 'mark_paid' | 'reject' | 'dispute_paid' } | null>(null)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [msg, setMsg] = useState<Record<string, { ok: boolean; text: string }>>({})
   const router = useRouter()
 
-  async function act(id: string, action: 'send' | 'mark_paid' | 'reject' | 'check') {
+  async function act(id: string, action: 'send' | 'mark_paid' | 'reject' | 'check' | 'confirm_paid' | 'dispute_paid') {
     setBusy(id)
     try {
       const res = await fetch(`/api/admin/withdrawals/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, note: action === 'send' || action === 'check' ? undefined : note }),
+        body: JSON.stringify({ action, note: action === 'send' || action === 'check' || action === 'confirm_paid' ? undefined : note }),
       })
       const data = await res.json().catch(() => ({}))
       setMsg((m) => ({
@@ -43,6 +44,8 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
               text:
                 data.status === 'PAID'
                   ? 'Paid.'
+                  : data.status === 'CONFIRMING'
+                  ? 'Recorded. A second finance team member must now confirm the payment.'
                   : data.status === 'FAILED'
                   ? 'The transfer failed; the money is back in the driver’s balance.'
                   : data.status === 'REQUESTED'
@@ -91,7 +94,7 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                 To {w.momo} · asked {new Date(w.requestedAt).toLocaleString()}
                 {w.totalEarned != null && ` · earned GHS ${w.totalEarned.toFixed(2)} in total`}
               </p>
-              {w.note && <p style={{ fontSize: 12, color: '#B3261E', marginTop: 4 }}>{w.note}</p>}
+              {w.note && w.status !== 'CONFIRMING' && <p style={{ fontSize: 12, color: '#B3261E', marginTop: 4 }}>{w.note}</p>}
             </div>
             {w.status === 'REQUESTED' ? (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -104,6 +107,22 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                 <button style={{ ...btn, color: '#B3261E', borderColor: '#B3261E' }} onClick={() => { setActive({ id: w.id, action: 'reject' }); setNote('') }}>
                   Reject
                 </button>
+              </div>
+            ) : w.status === 'CONFIRMING' ? (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS[w.status] }}>
+                  PAID BY HAND (ref {w.note}): {w.markedByMe ? 'waiting for a colleague to confirm' : 'please check and confirm'}
+                </span>
+                {!w.markedByMe && (
+                  <>
+                    <button onClick={() => act(w.id, 'confirm_paid')} disabled={busy === w.id} className="btn-accent">
+                      {busy === w.id ? '...' : 'Payment is there: confirm'}
+                    </button>
+                    <button style={{ ...btn, color: '#B3261E', borderColor: '#B3261E' }} onClick={() => { setActive({ id: w.id, action: 'dispute_paid' }); setNote('') }}>
+                      Can&apos;t find it
+                    </button>
+                  </>
+                )}
               </div>
             ) : (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -123,10 +142,16 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                 onChange={(e) => setNote(e.target.value)}
                 className="input-field"
                 style={{ marginBottom: 0, flex: 1, minWidth: 220 }}
-                placeholder={active.action === 'mark_paid' ? 'MoMo transaction ID of your payment' : 'Reason (the driver sees this)'}
+                placeholder={
+                  active.action === 'mark_paid'
+                    ? 'MoMo transaction ID of your payment'
+                    : active.action === 'dispute_paid'
+                    ? 'What you found (kept in the record)'
+                    : 'Reason (the driver sees this)'
+                }
               />
               <button onClick={() => act(w.id, active.action)} disabled={busy === w.id || note.trim().length < 3} className="btn-primary">
-                {active.action === 'mark_paid' ? 'Confirm paid' : 'Confirm reject'}
+                {active.action === 'mark_paid' ? 'Record payment' : active.action === 'dispute_paid' ? 'Send back' : 'Confirm reject'}
               </button>
               <button style={btn} onClick={() => setActive(null)}>
                 Cancel

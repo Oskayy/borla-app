@@ -26,12 +26,13 @@ export interface RefundRow {
   status: string
   reason: string
   createdAt: string
+  requestedByMe: boolean // this user asked for it, so someone else must approve it
 }
 
 const SECTION_TITLES: Record<ExceptionItem['kind'], string> = {
   flagged: 'Failed pickups and disputes',
   payment: 'Payment problems',
-  gps: 'GPS mismatches (collected and paid, worth a check)',
+  gps: 'Pickup checks: location or photo looked off (collected and paid, worth a check)',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -39,7 +40,46 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING: '#9A6415',
   PROCESSING: '#9A6415',
   NEEDS_ATTENTION: '#B3261E',
+  AWAITING_APPROVAL: '#9A6415',
   FAILED: '#B3261E',
+}
+
+function ApproveRefund({ id }: { id: string }) {
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+  async function decide(outcome: 'approve' | 'decline') {
+    setBusy(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/admin/refunds/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome, note }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) setError(data.error || 'Could not save')
+      else router.refresh()
+    } catch {
+      setError('Could not reach Trashit. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const btn = { background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '6px 10px', fontSize: 12, cursor: 'pointer' } as const
+  return (
+    <div style={{ marginTop: 8, width: '100%' }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+        <button className="btn-accent" disabled={busy} onClick={() => decide('approve')}>{busy ? '...' : 'Approve and send refund'}</button>
+      </div>
+      <input value={note} onChange={(e) => setNote(e.target.value)} className="input-field" placeholder="Reason, to decline" style={{ marginBottom: 6 }} />
+      <button style={{ ...btn, color: '#B3261E', borderColor: '#B3261E' }} disabled={busy || note.trim().length < 3} onClick={() => decide('decline')}>
+        Decline
+      </button>
+      {error && <p style={{ color: '#B3261E', fontSize: 12, marginTop: 4 }}>{error}</p>}
+    </div>
+  )
 }
 
 function SettleRefund({ id }: { id: string }) {
@@ -130,7 +170,9 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
           ok: true,
           text:
             mode === 'refund'
-              ? `Refund of GHS ${Number(data.refunded ?? 0).toFixed(2)} started.`
+              ? data.awaitingApproval
+                ? `Refund of GHS ${Number(data.awaitingApproval).toFixed(2)} recorded. A colleague must approve it before it is sent.`
+                : `Refund of GHS ${Number(data.refunded ?? 0).toFixed(2)} started.`
               : mode === 'retry'
               ? `Back in the queue for the night of ${data.night}.`
               : 'Done.',
@@ -287,9 +329,16 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
               </p>
             </div>
             <span style={{ fontSize: 12, fontWeight: 600, color: STATUS_COLORS[r.status] ?? '#666' }}>
-              {r.status === 'NEEDS_ATTENTION' ? 'NEEDS ATTENTION: check the Paystack dashboard' : r.status}
+              {r.status === 'NEEDS_ATTENTION'
+                ? 'NEEDS ATTENTION: check the Paystack dashboard'
+                : r.status === 'AWAITING_APPROVAL'
+                ? r.requestedByMe
+                  ? 'WAITING FOR A COLLEAGUE TO APPROVE'
+                  : 'NEEDS YOUR APPROVAL'
+                : r.status}
             </span>
             {canRefund && r.status === 'NEEDS_ATTENTION' && <SettleRefund id={r.id} />}
+            {canRefund && r.status === 'AWAITING_APPROVAL' && !r.requestedByMe && <ApproveRefund id={r.id} />}
           </div>
         ))}
       </section>

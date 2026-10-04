@@ -6,15 +6,15 @@ import { MANDATORY_MFA_ROLES } from '@/lib/mfa'
 import { readJson } from '@/lib/validate'
 
 export async function POST(req: NextRequest) {
-  const factorId = (await readJson(req))?.factorId
-  if (typeof factorId !== 'string' || !factorId || factorId.length > 100) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
-  }
-
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
+  }
+
+  const factorId = (await readJson(req))?.factorId
+  if (typeof factorId !== 'string' || !factorId || factorId.length > 100) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })

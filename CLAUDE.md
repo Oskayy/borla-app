@@ -19,7 +19,8 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 - Line endings: `.ts`/`.tsx` files use **CRLF**; `schema.prisma` and `.sql` files use **LF**. Keep what a file already uses.
 - Next.js 16 differs from older versions (see AGENTS.md): route files export only HTTP handlers,
   `params` is a Promise, `proxy.ts` is the middleware. Check `node_modules/next/dist/docs/` before guessing.
-- Before calling work done: `npm run build` passes (it runs `prisma generate` + `next build`), and `npm run lint`.
+- Before calling work done: `npm run build` passes (it runs `prisma generate` + `next build`), `npm run lint` and `npm test`.
+  `TEST_BASE_URL=http://localhost:3000 npm test` also checks every API route refuses signed-out callers.
 
 ## Business rules (placeholders are editable in the ops screens)
 
@@ -29,6 +30,12 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
 - Platform fee is taken off the top; the **driver pool** is paid **40% at pickup, 60% at disposal**
   (disposal released by the site geofence, or by ops review on "Unloads to Check"). `PayoutRule` table.
+- Money safeguards: replacing a driver's MoMo wallet needs the password again and **pauses withdrawals 24 h**
+  (`PAYOUT_CHANGE_HOLD_HOURS`, `lib/wallet.ts`). Manual "mark paid" withdrawals wait in `CONFIRMING` until a
+  **different** finance user confirms. Staff refunds of **GHS 100+** (`REFUND_APPROVAL_THRESHOLD_GHS`, placeholder,
+  `lib/refunds.ts`) wait in `AWAITING_APPROVAL` for a different staff member; customer self-cancellations don't.
+- Pickup checks (`lib/plausibility.ts`) flag, never block: no/weak GPS, photo far from the pin, impossible speed
+  between pickups, the same photo reused. They appear on the Exceptions page.
 - Capacity-based dispatch: drivers make **multiple trips per night** (`maxTripsPerNight`), each trip ends at a disposal site.
 - Drivers must **accept** each assigned stop within `acceptMinutes` (default 15); declined or expired stops are
   **reassigned automatically** (`lib/reassign-server.ts`); a decliner is never offered that order again.
@@ -81,14 +88,14 @@ pass, `driver-documents` bucket exists and is private, work committed and pushed
 
 Email confirmation is deliberately **off** while testing with made-up emails.
 
-**Security fixes, in priority order** (full plan: Security and Compliance Test Plan):
-1. F1 (High): changing the driver MoMo payout number takes effect at once. Add an SMS to the old number,
-   a 24–48 h hold on withdrawals after a change, and a password re-check.
-2. F2: add `Strict-Transport-Security` and a `Content-Security-Policy` (start report-only; allow Mapbox and Paystack).
-3. F3: `lib/rate-limit.ts` trusts the first `X-Forwarded-For` value; use the host's trusted client-IP header.
-4. F4: GPS and photo plausibility checks (accuracy, speed, time on site, duplicate photos); flag, don't block.
-5. F5: second approver for manual "mark paid" withdrawals and large refunds.
-6. F6: authorisation tests for every API route (customer A cannot see customer B's data; roles enforced).
+**Security (Oct 2026 audit):** F1–F6 are done (2FA brute-force limit, cross-site request check, ops layout role check
+also fixed). Still open:
+- Switch `Content-Security-Policy-Report-Only` (`next.config.ts`) to enforcing once the console shows no reports
+  on the map and booking pages.
+- `tests/security/cross-account.test.ts` needs a staging Supabase project with two test customers and a driver.
+- Privacy (Ghana Data Protection Act 2012): fill the Data Retention section in `lib/legal-content.ts`, add a way to
+  ask for account deletion, and register with the Data Protection Commission.
+- Confirm `NEXT_PUBLIC_SITE_URL` is set on Vercel and Supabase's redirect allow-list has only the real domain.
 
 **Frontend phases** (full plan: Frontend Enhancement Plan):
 1. Accessibility: replace `#999` text (fails contrast) with `#6B6B6B`; input borders `#8A8375`; `:focus-visible`;

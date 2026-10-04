@@ -10,6 +10,7 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null)
   const [gpsLat, setGpsLat] = useState<number | null>(null)
   const [gpsLng, setGpsLng] = useState<number | null>(null)
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [warning, setWarning] = useState('')
@@ -42,7 +43,7 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
       const res = await fetch('/api/orders/confirm-pickup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, photoPath, gpsLat, gpsLng }),
+        body: JSON.stringify({ orderId, photoPath, gpsLat, gpsLng, gpsAccuracy }),
       })
       const data = await res.json()
       setLoading(false)
@@ -91,10 +92,11 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
     <div>
       <PhotoCapture
         label={file ? 'Retake Photo' : 'Take Photo'}
-        onCapture={(f, lat, lng) => {
+        onCapture={(f, lat, lng, accuracy) => {
           setFile(f)
           setGpsLat(lat)
           setGpsLng(lng)
+          setGpsAccuracy(accuracy ?? null)
         }}
       />
       {file && <p style={{ fontSize: 12, color: '#2F7A4D', margin: '6px 0' }}>Photo captured ✓</p>}

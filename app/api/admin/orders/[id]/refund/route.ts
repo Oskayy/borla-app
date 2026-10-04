@@ -8,6 +8,7 @@ import { refundOrder } from '@/lib/refunds-server'
 
 // Staff refund all or part of an order's payment, optionally cancelling the order.
 // Body: { amount: number | null (null = everything left), reason, cancel: boolean, paymentId?: string }
+// Refunds of REFUND_APPROVAL_THRESHOLD_GHS or more wait for a second staff member to approve them.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(REFUND_ROLES)
   if (!auth.ok) return auth.response
@@ -28,8 +29,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const paymentId = body?.paymentId == null ? undefined : body.paymentId
   if (paymentId !== undefined && !isUuid(paymentId)) return NextResponse.json({ error: 'Invalid payment' }, { status: 400 })
 
-  const result = await refundOrder({ orderId: id, amount, reason, actorId: auth.user.id, cancel: body?.cancel === true, paymentId })
+  const result = await refundOrder({ orderId: id, amount, reason, actorId: auth.user.id, cancel: body?.cancel === true, paymentId, staffApproval: true })
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
+
+  if (result.awaitingApproval) {
+    await logAdminAction(auth.user.id, 'REFUND_REQUESTED', id, `GHS ${result.awaitingApproval.toFixed(2)}${body?.cancel === true ? ' + cancel' : ''}, waiting for a second approver: ${reason}`)
+    return NextResponse.json({ success: true, refunded: 0, awaitingApproval: result.awaitingApproval })
+  }
 
   await logAdminAction(auth.user.id, 'REFUND_STARTED', id, `GHS ${result.refunded.toFixed(2)}${body?.cancel === true ? ' + cancelled' : ''}: ${reason}`)
   return NextResponse.json({ success: true, refunded: result.refunded })
