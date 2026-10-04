@@ -58,8 +58,13 @@ export function tooManyRequests() {
   )
 }
 
+// The caller's IP, for per-IP limits. The first X-Forwarded-For value is whatever the caller sent, so it
+// can't be trusted. Vercel sets x-vercel-forwarded-for / x-real-ip itself (callers can't override them);
+// on other hosts the last X-Forwarded-For entry is the one added by our own proxy.
 export function getClientIp(req: Request): string {
+  const trusted = req.headers.get('x-vercel-forwarded-for') ?? req.headers.get('x-real-ip')
+  if (trusted) return trusted.split(',')[0].trim()
   const forwarded = req.headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0].trim()
+  if (forwarded) return forwarded.split(',').pop()!.trim()
   return 'unknown'
 }

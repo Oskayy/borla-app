@@ -1,19 +1,21 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { STAFF_ROLES } from '@/lib/staff'
 import OpsNav from '@/components/OpsNav'
 import OpsAlerts from '@/components/OpsAlerts'
 import EnableAlerts from '@/components/EnableAlerts'
 
 export default async function OpsLayout({ children }: { children: React.ReactNode }) {
-  // Suspended staff, and staff who must still replace their temporary password, can't use ops pages.
+  // Only active staff can use ops pages; staff who must still replace their temporary password are sent to do that.
+  // (Each page and API route also checks the exact roles it allows.)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
-    const me = await prisma.user.findUnique({ where: { id: user.id }, select: { active: true, mustChangePassword: true } })
-    if (me && !me.active) redirect('/login')
-    if (me?.mustChangePassword) redirect('/reset-password?first=1')
-  }
+  if (!user) redirect('/login')
+  const me = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true, active: true, mustChangePassword: true } })
+  if (!me || !me.active) redirect('/login')
+  if (!STAFF_ROLES.includes(me.role)) redirect('/dashboard')
+  if (me.mustChangePassword) redirect('/reset-password?first=1')
 
   return (
     <div>

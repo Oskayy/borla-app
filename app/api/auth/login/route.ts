@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { isRateLimited, recordAttempt, getClientIp } from '@/lib/rate-limit'
+import { readJson } from '@/lib/validate'
 
 export async function POST(req: NextRequest) {
-  const { email, password } = await req.json()
+  const body = await readJson(req)
+  const email = typeof body?.email === 'string' ? body.email.trim() : ''
+  const password = typeof body?.password === 'string' ? body.password : ''
   const ip = getClientIp(req)
 
-  if (!email || !password) {
+  if (!email || !password || email.length > 254 || password.length > 128) {
     return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
   }
 

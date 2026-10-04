@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+import { isUuid, readJson } from '@/lib/validate'
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Not logged in' }, { status: 401 })
-  }
+  const auth = await requireAuth(['CUSTOMER'])
+  if (!auth.ok) return auth.response
+  const { user } = auth
 
-  const { orderId } = await req.json()
+  const orderId = (await readJson(req))?.orderId
+  if (!isUuid(orderId)) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
 

@@ -13,12 +13,30 @@ function isOpen(pathname: string) {
   return OPEN_PATHS.includes(pathname) || OPEN_PREFIXES.some((p) => pathname.startsWith(p))
 }
 
+// A browser always sends Origin on a cross-site POST/PUT/PATCH/DELETE. Reject API writes that come from
+// another website (cross-site request forgery). Server-to-server calls (Paystack's webhook, the scheduler)
+// send no Origin and are checked by their own signatures instead.
+function isCrossSiteWrite(request: NextRequest): boolean {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return false
+  const origin = request.headers.get('origin')
+  if (!origin) return false
+  try {
+    return new URL(origin).host !== request.headers.get('host')
+  } catch {
+    return true // e.g. "null" from a sandboxed frame
+  }
+}
+
 function withCookies(from: NextResponse, to: NextResponse) {
   from.cookies.getAll().forEach((c) => to.cookies.set(c))
   return to
 }
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/api/') && isCrossSiteWrite(request)) {
+    return NextResponse.json({ error: 'Request blocked' }, { status: 403 })
+  }
+
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
