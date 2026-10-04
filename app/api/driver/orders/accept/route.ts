@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, readJson } from '@/lib/validate'
+import { caught } from '@/lib/errors'
 
 const MAX_ORDERS = 60
 
@@ -45,9 +46,9 @@ export async function POST(req: NextRequest) {
       })),
     })
     return accepted.count
-  }).catch((e: any) => {
-    if (e?.message === 'STATE_CHANGED') return -1
-    throw e
+  }).catch((err) => {
+    if (caught(err)?.message === 'STATE_CHANGED') return -1
+    throw err
   })
   if (result === -1) {
     return NextResponse.json({ error: 'Your stops just changed. Please refresh.' }, { status: 409 })

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import Logo from '@/components/Logo'
 
 const links = [
   { href: '/ops', label: 'Dashboard' },
@@ -36,17 +37,9 @@ export default function OpsNav() {
         flexWrap: 'wrap',
       }}
     >
-      <span
-        style={{
-          fontFamily: 'var(--font-heading)',
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: 18,
-          marginRight: 12,
-        }}
-      >
-        Borla Ops
-      </span>
+      <Link href="/ops" aria-label="Trashit Ops home" style={{ display: 'inline-flex', marginRight: 12 }}>
+        <Logo onDark height={26} suffix="Ops" />
+      </Link>
 
       {links.map((link) => {
         const active = pathname === link.href

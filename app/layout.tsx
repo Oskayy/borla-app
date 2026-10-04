@@ -16,11 +16,11 @@ const body = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Borla",
+  title: "Trashit",
   description: "Waste collection, done reliably.",
-  applicationName: "Borla",
-  // Installed on an iPhone home screen, Borla opens full screen like an app (and can receive alerts).
-  appleWebApp: { capable: true, title: "Borla", statusBarStyle: "default" },
+  applicationName: "Trashit",
+  // Installed on an iPhone home screen, Trashit opens full screen like an app (and can receive alerts).
+  appleWebApp: { capable: true, title: "Trashit", statusBarStyle: "default" },
   icons: {
     icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },

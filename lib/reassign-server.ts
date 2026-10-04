@@ -7,6 +7,7 @@ import { notifyUser, notifyOps } from '@/lib/notify'
 import { newStopsMessage } from '@/lib/offers'
 import { getAcceptMinutes } from '@/lib/settings'
 import { notifyCustomersAssigned } from '@/lib/customer-updates'
+import { caught } from '@/lib/errors'
 
 const LOAD = new Set<string>(LOAD_STATUSES)
 
@@ -192,7 +193,8 @@ export async function reassignOrder(orderId: string, actorId: string | null): Pr
     const msg = newStopsMessage(1, await getAcceptMinutes())
     await notifyUser(driver.id, { ...msg, title: 'New stop added to your route', body: `${address}. ${msg.body}` })
     return { reassigned: true, driverId: driver.id, driverName: driver.name, tripNumber, reason: '' }
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.message === 'STATE_CHANGED') {
       return { reassigned: false, driverId: null, driverName: null, tripNumber: null, reason: 'Order was changed by someone else' }
     }

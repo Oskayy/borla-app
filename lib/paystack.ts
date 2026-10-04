@@ -1,9 +1,12 @@
 // Calls to Paystack's API (server only). Every function returns { ok, data, error } and never throws.
+import { caught } from '@/lib/errors'
 
 const BASE = 'https://api.paystack.co'
 
 export interface PaystackResult {
   ok: boolean
+  // Raw JSON from Paystack; its shape depends on the endpoint, and callers check the fields they read.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any
   error: string
   // true when we can't tell whether Paystack acted (timeout, network error, 5xx). Money may have moved,
@@ -33,7 +36,8 @@ async function call(method: 'GET' | 'POST', path: string, body?: unknown): Promi
       }
     }
     return { ok: true, data: json.data, error: '', uncertain: false, httpStatus: res.status }
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     return {
       ok: false,
       data: null,

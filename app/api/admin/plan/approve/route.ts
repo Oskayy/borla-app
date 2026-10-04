@@ -13,6 +13,7 @@ import { getAcceptMinutes } from '@/lib/settings'
 import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
+import { caught } from '@/lib/errors'
 
 const MAX_DRIVERS_PER_REQUEST = 50
 const MAX_ORDERS_PER_DRIVER = 60
@@ -145,7 +146,8 @@ export async function POST(req: NextRequest) {
       )
       results.push({ driverId, ok: true, message: 'Approved', stops: built.orderIds.length, trips: built.trips.length })
       await notifyCustomersAssigned(built.orderIds)
-    } catch (e: any) {
+    } catch (err) {
+      const e = caught(err)
       if (e?.message === 'STATE_CHANGED') {
         results.push({ driverId, ok: false, message: 'Some orders were already assigned or changed. Refresh the plan.' })
       } else {

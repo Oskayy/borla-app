@@ -62,7 +62,7 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
           : "That's the area, but we don't collect there yet. If it's wrong, drag the pin to the right spot."
       )
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setFinding(false)
     }
@@ -103,7 +103,7 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
       router.push('/dashboard/customer/book')
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setSaving(false)
     }

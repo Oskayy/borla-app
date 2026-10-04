@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { countDriversInRange, rankDrivers, type DispatchDriver, type DispatchOrder } from '@/lib/dispatch'
+import { errorMessage } from '@/lib/errors'
 
 interface OrderRow {
   id: string
@@ -135,8 +136,8 @@ export default function OptimizeForm({
       setOverride(false)
       setOverrideReason('')
       router.refresh()
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(errorMessage(e))
     } finally {
       setLoading(false)
     }

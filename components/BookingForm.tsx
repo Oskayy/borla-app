@@ -114,7 +114,7 @@ export default function BookingForm({
       }
       setQuote(data)
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }

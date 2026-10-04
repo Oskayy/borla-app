@@ -112,7 +112,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 {r.status === 'PROCESSED'
                   ? 'sent back to your account'
                   : r.status === 'FAILED'
-                  ? 'could not be sent; Borla support will contact you'
+                  ? 'could not be sent; Trashit support will contact you'
                   : 'on its way (usually a few working days)'}
               </p>
             ))}

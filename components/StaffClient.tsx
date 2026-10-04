@@ -43,7 +43,7 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
       setForm({ name: '', email: '', phone: '', role: 'DISPATCHER' })
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please try again.')
+      setError('Could not reach Trashit. Please try again.')
     } finally {
       setCreating(false)
     }
@@ -67,7 +67,7 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
       setMsg((m) => ({ ...m, [row.id]: { ok: true, text: 'Saved.' } }))
       router.refresh()
     } catch {
-      setMsg((m) => ({ ...m, [row.id]: { ok: false, text: 'Could not reach Borla. Please try again.' } }))
+      setMsg((m) => ({ ...m, [row.id]: { ok: false, text: 'Could not reach Trashit. Please try again.' } }))
     } finally {
       setBusy(null)
     }

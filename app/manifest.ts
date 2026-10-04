@@ -1,10 +1,10 @@
 import type { MetadataRoute } from 'next'
 
-// Lets phones install Borla to the home screen as an app. On iPhone this is also what allows push alerts.
+// Lets phones install Trashit to the home screen as an app. On iPhone this is also what allows push alerts.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Borla',
-    short_name: 'Borla',
+    name: 'Trashit',
+    short_name: 'Trashit',
     description: 'Waste collection, done reliably.',
     start_url: '/dashboard',
     scope: '/',

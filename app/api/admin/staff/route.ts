@@ -7,6 +7,7 @@ import { logAdminAction } from '@/lib/admin-log'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { STAFF_ADMIN_ROLES, STAFF_ROLES, temporaryPassword } from '@/lib/staff'
 import { normalizeGhanaPhone } from '@/lib/phone'
+import { caught } from '@/lib/errors'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -42,7 +43,8 @@ export async function POST(req: NextRequest) {
 
   try {
     await prisma.user.create({ data: { id: data.user.id, name, email, phone: phoneRaw, role, mustChangePassword: true } })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     await admin.auth.admin.deleteUser(data.user.id).catch(() => {})
     const msg = e?.code === 'P2002' ? 'That phone number or email is already used by another account' : 'Could not create the account'
     return NextResponse.json({ error: msg }, { status: 400 })

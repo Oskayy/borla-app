@@ -57,7 +57,7 @@ export default function NextStopCard({
   const startNote = position
     ? `Directions start from where you are now (GPS within ${Math.round(position.accuracyM)} m).`
     : denied
-    ? 'Location is blocked, so Google Maps will use its own guess of where you are. Turn location on for Borla.'
+    ? 'Location is blocked, so Google Maps will use its own guess of where you are. Turn location on for Trashit.'
     : 'Getting your GPS position...'
 
   if (next.kind === 'no-site') {

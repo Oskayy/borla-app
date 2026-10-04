@@ -1,5 +1,7 @@
+import type { UserRole } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { sendSms } from '@/lib/sms'
+import { caught } from '@/lib/errors'
 
 // Sends a message to a user: always saved for the in-app banner, and pushed to their phone
 // if they turned alerts on. Never throws: a failed alert must not undo the work that triggered it.
@@ -11,15 +13,25 @@ export interface Message {
   sms?: string // also send this text by SMS (keep it short; only for key messages)
 }
 
-let webpush: any = null
+// The two web-push calls we use (the package ships no types).
+interface WebPush {
+  setVapidDetails(subject: string, publicKey: string, privateKey: string): void
+  sendNotification(
+    sub: { endpoint: string; keys: { p256dh: string; auth: string } },
+    payload: string,
+    options?: Record<string, unknown>
+  ): Promise<unknown>
+}
+
+let webpush: WebPush | null = null
 let pushReady: boolean | null = null
 
-async function getPush(): Promise<any> {
+async function getPush(): Promise<WebPush | null> {
   if (pushReady === false) return null
   if (webpush) return webpush
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   const priv = process.env.VAPID_PRIVATE_KEY
-  const subject = process.env.VAPID_SUBJECT || 'mailto:ops@borla.app'
+  const subject = process.env.VAPID_SUBJECT || 'mailto:ops@trashit.app'
   if (!pub || !priv) {
     pushReady = false
     console.warn('[notify] Push alerts are off: NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY are not set')
@@ -27,10 +39,11 @@ async function getPush(): Promise<any> {
   }
   try {
     const mod = await import('web-push')
-    webpush = (mod as any).default ?? mod
-    webpush.setVapidDetails(subject, pub, priv)
+    const wp = ((mod as { default?: WebPush }).default ?? mod) as WebPush
+    wp.setVapidDetails(subject, pub, priv)
+    webpush = wp
     pushReady = true
-    return webpush
+    return wp
   } catch (e) {
     pushReady = false
     console.warn('[notify] Push alerts are off: the web-push package is not installed', e)
@@ -72,7 +85,8 @@ export async function notifyUser(userId: string, msg: Message): Promise<void> {
           urgency: 'high',
         })
         await prisma.pushSubscription.update({ where: { id: s.id }, data: { lastUsedAt: new Date() } })
-      } catch (e: any) {
+      } catch (err) {
+        const e = caught(err)
         // 404/410: the phone unsubscribed or the browser was reset. Forget it.
         if (e?.statusCode === 404 || e?.statusCode === 410) {
           await prisma.pushSubscription.delete({ where: { id: s.id } }).catch(() => {})
@@ -89,11 +103,11 @@ export async function notifyUsers(userIds: string[], msg: Message): Promise<void
 }
 
 // Who hears about dispatch problems and the nightly plan.
-export const OPS_ALERT_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
+export const OPS_ALERT_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
 
 export async function notifyOps(msg: Message): Promise<void> {
   try {
-    const staff = await prisma.user.findMany({ where: { role: { in: OPS_ALERT_ROLES as any } }, select: { id: true } })
+    const staff = await prisma.user.findMany({ where: { role: { in: OPS_ALERT_ROLES } }, select: { id: true } })
     await notifyUsers(
       staff.map((u: { id: string }) => u.id),
       msg

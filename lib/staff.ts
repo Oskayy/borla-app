@@ -1,8 +1,9 @@
 import { randomInt } from 'crypto'
+import type { UserRole } from '@prisma/client'
 
 // Staff accounts: who can manage them, and which roles they can be given.
 export const STAFF_ADMIN_ROLES = ['SUPER_ADMIN']
-export const STAFF_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE', 'SUPPORT', 'COMPLIANCE', 'ANALYST']
+export const STAFF_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE', 'SUPPORT', 'COMPLIANCE', 'ANALYST']
 
 export const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin (everything, incl. staff accounts)',

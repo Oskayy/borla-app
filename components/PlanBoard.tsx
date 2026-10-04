@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { proposePlan, buildDriverPlan, type PlanOrder, type PlanSite } from '@/lib/planner'
 import { assessDriver, nightCapacity, type DispatchDriver } from '@/lib/dispatch'
@@ -49,14 +49,16 @@ export default function PlanBoard({
 
   // orderId -> driverId ('' = unassigned). Starts as the suggestion; edits change it.
   const [assignment, setAssignment] = useState<Record<string, string>>(suggestedMap)
-  // After an approval the page reloads with fewer orders: start again from the new suggestion.
-  useEffect(() => {
-    setAssignment(suggestedMap)
-    setSiteChoices({})
-  }, [suggestedMap])
   const [reasons, setReasons] = useState<Record<string, string>>({})
   // Sites ops picked by hand: { driverId: { tripNumber: siteId } }
   const [siteChoices, setSiteChoices] = useState<Record<string, Record<string, string>>>({})
+  // After an approval the page reloads with fewer orders: start again from the new suggestion.
+  const [planBasis, setPlanBasis] = useState(suggestedMap)
+  if (planBasis !== suggestedMap) {
+    setPlanBasis(suggestedMap)
+    setAssignment(suggestedMap)
+    setSiteChoices({})
+  }
   const siteById = useMemo(() => Object.fromEntries(sites.map((st) => [st.id, st])), [sites])
   const [busy, setBusy] = useState(false)
   const [messages, setMessages] = useState<{ ok: boolean; text: string }[]>([])
@@ -117,14 +119,14 @@ export default function PlanBoard({
         return
       }
       setMessages(
-        (data.results ?? []).map((r: any) => ({
+        (data.results ?? []).map((r: { driverId: string; ok: boolean; stops?: number; trips?: number; message?: string }) => ({
           ok: r.ok,
           text: `${driverById[r.driverId]?.name ?? 'Driver'}: ${r.ok ? `approved, ${r.stops} stop(s) in ${r.trips} trip(s)` : r.message}`,
         }))
       )
       router.refresh()
     } catch {
-      setMessages([{ ok: false, text: 'Could not reach Borla. Please try again.' }])
+      setMessages([{ ok: false, text: 'Could not reach Trashit. Please try again.' }])
     } finally {
       setBusy(false)
     }

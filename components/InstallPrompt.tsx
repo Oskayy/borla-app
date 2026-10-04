@@ -1,42 +1,51 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useClientValue } from '@/lib/use-client-value'
 
-// Offers to install Borla on the home screen. Android/Chrome gets an Install button; iPhone gets the
+// Chrome's install event (not in the standard DOM types).
+type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<unknown> }
+
+// False when already installed, or when the person said "not now" before.
+function canOffer(): boolean {
+  const standalone =
+    window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+  if (standalone) return false
+  try {
+    return localStorage.getItem('trashit-install-dismissed') !== '1'
+  } catch {
+    return true // storage unavailable
+  }
+}
+
+function isIosSafari(): boolean {
+  const ua = navigator.userAgent
+  return /iPhone|iPad|iPod/.test(ua) && !/CriOS|FxiOS/.test(ua)
+}
+
+// Offers to install Trashit on the home screen. Android/Chrome gets an Install button; iPhone gets the
 // Share -> Add to Home Screen steps (iPhones only allow alerts for apps added this way).
 export default function InstallPrompt() {
-  const [mode, setMode] = useState<'hidden' | 'android' | 'ios'>('hidden')
-  const [deferred, setDeferred] = useState<any>(null)
+  const offer = useClientValue(canOffer, false)
+  const ios = useClientValue(isIosSafari, false)
+  const [deferred, setDeferred] = useState<InstallEvent | null>(null)
+  const [closed, setClosed] = useState(false)
+  const mode: 'hidden' | 'android' | 'ios' = closed || !offer ? 'hidden' : deferred ? 'android' : ios ? 'ios' : 'hidden'
 
   useEffect(() => {
-    const standalone =
-      window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true
-    if (standalone) return
-    let dismissed = false
-    try {
-      dismissed = localStorage.getItem('borla-install-dismissed') === '1'
-    } catch {
-      // storage unavailable
-    }
-    if (dismissed) return
-
-    const ua = navigator.userAgent
-    const isIos = /iPhone|iPad|iPod/.test(ua) && !/CriOS|FxiOS/.test(ua)
-    if (isIos) setMode('ios')
-
+    if (!offer) return
     const onPrompt = (e: Event) => {
       e.preventDefault()
-      setDeferred(e)
-      setMode('android')
+      setDeferred(e as InstallEvent)
     }
     window.addEventListener('beforeinstallprompt', onPrompt)
     return () => window.removeEventListener('beforeinstallprompt', onPrompt)
-  }, [])
+  }, [offer])
 
   function dismiss() {
-    setMode('hidden')
+    setClosed(true)
     try {
-      localStorage.setItem('borla-install-dismissed', '1')
+      localStorage.setItem('trashit-install-dismissed', '1')
     } catch {
       // storage unavailable
     }
@@ -47,7 +56,7 @@ export default function InstallPrompt() {
     deferred.prompt()
     await deferred.userChoice.catch(() => null)
     setDeferred(null)
-    setMode('hidden')
+    setClosed(true)
   }
 
   if (mode === 'hidden') return null
@@ -56,7 +65,7 @@ export default function InstallPrompt() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icons/icon-192.png" alt="" width={40} height={40} style={{ borderRadius: 8 }} />
       <div style={{ flex: 1 }}>
-        <p style={{ fontWeight: 600, fontSize: 14 }}>Install Borla on your phone</p>
+        <p style={{ fontWeight: 600, fontSize: 14 }}>Install Trashit on your phone</p>
         {mode === 'android' ? (
           <>
             <p style={{ fontSize: 13, color: '#444', marginBottom: 8 }}>Opens straight from your home screen, full screen, with alerts.</p>
@@ -66,7 +75,7 @@ export default function InstallPrompt() {
           </>
         ) : (
           <p style={{ fontSize: 13, color: '#444' }}>
-            Tap the Share button <span aria-hidden>⬆️</span> in Safari, then <strong>Add to Home Screen</strong>. Open Borla from the new
+            Tap the Share button <span aria-hidden>⬆️</span> in Safari, then <strong>Add to Home Screen</strong>. Open Trashit from the new
             icon to turn on alerts.
           </p>
         )}

@@ -63,7 +63,7 @@ export default function ConfirmTripUnload({
       setFile(null)
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }

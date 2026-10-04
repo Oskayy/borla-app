@@ -21,12 +21,12 @@ async function accept(orderIds: string[]): Promise<string> {
     const data = await res.json().catch(() => ({}))
     return res.ok ? '' : data.error || 'Could not accept'
   } catch {
-    return 'Could not reach Borla. Please check your connection and try again.'
+    return 'Could not reach Trashit. Please check your connection and try again.'
   }
 }
 
-function timeLeft(deadlineIso: string): string {
-  const mins = Math.ceil((new Date(deadlineIso).getTime() - Date.now()) / 60_000)
+function timeLeft(deadlineIso: string, now: number): string {
+  const mins = Math.ceil((new Date(deadlineIso).getTime() - now) / 60_000)
   if (mins <= 0) return 'Time is up: this stop is about to go to another driver'
   if (mins < 60) return `Accept within ${mins} min, or it goes to another driver`
   return `Accept by ${new Date(deadlineIso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, or it goes to another driver`
@@ -34,13 +34,13 @@ function timeLeft(deadlineIso: string): string {
 
 // A live "accept within 12 min" line.
 export function AcceptCountdown({ deadline }: { deadline: string }) {
-  const [text, setText] = useState(() => timeLeft(deadline))
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    setText(timeLeft(deadline))
-    const t = setInterval(() => setText(timeLeft(deadline)), 15_000)
+    const t = setInterval(() => setNow(Date.now()), 15_000)
     return () => clearInterval(t)
-  }, [deadline])
-  const urgent = new Date(deadline).getTime() - Date.now() < 5 * 60_000
+  }, [])
+  const text = timeLeft(deadline, now)
+  const urgent = new Date(deadline).getTime() - now < 5 * 60_000
   return <p style={{ fontSize: 12, color: urgent ? '#B3261E' : '#9A6415', fontWeight: urgent ? 600 : 400, margin: '4px 0 6px' }}>⏱ {text}</p>
 }
 
@@ -101,7 +101,7 @@ export default function StopResponse({ orderId, deadline }: { orderId: string; d
       }
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setBusy(false)
     }

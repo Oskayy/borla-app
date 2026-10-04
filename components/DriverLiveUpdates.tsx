@@ -14,7 +14,7 @@ interface Alert {
 // Plays a short two-tone ring. Browsers only allow sound after the driver has tapped the page once.
 function ring() {
   try {
-    const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
+    const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AudioCtx) return
     const ctx = new AudioCtx()
     ;[880, 660, 880].forEach((freq, i) => {

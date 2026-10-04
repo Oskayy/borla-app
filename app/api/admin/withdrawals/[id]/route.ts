@@ -48,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         title: 'Earnings sent',
         body: `GHS ${w.amount.toFixed(2)} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
         url: '/dashboard/driver/earnings',
-        sms: `Borla: GHS ${w.amount.toFixed(2)} has been sent to your MoMo wallet ${w.momoNumber}.`,
+        sms: `Trashit: GHS ${w.amount.toFixed(2)} has been sent to your MoMo wallet ${w.momoNumber}.`,
       })
       return NextResponse.json({ success: true, status: 'PAID' })
     }
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await logAdminAction(auth.user.id, 'WITHDRAWAL_REJECTED', id, `${amountLabel}: ${note}`)
     await notifyUser(w.driverId, {
       title: 'Withdrawal not sent',
-      body: `Your withdrawal of ${amountLabel} was not approved: ${note}. The money is back in your Borla balance.`,
+      body: `Your withdrawal of ${amountLabel} was not approved: ${note}. The money is back in your Trashit balance.`,
       url: '/dashboard/driver/earnings',
     })
     return NextResponse.json({ success: true, status: 'REJECTED' })
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       title: 'Earnings sent',
       body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
       url: '/dashboard/driver/earnings',
-      sms: `Borla: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}. Ref ${note}.`,
+      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}. Ref ${note}.`,
     })
     return NextResponse.json({ success: true, status: 'PAID' })
   }
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await prisma.driverProfile.update({ where: { userId: w.driverId }, data: { paystackRecipientCode: recipient, recipientFor: walletKey } })
   }
 
-  const t = await initiateTransfer({ amountGhs: w.amount, recipient: recipient!, reference: w.reference, reason: 'Borla driver earnings' })
+  const t = await initiateTransfer({ amountGhs: w.amount, recipient: recipient!, reference: w.reference, reason: 'Trashit driver earnings' })
   if (!t.ok && t.uncertain) {
     // No clear answer: the money may have gone out. Keep it "being sent" (never back to REQUESTED, where it could be
     // paid by hand as well) until Paystack's webhook arrives or someone presses Check.
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       title: 'Earnings sent',
       body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
       url: '/dashboard/driver/earnings',
-      sms: `Borla: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}.`,
+      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}.`,
     })
   } else {
     await prisma.withdrawal.update({

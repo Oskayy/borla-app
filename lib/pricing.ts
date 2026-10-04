@@ -3,7 +3,7 @@ import { getShiftSettings } from '@/lib/settings'
 import { classifyBooking, describeCollection } from '@/lib/shift'
 import { pickZone } from '@/lib/zone-match'
 import { geocodeAddress } from '@/lib/geocode'
-import { cleanText, isValidLat, isValidLng } from '@/lib/validate'
+import { cleanText, isValidLat, isValidLng, type JsonBody } from '@/lib/validate'
 import {
   calculatePrice,
   type OrderInput,
@@ -170,7 +170,7 @@ export async function quoteAtPoint(
 // because looking text up on the map often lands on the middle of a neighbourhood.
 export async function quoteFromBooking(
   userId: string,
-  body: any,
+  body: JsonBody,
   input: OrderInput,
   _gpsLat: number | null,
   _gpsLng: number | null

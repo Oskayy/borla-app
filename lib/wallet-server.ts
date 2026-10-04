@@ -1,13 +1,14 @@
+import type { Prisma, UserRole } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { summarizeWallet, type WalletSummary } from '@/lib/wallet'
 
-export const PAYOUT_ROLES = ['SUPER_ADMIN', 'FINANCE']
+export const PAYOUT_ROLES: UserRole[] = ['SUPER_ADMIN', 'FINANCE']
 
 const EARNING_TYPES = ['driver_payout_pickup', 'driver_payout_disposal']
 
 // A driver's balance, worked out from the ledger (earnings) and their withdrawals.
 // Pass `tx` to read inside a transaction.
-export async function getWalletSummary(driverId: string, tx: any = prisma): Promise<WalletSummary> {
+export async function getWalletSummary(driverId: string, tx: Prisma.TransactionClient = prisma): Promise<WalletSummary> {
   const [earnings, withdrawals] = await Promise.all([
     tx.ledgerEntry.findMany({ where: { driverId, type: { in: EARNING_TYPES } }, select: { amount: true } }),
     tx.withdrawal.findMany({ where: { driverId }, select: { amount: true, status: true } }),

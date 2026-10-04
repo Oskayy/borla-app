@@ -34,7 +34,7 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
       setMsg((m) => ({ ...m, [id]: res.ok ? { ok: true, text: decision === 'approve' ? 'Approved.' : 'Sent back to the driver.' } : { ok: false, text: data.error || 'Could not save' } }))
       if (res.ok) router.refresh()
     } catch {
-      setMsg((m) => ({ ...m, [id]: { ok: false, text: 'Could not reach Borla. Please try again.' } }))
+      setMsg((m) => ({ ...m, [id]: { ok: false, text: 'Could not reach Trashit. Please try again.' } }))
     } finally {
       setBusy(null)
     }

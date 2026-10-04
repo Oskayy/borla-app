@@ -27,7 +27,7 @@ export default function CancelOrderButton({ orderId, amount }: { orderId: string
       }
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please try again.')
+      setError('Could not reach Trashit. Please try again.')
     } finally {
       setBusy(false)
     }

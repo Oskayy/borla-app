@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const result = await refundOrder({ orderId, amount: null, reason: `Cancelled by customer: ${reason}`, actorId: auth.user.id, cancel: true })
   if (!result.ok) {
     console.error('[cancel] refund failed', orderId, result.error)
-    return NextResponse.json({ error: 'We could not start your refund right now. Please try again, or contact Borla support.' }, { status: 502 })
+    return NextResponse.json({ error: 'We could not start your refund right now. Please try again, or contact Trashit support.' }, { status: 502 })
   }
   return NextResponse.json({ success: true, refunded: result.refunded })
 }

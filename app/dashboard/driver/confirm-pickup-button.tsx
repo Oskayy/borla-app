@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
+import { errorMessage } from '@/lib/errors'
 
 export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null)
@@ -57,9 +58,9 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
       } else {
         setError(data.error || 'Failed to confirm pickup')
       }
-    } catch (e: any) {
+    } catch (e) {
       setLoading(false)
-      setError(e.message)
+      setError(errorMessage(e))
     }
   }
 
@@ -80,9 +81,9 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
         const data = await res.json()
         setError(data.error || 'Failed to report issue')
       }
-    } catch (e: any) {
+    } catch (e) {
       setLoading(false)
-      setError(e.message)
+      setError(errorMessage(e))
     }
   }
 

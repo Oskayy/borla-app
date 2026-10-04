@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
-import { readJson } from '@/lib/validate'
+import { readJson, type JsonBody } from '@/lib/validate'
 
 // Saves (or removes) this phone's permission to receive push alerts.
-function parse(body: any): { endpoint: string; p256dh: string; auth: string } | null {
+function parse(body: JsonBody): { endpoint: string; p256dh: string; auth: string } | null {
   const endpoint = body?.endpoint
   const p256dh = body?.keys?.p256dh
   const auth = body?.keys?.auth

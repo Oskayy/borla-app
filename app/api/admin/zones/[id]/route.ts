@@ -4,6 +4,7 @@ import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, readJson } from '@/lib/validate'
 import { parseZoneBody } from '@/lib/zones'
+import { caught } from '@/lib/errors'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(OPS_ROLES)
@@ -28,7 +29,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: { ...data, ...(active !== undefined ? { active } : {}) },
     })
     return NextResponse.json({ success: true, zone })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.code === 'P2025') return NextResponse.json({ error: 'Zone not found' }, { status: 404 })
     console.error('[zones] update failed:', e)
     return NextResponse.json({ error: 'Could not update the zone' }, { status: 500 })
@@ -61,7 +63,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     await prisma.zone.delete({ where: { id } })
     return NextResponse.json({ success: true })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.code === 'P2025') return NextResponse.json({ error: 'Zone not found' }, { status: 404 })
     console.error('[zones] delete failed:', e)
     return NextResponse.json({ error: 'Could not delete the zone' }, { status: 500 })

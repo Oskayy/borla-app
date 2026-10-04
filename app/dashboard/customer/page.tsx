@@ -59,7 +59,7 @@ export default async function CustomerDashboard() {
       {lastOrder ? (
         <div className="panel">
           <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Most recent order</p>
-          <p style={{ marginBottom: 8 }}>{(lastOrder.quoteSnapshot as any)?.address}</p>
+          <p style={{ marginBottom: 8 }}>{(lastOrder.quoteSnapshot as { address?: string } | null)?.address}</p>
           <p style={{ fontSize: 14 }}>
             <span className="status-dot" style={{ background: statusColors[lastOrder.status] ?? '#999' }} />
             {lastOrder.status}
@@ -67,7 +67,7 @@ export default async function CustomerDashboard() {
         </div>
       ) : (
         <div className="panel">
-          <p>You haven't booked a pickup yet.</p>
+          <p>You haven&apos;t booked a pickup yet.</p>
         </div>
       )}
     </div>

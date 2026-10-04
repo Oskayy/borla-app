@@ -30,7 +30,7 @@ export default function PayoutAccountForm({
       setMsg(res.ok ? { ok: true, text: 'Saved.' } : { ok: false, text: data.error || 'Could not save' })
       if (res.ok) router.refresh()
     } catch {
-      setMsg({ ok: false, text: 'Could not reach Borla. Please try again.' })
+      setMsg({ ok: false, text: 'Could not reach Trashit. Please try again.' })
     } finally {
       setBusy(false)
     }

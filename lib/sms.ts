@@ -1,14 +1,14 @@
 import { normalizeGhanaPhone } from '@/lib/phone'
 
 // Text messages through Arkesel (a Ghana SMS provider). Off unless ARKESEL_API_KEY is set.
-// SMS_SENDER_ID is the name shown as the sender (max 11 letters/digits, registered with Arkesel), e.g. "Borla".
+// SMS_SENDER_ID is the name shown as the sender (max 11 letters/digits, registered with Arkesel), e.g. "Trashit".
 // Never throws: a failed text must not undo the work that triggered it.
 export async function sendSms(phone: string | null | undefined, message: string): Promise<boolean> {
   const key = process.env.ARKESEL_API_KEY
   if (!key) return false
   const to = normalizeGhanaPhone(phone ?? '')
   if (!to) return false
-  const sender = (process.env.SMS_SENDER_ID || 'Borla').slice(0, 11)
+  const sender = (process.env.SMS_SENDER_ID || 'Trashit').slice(0, 11)
   try {
     const res = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
       method: 'POST',

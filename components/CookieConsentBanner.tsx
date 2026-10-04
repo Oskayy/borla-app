@@ -1,26 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useClientValue } from '@/lib/use-client-value'
 
 const STORAGE_KEY = 'borla_cookie_consent'
 
 export default function CookieConsentBanner() {
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const existing = localStorage.getItem(STORAGE_KEY)
-    if (!existing) setVisible(true)
-  }, [])
+  // Hidden on the server; shown in the browser until a choice is saved.
+  const saved = useClientValue(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY) !== null
+    } catch {
+      return false
+    }
+  }, true)
+  const [chosen, setChosen] = useState(false)
+  const visible = !saved && !chosen
 
   function accept() {
     localStorage.setItem(STORAGE_KEY, 'accepted')
-    setVisible(false)
+    setChosen(true)
   }
 
   function acceptEssentialOnly() {
     localStorage.setItem(STORAGE_KEY, 'essential-only')
-    setVisible(false)
+    setChosen(true)
   }
 
   if (!visible) return null

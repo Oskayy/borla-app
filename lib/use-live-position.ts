@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 // The phone's own GPS position, shared by every component on the page that needs it
 // (the Navigate buttons, the next-stop card and the route map), so only one GPS watch runs.
@@ -50,23 +50,20 @@ export function isUsableFix(p: LivePosition | null, now = Date.now()): p is Live
 
 // Returns the latest usable position (or null), and whether the phone refused to give one.
 export function useLivePosition(enabled = true): { position: LivePosition | null; denied: boolean } {
-  const [position, setPosition] = useState<LivePosition | null>(current)
-  const [denied, setDenied] = useState(false)
-
-  useEffect(() => {
-    if (!enabled) return
-    const listener = (p: LivePosition | null) => {
-      setPosition(p)
-      setDenied(failed && !p)
-    }
-    listeners.add(listener)
-    start()
-    if (current) setPosition(current)
-    return () => {
-      listeners.delete(listener)
-      stop()
-    }
-  }, [enabled])
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!enabled) return () => {}
+      listeners.add(onChange)
+      start()
+      return () => {
+        listeners.delete(onChange)
+        stop()
+      }
+    },
+    [enabled]
+  )
+  const position = useSyncExternalStore(subscribe, () => current, () => null)
+  const denied = useSyncExternalStore(subscribe, () => failed && !current, () => false)
 
   return { position: isUsableFix(position) ? position : null, denied }
 }

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your account is waiting for approval. We’ll message you when you can start.' }, { status: 403 })
   }
   if (!profile.isActive) {
-    return NextResponse.json({ error: 'Your account is paused. Please contact Borla support.' }, { status: 403 })
+    return NextResponse.json({ error: 'Your account is paused. Please contact Trashit support.' }, { status: 403 })
   }
   if (!profile.vehicleTypeId || profile.homeLat == null) {
     return NextResponse.json({ error: 'Please finish setting up your vehicle and home base first.' }, { status: 400 })

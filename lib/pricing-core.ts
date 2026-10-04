@@ -5,10 +5,11 @@
 //         + hazard surcharge (if hazardous)
 //         + late surcharge (if booked after the planning snapshot)
 //
-// The platform fee does not change what the customer pays. It is Borla's share of the price,
+// The platform fee does not change what the customer pays. It is Trashit's share of the price,
 // taken before the driver's pickup/disposal split:
 //   platform fee = price × platformFeePercent
 //   driver pool  = price − platform fee
+import type { JsonBody } from './validate'
 
 export const WASTE_TYPES = ['general', 'recyclable'] as const
 export type WasteType = (typeof WASTE_TYPES)[number]
@@ -83,7 +84,7 @@ export function round2(n: number): number {
 }
 
 // Validates the order details a customer sends. Returns null when anything is wrong.
-export function parseOrderInput(body: any): OrderInput | null {
+export function parseOrderInput(body: JsonBody): OrderInput | null {
   const wasteType = body?.wasteType
   if (typeof wasteType !== 'string' || !(WASTE_TYPES as readonly string[]).includes(wasteType)) return null
 
@@ -152,7 +153,7 @@ export function calculatePrice(
   const price = round2(Math.max(0, subtotal - recyclableDiscount + hazardSurcharge + lateSurcharge))
   const platformFee = round2(price * (rule.platformFeePercent / 100))
 
-    return {
+  return {
     ok: true,
     error: '',
     breakdown: {

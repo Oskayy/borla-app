@@ -5,6 +5,7 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
 import { notifyOps, notifyUser } from '@/lib/notify'
+import { caught } from '@/lib/errors'
 
 const ISSUE_TYPES = ['LOCKED_GATE', 'SPILL_HAZARD']
 
@@ -82,7 +83,8 @@ export async function POST(req: NextRequest) {
         },
       })
     })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'This order was just updated. Please refresh.' }, { status: 409 })
     }
@@ -94,9 +96,9 @@ export async function POST(req: NextRequest) {
   if (issueType === 'LOCKED_GATE') {
     await notifyUser(order.customerId, {
       title: 'We couldn’t reach your bins',
-      body: 'Our driver found the gate locked or the bins out of reach. Borla will contact you about another try.',
+      body: 'Our driver found the gate locked or the bins out of reach. Trashit will contact you about another try.',
       url: `/dashboard/customer/orders/${orderId}`,
-      sms: 'Borla: our driver couldn’t reach your bins tonight (gate locked or bins not out). We’ll contact you about another try.',
+      sms: 'Trashit: our driver couldn’t reach your bins tonight (gate locked or bins not out). We’ll contact you about another try.',
     })
   }
   await notifyOps({

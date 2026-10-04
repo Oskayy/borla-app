@@ -60,7 +60,7 @@ function SettleRefund({ id }: { id: string }) {
       if (!res.ok) setError(data.error || 'Could not save')
       else router.refresh()
     } catch {
-      setError('Could not reach Borla. Please try again.')
+      setError('Could not reach Trashit. Please try again.')
     } finally {
       setBusy(false)
     }
@@ -139,7 +139,7 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
       setOpen(null)
       router.refresh()
     } catch {
-      setMsg((m) => ({ ...m, [key]: { ok: false, text: 'Could not reach Borla. Please try again.' } }))
+      setMsg((m) => ({ ...m, [key]: { ok: false, text: 'Could not reach Trashit. Please try again.' } }))
     } finally {
       setBusy(false)
     }

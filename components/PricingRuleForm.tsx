@@ -103,7 +103,7 @@ export default function PricingRuleForm({ sizes }: { sizes: BinSizeOption[] }) {
         className="input-field"
       />
 
-      <label style={labelStyle}>Platform fee (% of price kept by Borla)</label>
+      <label style={labelStyle}>Platform fee (% of price kept by Trashit)</label>
       <input
         type="number"
         min="0"

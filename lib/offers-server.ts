@@ -3,6 +3,7 @@ import { getAcceptMinutes, getShiftSettings } from '@/lib/settings'
 import { offerDeadline, isOfferExpired } from '@/lib/offers'
 import { reassignOrder } from '@/lib/reassign-server'
 import { notifyUser } from '@/lib/notify'
+import { caught } from '@/lib/errors'
 
 const BATCH = 50
 const MIN_GAP_MS = 20_000 // don't sweep more often than this from one server
@@ -61,7 +62,8 @@ async function doSweep(): Promise<number> {
           data: { orderId: o.id, actorId: null, fromState: 'ASSIGNED', toState: 'PAID', reason: `EXPIRED: ${reason}` },
         })
       })
-    } catch (e: any) {
+    } catch (err) {
+      const e = caught(err)
       if (e?.message !== 'STATE_CHANGED') console.error('[offers] could not expire order', o.id, e)
       continue // the driver answered, or someone else changed it, in the meantime
     }

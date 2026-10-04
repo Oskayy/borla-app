@@ -1,8 +1,9 @@
-// Driver approval: the documents a driver uploads, and who can review them.
+/// Driver approval: the documents a driver uploads, and who can review them.
+import type { UserRole } from '@prisma/client'
 
 export const DRIVER_DOCS_BUCKET = 'driver-documents' // private: only the server can read or write
 export const MAX_DOC_BYTES = 5 * 1024 * 1024 // 5 MB (photos are shrunk on the phone first)
-export const APPROVAL_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'COMPLIANCE']
+export const APPROVAL_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPS_MANAGER', 'COMPLIANCE']
 
 export const DOC_TYPES: { code: string; label: string; hint: string; required: boolean }[] = [
   { code: 'ghana_card', label: 'Ghana Card', hint: 'A clear photo of the front of your Ghana Card', required: true },

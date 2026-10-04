@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { cleanText, isUuid, readJson } from '@/lib/validate'
 import { reassignOrder } from '@/lib/reassign-server'
+import { caught } from '@/lib/errors'
 
 // The driver turns down a stop they haven't collected yet. It comes off their route straight away and
 // is given to the best other driver. That driver is never offered it again.
@@ -39,7 +40,8 @@ export async function POST(req: NextRequest) {
         data: { orderId, actorId: user.id, fromState: 'ASSIGNED', toState: 'PAID', reason: `DECLINED by driver: ${reason}` },
       })
     })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.message === 'STATE_CHANGED' || e?.code === 'P2002') {
       return NextResponse.json({ error: 'This stop can no longer be declined. Please refresh.' }, { status: 409 })
     }

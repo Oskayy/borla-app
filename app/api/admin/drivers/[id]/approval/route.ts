@@ -45,15 +45,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await notifyUser(id, approved
     ? {
         title: 'You’re approved!',
-        body: 'Welcome to Borla. You can go online when the shift starts and receive pickups.',
+        body: 'Welcome to Trashit. You can go online when the shift starts and receive pickups.',
         url: '/dashboard/driver',
-        sms: 'Borla: your driver account is approved. Open the Borla app and go online when the shift starts.',
+        sms: 'Trashit: your driver account is approved. Open the Trashit app and go online when the shift starts.',
       }
     : {
         title: 'Please update your documents',
         body: `Your documents weren't approved yet: ${note}. Please fix this and send them again.`,
         url: '/dashboard/driver/verification',
-        sms: `Borla: please update your driver documents: ${note}`,
+        sms: `Trashit: please update your driver documents: ${note}`,
       })
   return NextResponse.json({ success: true })
 }

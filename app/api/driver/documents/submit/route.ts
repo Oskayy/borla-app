@@ -22,7 +22,7 @@ export async function POST() {
     data: { approvalStatus: 'PENDING', submittedAt: new Date(), approvalNote: null },
   })
 
-  const staff = await prisma.user.findMany({ where: { role: { in: APPROVAL_ROLES as any }, active: true }, select: { id: true } })
+  const staff = await prisma.user.findMany({ where: { role: { in: APPROVAL_ROLES }, active: true }, select: { id: true } })
   await notifyUsers(
     staff.map((s: { id: string }) => s.id),
     { title: 'Driver waiting for approval', body: 'A new driver sent their documents. Review them on the Driver Approvals page.', url: '/ops/driver-approvals' }

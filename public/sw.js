@@ -1,14 +1,14 @@
-// Borla service worker: shows push alerts (new stops, reassigned stops) even when the app is closed,
+// Trashit service worker: shows push alerts (new stops, reassigned stops) even when the app is closed,
 // and opens the right page when the alert is tapped. It does not cache pages.
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'Borla', body: 'You have an update', url: '/dashboard' }
+  let data = { title: 'Trashit', body: 'You have an update', url: '/dashboard' }
   try {
     if (event.data) data = { ...data, ...event.data.json() }
-  } catch (e) {
+  } catch {
     // not JSON; keep the default text
   }
   event.waitUntil(
@@ -16,7 +16,7 @@ self.addEventListener('push', (event) => {
       body: data.body,
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-96.png',
-      tag: 'borla-route',
+      tag: 'trashit-route',
       renotify: true,
       requireInteraction: true,
       vibrate: [300, 100, 300, 100, 300],

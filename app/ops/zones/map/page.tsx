@@ -23,7 +23,7 @@ export default async function ZoneMapPage() {
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <h1 style={{ fontSize: 26, marginBottom: 6 }}>Zone Map</h1>
       <p style={{ color: '#666', marginBottom: 20 }}>
-        Shaded circles show each zone's approximate coverage area. Click a marker for details.
+        Shaded circles show each zone&apos;s approximate coverage area. Click a marker for details.
       </p>
 
       {zonesWithCoords.length === 0 ? (

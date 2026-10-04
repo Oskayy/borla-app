@@ -9,6 +9,7 @@ import { attachOrderToDriver, type AttachableOrder } from '@/lib/reassign-server
 import { sweepExpiredOffers } from '@/lib/offers-server'
 import { newStopsMessage } from '@/lib/offers'
 import { notifyOps, notifyUser } from '@/lib/notify'
+import { caught } from '@/lib/errors'
 
 // The night's automatic jobs. Called every 2 minutes by the scheduler, and also (at most once a minute)
 // whenever driver or ops screens check for updates, so they keep running even without the scheduler.
@@ -85,9 +86,10 @@ function nightName(ymd: string): string {
 async function once(key: string, job: () => Promise<string>): Promise<void> {
   try {
     await prisma.jobRun.create({ data: { key } })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.code === 'P2002') return // already done (or running elsewhere)
-    throw e
+    throw err
   }
   try {
     const summary = await job()
@@ -183,9 +185,9 @@ async function shiftStartNotice(shiftDate: string, auto: boolean): Promise<strin
   for (const c of customers) {
     await notifyUser(c as string, {
       title: 'Your pickup is tonight',
-      body: 'Borla is collecting tonight. Please put your bins out now, where the driver can reach them.',
+      body: 'Trashit is collecting tonight. Please put your bins out now, where the driver can reach them.',
       url: '/dashboard/customer/orders',
-      sms: 'Borla: your pickup is tonight. Please put your bins out now where the driver can reach them. Thank you!',
+      sms: 'Trashit: your pickup is tonight. Please put your bins out now where the driver can reach them. Thank you!',
     })
   }
 
@@ -216,7 +218,8 @@ async function autoDispatch(shiftDate: string): Promise<number> {
       try {
         await attachOrderToDriver(o, driver, sites, null, (trip, newTrip) => `Assigned automatically (trip ${trip}${newTrip ? ', new trip' : ''})`)
         added++
-      } catch (e: any) {
+      } catch (err) {
+        const e = caught(err)
         if (e?.message !== 'STATE_CHANGED') console.error('[jobs] auto-assign failed', orderId, e)
       }
     }
@@ -282,7 +285,7 @@ async function rollOver(endedShiftDate: string): Promise<number> {
         title: 'Your pickup has moved to tonight',
         body: `Sorry, we couldn't collect on ${nightName(endedShiftDate)} night. Your pickup is now booked for ${nightName(next)} night. Please leave your bins out again. There's nothing extra to pay.`,
         url: '/dashboard/customer/orders',
-        sms: `Borla: sorry, we couldn't collect last night. Your pickup is now booked for ${nightName(next)} night at no extra cost. Please put your bins out again.`,
+        sms: `Trashit: sorry, we couldn't collect last night. Your pickup is now booked for ${nightName(next)} night at no extra cost. Please put your bins out again.`,
       })
     }
     if (batch.length < 200) break

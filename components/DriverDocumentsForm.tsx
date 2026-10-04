@@ -43,7 +43,7 @@ export default function DriverDocumentsForm({
       }
       setHave((h) => ({ ...h, [code]: new Date().toISOString() }))
     } catch {
-      setError('Could not reach Borla. Please try again.')
+      setError('Could not reach Trashit. Please try again.')
     } finally {
       setBusy(null)
     }
@@ -61,7 +61,7 @@ export default function DriverDocumentsForm({
       }
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please try again.')
+      setError('Could not reach Trashit. Please try again.')
     } finally {
       setSending(false)
     }

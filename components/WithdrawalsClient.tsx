@@ -61,7 +61,7 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
         router.refresh()
       }
     } catch {
-      setMsg((m) => ({ ...m, [id]: { ok: false, text: 'Could not reach Borla. Please try again.' } }))
+      setMsg((m) => ({ ...m, [id]: { ok: false, text: 'Could not reach Trashit. Please try again.' } }))
     } finally {
       setBusy(null)
     }

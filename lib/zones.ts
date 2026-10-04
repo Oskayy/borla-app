@@ -1,4 +1,4 @@
-import { cleanText, isValidLat, isValidLng } from '@/lib/validate'
+import { cleanText, isValidLat, isValidLng, type JsonBody } from '@/lib/validate'
 
 // Returns the number, null when not provided, or NaN when it is not a number.
 function optionalNumber(value: unknown): number | null {
@@ -17,7 +17,7 @@ function parseAreas(value: unknown): string[] | null {
 }
 
 // Returns clean zone data, or null if anything is invalid.
-export function parseZoneBody(body: any) {
+export function parseZoneBody(body: JsonBody) {
   const name = cleanText(body?.name, 80)
   const city = cleanText(body?.city, 60)
   const coveredAreas = parseAreas(body?.coveredAreas)

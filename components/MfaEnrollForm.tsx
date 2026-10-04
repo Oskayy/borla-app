@@ -82,7 +82,7 @@ export default function MfaEnrollForm({ onEnrolled, redirectTo }: { onEnrolled?:
       </p>
       <div dangerouslySetInnerHTML={{ __html: qrCode }} style={{ marginBottom: 12 }} />
       <p style={{ fontSize: 11, color: '#999', marginBottom: 16 }}>
-        Can't scan? Enter this code manually: <code>{secret}</code>
+        Can&apos;t scan? Enter this code manually: <code>{secret}</code>
       </p>
       <form onSubmit={confirmCode}>
         <input

@@ -33,7 +33,7 @@ export default function Footer() {
         </Link>
       </div>
       <p style={{ fontSize: 12, color: '#999', margin: 0 }}>
-        © {new Date().getFullYear()} Borla. All rights reserved.
+        © {new Date().getFullYear()} Trashit. All rights reserved.
       </p>
     </footer>
   )

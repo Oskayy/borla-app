@@ -6,6 +6,7 @@ import { validatePasswordStrength, isPasswordBreached } from '@/lib/password'
 import { isRateLimited, recordAttempt, getClientIp } from '@/lib/rate-limit'
 import { cleanText, readJson } from '@/lib/validate'
 import { siteUrl } from '@/lib/site-url'
+import { caught } from '@/lib/errors'
 
 // Only these two roles can ever be created from the public signup form.
 const SELF_SERVICE_ROLES = ['CUSTOMER', 'DRIVER']
@@ -82,7 +83,8 @@ export async function POST(req: NextRequest) {
     if (role === 'DRIVER') {
       await prisma.driverProfile.create({ data: { userId: data.user.id } })
     }
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     console.error('[signup] profile creation failed:', e)
 
     // Remove the half-created login so the person can simply try again.

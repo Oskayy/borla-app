@@ -32,7 +32,7 @@ export default function MfaRecoveryForm() {
 
   return (
     <div className="panel">
-      <label style={{ fontSize: 12, color: '#666' }}>User's email</label>
+      <label style={{ fontSize: 12, color: '#666' }}>User&apos;s email</label>
       <input
         type="email"
         value={email}

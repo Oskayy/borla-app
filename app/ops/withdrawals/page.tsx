@@ -33,7 +33,7 @@ export default async function WithdrawalsPage() {
     if (!balances.has(w.driverId)) balances.set(w.driverId, (await getWalletSummary(w.driverId)).earned)
   }
 
-  const toRow = (w: any): WithdrawalRow => ({
+  const toRow = (w: (typeof open)[number]): WithdrawalRow => ({
     id: w.id,
     driverName: w.driver?.name ?? 'Driver',
     driverPhone: w.driver?.phone ?? '',

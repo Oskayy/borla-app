@@ -20,20 +20,13 @@ export default function DriverOnlineToggle({
   const [online, setOnline] = useState(initialOnline)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [gps, setGps] = useState<'idle' | 'on' | 'denied' | 'unsupported'>('idle')
+  const [gps, setGps] = useState<'idle' | 'on' | 'denied'>('idle')
   const lastSent = useRef(0)
   const router = useRouter()
 
   // Share location only while online.
   useEffect(() => {
-    if (!online) {
-      setGps('idle')
-      return
-    }
-    if (!navigator.geolocation) {
-      setGps('unsupported')
-      return
-    }
+    if (!online || !navigator.geolocation) return
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -62,7 +55,10 @@ export default function DriverOnlineToggle({
       { enableHighAccuracy: true, maximumAge: 15_000 }
     )
 
-    return () => navigator.geolocation.clearWatch(watchId)
+    return () => {
+      navigator.geolocation.clearWatch(watchId)
+      setGps('idle')
+    }
   }, [online, shiftLabel, router])
 
   async function toggle() {
@@ -83,7 +79,7 @@ export default function DriverOnlineToggle({
       setOnline(data.online)
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setBusy(false)
     }

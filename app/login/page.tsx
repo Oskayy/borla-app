@@ -1,27 +1,30 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PasswordInput from '@/components/PasswordInput'
+import { useClientValue } from '@/lib/use-client-value'
+
+const LINK_ERRORS: Record<string, string> = {
+  'confirm-link-invalid': 'That confirmation link has expired or was already used. Log in, or ask for a new link.',
+  'reset-link-invalid': 'That password reset link has expired or was already used. Please ask for a new one.',
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [notice, setNotice] = useState('')
   const [notConfirmed, setNotConfirmed] = useState(false)
   const [resent, setResent] = useState(false)
 
   // Messages from email links (?confirmed=1 after confirming, ?error=... for expired links).
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('confirmed') === '1') setNotice('Your email is confirmed. Please log in.')
-    const err = params.get('error')
-    if (err === 'confirm-link-invalid') setError('That confirmation link has expired or was already used. Log in, or ask for a new link.')
-    if (err === 'reset-link-invalid') setError('That password reset link has expired or was already used. Please ask for a new one.')
-  }, [])
+  // The link's error shows until the first login attempt, like any other error.
+  const linkParams = new URLSearchParams(useClientValue(() => window.location.search, ''))
+  const notice = linkParams.get('confirmed') === '1' ? 'Your email is confirmed. Please log in.' : ''
+  const [attempted, setAttempted] = useState(false)
+  const linkError = attempted ? '' : LINK_ERRORS[linkParams.get('error') ?? ''] ?? ''
 
   async function resendConfirmation() {
     setResent(false)
@@ -41,6 +44,7 @@ export default function LoginPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
+    setAttempted(true)
     setError('')
     setNotConfirmed(false)
     setResent(false)
@@ -69,7 +73,7 @@ export default function LoginPage() {
 
       router.push('/dashboard')
       router.refresh()
-    } catch (e) {
+    } catch {
       setError('Something went wrong. Please try again.')
       setLoading(false)
     }
@@ -96,7 +100,7 @@ export default function LoginPage() {
 
       router.push('/dashboard')
       router.refresh()
-    } catch (e) {
+    } catch {
       setError('Something went wrong. Please try again.')
       setLoading(false)
     }
@@ -122,7 +126,7 @@ export default function LoginPage() {
               className="input-field"
               style={{ letterSpacing: 4, fontSize: 20, textAlign: 'center' }}
             />
-            {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+            {(error || linkError) && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error || linkError}</p>}
             <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
               {loading ? 'Verifying...' : 'Verify'}
             </button>
@@ -135,7 +139,7 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Log in to Borla</h1>
+        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Log in to Trashit</h1>
         <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Pickups, on schedule.</p>
         {notice && <p style={{ color: '#2F7A4D', fontSize: 13, marginBottom: 12 }}>{notice}</p>}
         <form onSubmit={handleLogin}>
@@ -155,7 +159,7 @@ export default function LoginPage() {
             autoComplete="current-password"
             className="input-field"
           />
-          {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+          {(error || linkError) && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error || linkError}</p>}
           {notConfirmed && (
             <p style={{ fontSize: 13, marginBottom: 12 }}>
               {resent ? (

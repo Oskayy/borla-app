@@ -37,7 +37,7 @@ export default function DisposalReviewClient({ groups }: { groups: ReviewGroup[]
       }))
       if (res.ok) router.refresh()
     } catch {
-      setMessages((m) => ({ ...m, [g.key]: { ok: false, text: 'Could not reach Borla. Please try again.' } }))
+      setMessages((m) => ({ ...m, [g.key]: { ok: false, text: 'Could not reach Trashit. Please try again.' } }))
     } finally {
       setBusy(null)
     }

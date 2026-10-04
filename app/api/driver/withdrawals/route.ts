@@ -6,6 +6,7 @@ import { readJson } from '@/lib/validate'
 import { checkWithdrawal, transferReference } from '@/lib/wallet'
 import { getWalletSummary, PAYOUT_ROLES } from '@/lib/wallet-server'
 import { notifyUsers } from '@/lib/notify'
+import { caught } from '@/lib/errors'
 
 // A driver asks for (part of) their balance to be sent to their mobile money wallet.
 // Finance approves it on the Withdrawals page, which sends the money through Paystack.
@@ -52,7 +53,8 @@ export async function POST(req: NextRequest) {
       },
       { isolationLevel: 'Serializable', timeout: 15000 }
     )
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.message === 'OPEN_REQUEST') {
       return NextResponse.json({ error: 'You already have a withdrawal waiting. Please wait for it to finish.' }, { status: 409 })
     }
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not request the withdrawal. Please try again.' }, { status: 500 })
   }
 
-  const staff = await prisma.user.findMany({ where: { role: { in: PAYOUT_ROLES as any }, active: true }, select: { id: true } })
+  const staff = await prisma.user.findMany({ where: { role: { in: PAYOUT_ROLES }, active: true }, select: { id: true } })
   await notifyUsers(
     staff.map((s: { id: string }) => s.id),
     { title: 'Withdrawal request', body: `A driver asked to withdraw GHS ${created!.amount.toFixed(2)}.`, url: '/ops/withdrawals' }

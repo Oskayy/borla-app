@@ -16,7 +16,7 @@ export function refundable(paymentAmount: number, liveRefunds: number[]): number
 }
 
 // A customer can cancel (for a full refund) a paid order until its collection night starts.
-// After that a driver may already be on the way, so they need to contact Borla instead.
+// After that a driver may already be on the way, so they need to contact Trashit instead.
 export function customerCancelCheck(
   order: { status: string; shiftDate: Date | string | null },
   now: Date,
@@ -24,13 +24,13 @@ export function customerCancelCheck(
 ): { ok: boolean; error: string } {
   if (order.status === 'DRAFT') return { ok: false, error: 'This order was never paid. You can simply delete it.' }
   if (order.status !== 'PAID' && order.status !== 'ASSIGNED') {
-    return { ok: false, error: 'This order can no longer be cancelled here. Please contact Borla support.' }
+    return { ok: false, error: 'This order can no longer be cancelled here. Please contact Trashit support.' }
   }
   if (order.shiftDate) {
     const ymd = typeof order.shiftDate === 'string' ? order.shiftDate.slice(0, 10) : order.shiftDate.toISOString().slice(0, 10)
     const start = zonedInstant(ymd, s.shiftStartMinutes, s.timezone)
     if (now.getTime() >= start.getTime()) {
-      return { ok: false, error: 'Collection for this order has already started, so it can’t be cancelled online. Please contact Borla support.' }
+      return { ok: false, error: 'Collection for this order has already started, so it can’t be cancelled online. Please contact Trashit support.' }
     }
   }
   return { ok: true, error: '' }

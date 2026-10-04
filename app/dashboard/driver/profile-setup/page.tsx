@@ -40,7 +40,7 @@ export default async function DriverProfileSetupPage() {
   return (
     <div style={{ maxWidth: 560, margin: '40px auto', padding: '0 20px' }}>
       <div className="panel">
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>{isSetUp ? 'My vehicle and area' : `Welcome to Borla, ${dbUser.name}`}</h1>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>{isSetUp ? 'My vehicle and area' : `Welcome to Trashit, ${dbUser.name}`}</h1>
         <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
           {isSetUp
             ? 'Update your vehicle, where you start each night, and how far you travel for pickups.'

@@ -75,7 +75,7 @@ export default async function DriverEarningsPage() {
 
       <h2 style={{ fontSize: 16, margin: '8px 0' }}>Withdrawals</h2>
       {withdrawals.length === 0 && <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>None yet.</p>}
-      {withdrawals.map((w: any) => (
+      {withdrawals.map((w) => (
         <div key={w.id} className="panel" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <div>
             <p style={{ fontWeight: 600 }}>GHS {w.amount.toFixed(2)}</p>
@@ -92,7 +92,7 @@ export default async function DriverEarningsPage() {
 
       <h2 style={{ fontSize: 16, margin: '20px 0 8px' }}>Recent earnings</h2>
       {history.length === 0 && <p style={{ fontSize: 13, color: '#666' }}>No earnings yet.</p>}
-      {history.map((e: any) => (
+      {history.map((e) => (
         <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
           <div>
             <p style={{ fontSize: 14 }}>{(e.order?.quoteSnapshot as { address?: string } | null)?.address ?? 'Order'}</p>

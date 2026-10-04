@@ -14,11 +14,11 @@ export default async function StaffPage() {
   if (!dbUser || !STAFF_ADMIN_ROLES.includes(dbUser.role)) redirect('/ops')
 
   const staff = await prisma.user.findMany({
-    where: { role: { in: STAFF_ROLES as any } },
+    where: { role: { in: STAFF_ROLES } },
     orderBy: [{ active: 'desc' }, { name: 'asc' }],
     select: { id: true, name: true, email: true, phone: true, role: true, active: true, mustChangePassword: true, createdAt: true },
   })
-  const rows: StaffRow[] = staff.map((s: any) => ({ ...s, createdAt: s.createdAt.toISOString(), isMe: s.id === user.id }))
+  const rows: StaffRow[] = staff.map((s) => ({ ...s, createdAt: s.createdAt.toISOString(), isMe: s.id === user.id }))
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto' }}>

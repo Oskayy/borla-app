@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (authError?.code === 'email_not_confirmed') {
         // Right password, but the email address hasn't been confirmed yet.
         return NextResponse.json(
-          { error: 'Please confirm your email address first. Check your inbox (and spam) for the link from Borla.', notConfirmed: true },
+          { error: 'Please confirm your email address first. Check your inbox (and spam) for the link from Trashit.', notConfirmed: true },
           { status: 403 }
         )
     }

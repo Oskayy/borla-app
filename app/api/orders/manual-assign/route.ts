@@ -10,6 +10,7 @@ import { getAcceptMinutes } from '@/lib/settings'
 import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
+import { caught } from '@/lib/errors'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(OPS_ROLES)
@@ -75,7 +76,8 @@ export async function POST(req: NextRequest) {
     await notifyUser(driverId, newStopsMessage(ids.length, await getAcceptMinutes()))
     await notifyCustomersAssigned(ids)
     return NextResponse.json({ success: true, routeId, stopCount: ids.length })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'Some selected orders are no longer available. Refresh and try again.' }, { status: 409 })
     }

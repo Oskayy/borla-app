@@ -58,7 +58,7 @@ export default async function DashboardPage() {
     <div style={{ maxWidth: 400, margin: '60px auto', padding: 20 }}>
       <h1>Welcome, {dbUser.name}</h1>
       <p>Role: {dbUser.role}</p>
-      <p style={{ color: '#999', fontSize: 13 }}>This role doesn't have a dashboard yet.</p>
+      <p style={{ color: '#999', fontSize: 13 }}>This role doesn&apos;t have a dashboard yet.</p>
     </div>
   )
 }

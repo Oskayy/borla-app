@@ -9,6 +9,11 @@ export const dynamic = 'force-dynamic'
 
 type Snap = { address?: string; price?: number } | null
 
+// Kept outside the component: reading the clock is fine once per request on the server.
+function daysAgo(days: number): Date {
+  return new Date(Date.now() - days * 86400000)
+}
+
 export default async function ExceptionsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -70,14 +75,14 @@ export default async function ExceptionsPage() {
       take: 50,
     }),
     prisma.refund.findMany({
-      where: { OR: [{ status: { in: ['PENDING', 'PROCESSING', 'NEEDS_ATTENTION', 'FAILED'] } }, { createdAt: { gte: new Date(Date.now() - 14 * 86400000) } }] },
+      where: { OR: [{ status: { in: ['PENDING', 'PROCESSING', 'NEEDS_ATTENTION', 'FAILED'] } }, { createdAt: { gte: daysAgo(14) } }] },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: { order: { select: { id: true, quoteSnapshot: true, customer: { select: { name: true } } } } },
     }),
   ])
 
-  function toItem(o: any, kind: ExceptionItem['kind'], reason: string): ExceptionItem {
+  function toItem(o: (typeof gps)[number], kind: ExceptionItem['kind'], reason: string): ExceptionItem {
     const snap = o.quoteSnapshot as Snap
     return {
       kind,
@@ -90,24 +95,24 @@ export default async function ExceptionsPage() {
       driverName: o.driver?.name ?? null,
       reason,
       updatedAt: o.updatedAt.toISOString(),
-      payments: (o.payments ?? []).map((p: any) => ({
+      payments: (o.payments ?? []).map((p) => ({
         id: p.id,
         amount: p.amount,
         status: p.status,
         refundable: refundable(
           p.amount,
-          p.refunds.filter((r: any) => LIVE_REFUND_STATUSES.includes(r.status)).map((r: any) => r.amount)
+          p.refunds.filter((r) => LIVE_REFUND_STATUSES.includes(r.status)).map((r) => r.amount)
         ),
       })),
     }
   }
 
   const items: ExceptionItem[] = [
-    ...flagged.map((o: any) => toItem(o, 'flagged', o.disputes[0]?.reason ?? o.auditLogs[0]?.reason ?? 'No reason recorded')),
-    ...paymentProblems.map((o: any) => toItem(o, 'payment', o.auditLogs[0]?.reason ?? 'Payment problem')),
-    ...gps.map((o: any) => toItem(o, 'gps', o.auditLogs[0]?.reason ?? 'GPS mismatch')),
+    ...flagged.map((o) => toItem(o, 'flagged', o.disputes[0]?.reason ?? o.auditLogs[0]?.reason ?? 'No reason recorded')),
+    ...paymentProblems.map((o) => toItem(o, 'payment', o.auditLogs[0]?.reason ?? 'Payment problem')),
+    ...gps.map((o) => toItem(o, 'gps', o.auditLogs[0]?.reason ?? 'GPS mismatch')),
   ]
-  const refundRows: RefundRow[] = refunds.map((r: any) => ({
+  const refundRows: RefundRow[] = refunds.map((r) => ({
     id: r.id,
     orderId: r.orderId,
     address: (r.order.quoteSnapshot as Snap)?.address ?? 'No address',

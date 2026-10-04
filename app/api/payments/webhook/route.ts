@@ -7,6 +7,7 @@ import { classifyBooking, describeCollection, formatClock, localParts } from '@/
 import { refundStatusFromPaystack } from '@/lib/refunds'
 import { markRefundProcessed } from '@/lib/refunds-server'
 import { notifyOps, notifyUser } from '@/lib/notify'
+import { caught } from '@/lib/errors'
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -26,6 +27,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
+  // Signed by Paystack but still checked field by field below.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let event: any
   try {
     event = JSON.parse(rawBody)
@@ -124,7 +127,7 @@ export async function POST(req: NextRequest) {
 
       if (moved.count === 1) paidCustomerId = order.customerId
 
-      // Borla's platform fee, recorded once per order.
+      // Trashit's platform fee, recorded once per order.
       const platformFee = quote?.platformFee
       if (moved.count === 1 && typeof platformFee === 'number' && platformFee > 0) {
         await tx.ledgerEntry.create({
@@ -145,7 +148,8 @@ export async function POST(req: NextRequest) {
         },
       })
     })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.code === 'P2002') return NextResponse.json({ received: true }) // duplicate delivery
     console.error('[webhook] Database transaction failed:', e)
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 }) // Paystack will retry
@@ -159,7 +163,7 @@ export async function POST(req: NextRequest) {
       title: 'Payment received',
       body: `Thank you. Your pickup is booked for ${when}. Please put your bins out before the collection starts.`,
       url: `/dashboard/customer/orders/${orderId}`,
-      sms: `Borla: payment of GHS ${amount.toFixed(2)} received. Your pickup is ${when}. Please put your bins out by ${start}.`,
+      sms: `Trashit: payment of GHS ${amount.toFixed(2)} received. Your pickup is ${when}. Please put your bins out by ${start}.`,
     })
   }
 
@@ -167,6 +171,7 @@ export async function POST(req: NextRequest) {
 }
 
 // Driver withdrawals: Paystack tells us whether the money reached the wallet.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Paystack event data, fields checked before use
 async function handleTransfer(name: string, data: any) {
   const reference = data?.reference
   if (typeof reference !== 'string') return
@@ -185,7 +190,7 @@ async function handleTransfer(name: string, data: any) {
       title: 'Earnings sent',
       body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
       url: '/dashboard/driver/earnings',
-      sms: `Borla: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}.`,
+      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}.`,
     })
   } else if (['transfer.failed', 'transfer.reversed', 'transfer.abandoned', 'transfer.rejected', 'transfer.blocked'].includes(name)) {
     // Failed money goes back into the driver's balance (FAILED withdrawals don't count against it).
@@ -195,13 +200,14 @@ async function handleTransfer(name: string, data: any) {
     })
     await notifyUser(w.driverId, {
       title: 'Withdrawal failed',
-      body: `We couldn't send ${amountLabel} to ${w.momoNumber}. The money is back in your Borla balance. Please check your wallet details and try again.`,
+      body: `We couldn't send ${amountLabel} to ${w.momoNumber}. The money is back in your Trashit balance. Please check your wallet details and try again.`,
       url: '/dashboard/driver/earnings',
     })
   }
 }
 
 // Customer refunds: Paystack reports progress until the money is back with the customer.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Paystack event data, fields checked before use
 async function handleRefund(data: any) {
   const status = refundStatusFromPaystack(data?.status)
   const paystackId = data?.id != null ? String(data.id) : null

@@ -9,6 +9,7 @@ import { dbDate, planningShiftDate } from '@/lib/schedule'
 import { cancelOrder } from '@/lib/refunds-server'
 import { notifyUser } from '@/lib/notify'
 import { EXCEPTION_ROLES } from '@/lib/exceptions'
+import { caught } from '@/lib/errors'
 
 // Resolves a flagged order from the Exceptions page:
 //   retry            -> back in the queue for tonight (or the coming night); a driver is assigned as usual
@@ -74,16 +75,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           data: { orderId: id, actorId: auth.user.id, fromState: order.status, toState: 'PAID', reason: `EXCEPTION RESOLVED - retry on the night of ${night}: ${note}` },
         })
       })
-    } catch (e: any) {
+    } catch (err) {
+      const e = caught(err)
       if (e?.message === 'STATE_CHANGED') return NextResponse.json({ error: 'This order was just updated. Please refresh.' }, { status: 409 })
-      throw e
+      throw err
     }
     await logAdminAction(auth.user.id, 'EXCEPTION_RETRY', id, note)
     await notifyUser(order.customerId, {
       title: 'We’ll collect again',
       body: 'We couldn’t complete your last pickup, so we’ve booked another try at no extra cost. Please make sure your bins are out and reachable.',
       url: `/dashboard/customer/orders/${id}`,
-      sms: 'Borla: we couldn’t complete your pickup, so we’ll try again at no extra cost. Please put your bins out where the driver can reach them.',
+      sms: 'Trashit: we couldn’t complete your pickup, so we’ll try again at no extra cost. Please put your bins out where the driver can reach them.',
     })
     return NextResponse.json({ success: true, night })
   }
@@ -97,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await logAdminAction(auth.user.id, 'EXCEPTION_CLOSED', id, note)
     await notifyUser(order.customerId, {
       title: 'Pickup closed',
-      body: `Your pickup was closed: ${note}. If you think this is wrong, please contact Borla support.`,
+      body: `Your pickup was closed: ${note}. If you think this is wrong, please contact Trashit support.`,
       url: `/dashboard/customer/orders/${id}`,
     })
     return NextResponse.json({ success: true })

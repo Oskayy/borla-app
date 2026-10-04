@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await readJson(req)
   const admin = createAdminClient()
 
-  // Never leave Borla without an active Super Admin.
+  // Never leave Trashit without an active Super Admin.
   const losesSuperAdmin =
     target.role === 'SUPER_ADMIN' && target.active && ((body?.role && body.role !== 'SUPER_ADMIN') || body?.active === false)
   if (losesSuperAdmin) {

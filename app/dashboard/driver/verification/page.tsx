@@ -42,7 +42,7 @@ export default async function DriverVerificationPage() {
       )}
       {!waiting && profile.approvalStatus !== 'REJECTED' && (
         <p style={{ fontSize: 14, color: '#444', marginBottom: 16 }}>
-          To keep customers safe, every Borla driver is checked before their first pickup. Take clear photos of the items
+          To keep customers safe, every Trashit driver is checked before their first pickup. Take clear photos of the items
           below, then send them for review.
         </p>
       )}

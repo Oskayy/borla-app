@@ -27,7 +27,9 @@ export default function PinPicker({
   const map = useRef<mapboxgl.Map | null>(null)
   const marker = useRef<mapboxgl.Marker | null>(null)
   const onChange = useRef(onPinChange)
-  onChange.current = onPinChange
+  useEffect(() => {
+    onChange.current = onPinChange
+  })
   const [locating, setLocating] = useState(false)
   const [gpsNote, setGpsNote] = useState('')
 
@@ -95,7 +97,7 @@ export default function PinPicker({
       },
       () => {
         setLocating(false)
-        setGpsNote('Could not get your location. Allow location for Borla, or tap your house on the map.')
+        setGpsNote('Could not get your location. Allow location for Trashit, or tap your house on the map.')
       },
       { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 }
     )

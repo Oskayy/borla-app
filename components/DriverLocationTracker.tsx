@@ -1,19 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useClientValue } from '@/lib/use-client-value'
 
 const UPDATE_INTERVAL_MS = 30_000 // send to server at most once every 30 seconds
 
 export default function DriverLocationTracker() {
-  const [status, setStatus] = useState<'idle' | 'tracking' | 'denied' | 'unsupported'>('idle')
+  const supported = useClientValue(() => !!navigator.geolocation, true)
+  const [status, setStatus] = useState<'idle' | 'tracking' | 'denied'>('idle')
   const lastSentAt = useRef<number>(0)
   const watchId = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setStatus('unsupported')
-      return
-    }
+    if (!supported) return
 
     watchId.current = navigator.geolocation.watchPosition(
       (position) => {
@@ -47,7 +46,9 @@ export default function DriverLocationTracker() {
         navigator.geolocation.clearWatch(watchId.current)
       }
     }
-  }, [])
+  }, [supported])
+
+  if (!supported) return null
 
   if (status === 'denied') {
     return (
@@ -55,10 +56,6 @@ export default function DriverLocationTracker() {
         Location access is off — turn it on in your browser settings so nearby jobs can be assigned to you efficiently.
       </p>
     )
-  }
-
-  if (status === 'unsupported') {
-    return null
   }
 
   return (

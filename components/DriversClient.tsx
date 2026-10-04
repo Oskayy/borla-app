@@ -52,7 +52,7 @@ export default function DriversClient({ drivers }: { drivers: DriverRow[] }) {
       }
       router.refresh()
     } catch {
-      setMessage('Could not reach Borla. Please try again.')
+      setMessage('Could not reach Trashit. Please try again.')
     } finally {
       setBusy(null)
     }

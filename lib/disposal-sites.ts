@@ -1,4 +1,4 @@
-import { cleanText, isValidLat, isValidLng } from './validate'
+import { cleanText, isValidLat, isValidLng, type JsonBody } from './validate'
 import { inRange } from './numbers'
 
 export const SITE_STATUSES = ['OPEN', 'CLOSED', 'FULL'] as const
@@ -63,7 +63,7 @@ function clockToMinutes(value: unknown): number | null {
 }
 
 // Returns clean site details, or an error message.
-export function parseSiteBody(body: any): { ok: boolean; error: string; data: SiteInput } {
+export function parseSiteBody(body: JsonBody): { ok: boolean; error: string; data: SiteInput } {
   const bad = (error: string) => ({ ok: false, error, data: null as unknown as SiteInput })
 
   const name = cleanText(body?.name, 80)

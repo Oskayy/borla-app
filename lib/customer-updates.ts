@@ -20,7 +20,7 @@ export async function notifyCustomersAssigned(orderIds: string[]): Promise<void>
       if (claimed.count !== 1) continue
       await notifyUser(o.customerId, {
         title: 'Driver assigned',
-        body: `A Borla driver has been assigned to your pickup at ${addressOf(o.quoteSnapshot)}. Please make sure your bins are out.`,
+        body: `A Trashit driver has been assigned to your pickup at ${addressOf(o.quoteSnapshot)}. Please make sure your bins are out.`,
         url: `/dashboard/customer/orders/${o.id}`,
       })
     }
@@ -35,9 +35,9 @@ export async function notifyCustomerCollected(orderId: string): Promise<void> {
     if (!o) return
     await notifyUser(o.customerId, {
       title: 'Bins collected',
-      body: `Your waste at ${addressOf(o.quoteSnapshot)} has been collected. Thank you for using Borla.`,
+      body: `Your waste at ${addressOf(o.quoteSnapshot)} has been collected. Thank you for using Trashit.`,
       url: `/dashboard/customer/orders/${orderId}`,
-      sms: 'Borla: your waste has been collected. Thank you!',
+      sms: 'Trashit: your waste has been collected. Thank you!',
     })
   } catch (e) {
     console.error('[customer-updates] collected notice failed', e)

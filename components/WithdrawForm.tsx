@@ -26,7 +26,7 @@ export default function WithdrawForm({ available, walletLabel }: { available: nu
       setMsg({ ok: true, text: 'Requested. You’ll get a message when the money is sent.' })
       router.refresh()
     } catch {
-      setMsg({ ok: false, text: 'Could not reach Borla. Please try again.' })
+      setMsg({ ok: false, text: 'Could not reach Trashit. Please try again.' })
     } finally {
       setBusy(false)
     }

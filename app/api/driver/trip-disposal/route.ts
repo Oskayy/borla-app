@@ -7,6 +7,7 @@ import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
 import { distanceInMeters } from '@/lib/geo'
 import { releaseDisposal } from '@/lib/disposal-release'
 import { notifyCustomersCompleted } from '@/lib/customer-updates'
+import { caught } from '@/lib/errors'
 
 // Extra metres allowed on top of a site's geofence, because phone GPS drifts.
 const GPS_TOLERANCE_M = 50
@@ -123,7 +124,8 @@ export async function POST(req: NextRequest) {
 
     if (result.verified) await notifyCustomersCompleted(onBoard.map((o) => o.id))
     return NextResponse.json({ success: true, orders: onBoard.length, distanceM, ...result })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.code === 'P2002') return NextResponse.json({ success: true, note: 'Already processed' })
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'This trip was just updated. Please refresh.' }, { status: 409 })

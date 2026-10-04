@@ -26,12 +26,12 @@ export default function ForgotPasswordPage() {
         <h1 style={{ fontSize: 24, marginBottom: 4 }}>Reset your password</h1>
         {submitted ? (
           <p style={{ fontSize: 14, color: '#666', marginTop: 12 }}>
-            If an account exists for that email, we've sent a password reset link. Check your inbox.
+            If an account exists for that email, we&apos;ve sent a password reset link. Check your inbox.
           </p>
         ) : (
           <>
             <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
-              Enter your email and we'll send you a reset link.
+              Enter your email and we&apos;ll send you a reset link.
             </p>
             <form onSubmit={handleSubmit}>
               <input

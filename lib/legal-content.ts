@@ -4,7 +4,7 @@ export const privacyPolicySections: LegalSection[] = [
   {
     heading: '1. Introduction',
     blocks: [
-      { type: 'p', text: 'Borla ("we", "our", "us") operates a waste collection platform connecting customers with waste collectors in Ghana. This Privacy Policy explains what personal data we collect, why we collect it, and how it is handled. [Company legal name, registration number, and registered address to be inserted here.]' },
+      { type: 'p', text: 'Trashit ("we", "our", "us") operates a waste collection platform connecting customers with waste collectors in Ghana. This Privacy Policy explains what personal data we collect, why we collect it, and how it is handled. [Company legal name, registration number, and registered address to be inserted here.]' },
     ],
   },
   {
@@ -71,7 +71,7 @@ export const privacyPolicySections: LegalSection[] = [
   {
     heading: "9. Children's Privacy",
     blocks: [
-      { type: 'p', text: 'Borla is not intended for use by individuals under [18] years old. [To be confirmed and expanded.]' },
+      { type: 'p', text: 'Trashit is not intended for use by individuals under [18] years old. [To be confirmed and expanded.]' },
     ],
   },
   {
@@ -92,13 +92,13 @@ export const termsSections: LegalSection[] = [
   {
     heading: '1. Acceptance of Terms',
     blocks: [
-      { type: 'p', text: 'By creating an account or using Borla ("the Platform"), you agree to these Terms & Conditions. If you do not agree, please do not use the Platform. [Company legal name and registration details to be inserted.]' },
+      { type: 'p', text: 'By creating an account or using Trashit ("the Platform"), you agree to these Terms & Conditions. If you do not agree, please do not use the Platform. [Company legal name and registration details to be inserted.]' },
     ],
   },
   {
     heading: '2. Description of Service',
     blocks: [
-      { type: 'p', text: "Borla connects customers who need waste collected with independent drivers who provide pickup and disposal services within Ghana's designated night-shift collection hours. [Insert specific service hours, coverage areas, and any licensing details.]" },
+      { type: 'p', text: "Trashit connects customers who need waste collected with independent drivers who provide pickup and disposal services within Ghana's designated night-shift collection hours. [Insert specific service hours, coverage areas, and any licensing details.]" },
     ],
   },
   {
@@ -254,7 +254,7 @@ export const refundPolicySections: LegalSection[] = [
   {
     heading: '1. Overview',
     blocks: [
-      { type: 'p', text: "This Refund Policy explains when and how customers may be entitled to a refund for payments made through Borla. [To be reviewed against Ghana's consumer protection framework.]" },
+      { type: 'p', text: "This Refund Policy explains when and how customers may be entitled to a refund for payments made through Trashit. [To be reviewed against Ghana's consumer protection framework.]" },
     ],
   },
   {

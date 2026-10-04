@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 
-export default function AssignForm({ order, drivers }: { order: any; drivers: any[] }) {
+export default function AssignForm({ order, drivers }: {
+  order: { id: string; quoteSnapshot: unknown; customer: { name: string } }
+  drivers: { id: string; name: string }[]
+}) {
   const [driverId, setDriverId] = useState('')
   const [status, setStatus] = useState('')
 

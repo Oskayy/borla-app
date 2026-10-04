@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const profile = await prisma.driverProfile.findUnique({ where: { userId: auth.user.id }, select: { approvalStatus: true } })
   if (!profile) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
   if (profile.approvalStatus === 'APPROVED') {
-    return NextResponse.json({ error: 'Your account is already approved. Contact Borla to update your documents.' }, { status: 409 })
+    return NextResponse.json({ error: 'Your account is already approved. Contact Trashit to update your documents.' }, { status: 409 })
   }
 
   let form: FormData

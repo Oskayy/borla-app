@@ -102,7 +102,7 @@ export default function DriverProfileSetupForm({
         setMatchInfo('No zones exist yet for your area. Leave the zone blank for now; an admin will assign one later.')
       }
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setFinding(false)
     }
@@ -147,7 +147,7 @@ export default function DriverProfileSetupForm({
       router.push('/dashboard/driver')
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please check your connection and try again.')
+      setError('Could not reach Trashit. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -159,7 +159,7 @@ export default function DriverProfileSetupForm({
     <div>
       <label style={labelStyle}>Your vehicle</label>
       {vehicleTypes.length === 0 && (
-        <p style={{ fontSize: 13, color: '#B3261E', marginBottom: 12 }}>No vehicles are set up yet. Please contact Borla support.</p>
+        <p style={{ fontSize: 13, color: '#B3261E', marginBottom: 12 }}>No vehicles are set up yet. Please contact Trashit support.</p>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginBottom: 16 }}>
         {vehicleTypes.map((v) => {

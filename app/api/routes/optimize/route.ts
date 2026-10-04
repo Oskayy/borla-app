@@ -10,6 +10,7 @@ import { getAcceptMinutes } from '@/lib/settings'
 import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
+import { caught } from '@/lib/errors'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(OPS_ROLES)
@@ -69,12 +70,12 @@ export async function POST(req: NextRequest) {
       const mapboxData = await mapboxRes.json()
 
       if (mapboxData?.trips?.length > 0 && Array.isArray(mapboxData.waypoints)) {
-        const waypointOrder = mapboxData.waypoints
-          .map((wp: any, originalIndex: number) => ({ originalIndex, order: wp.waypoint_index }))
-          .sort((a: any, b: any) => a.order - b.order)
+        const waypointOrder = (mapboxData.waypoints as { waypoint_index: number }[])
+          .map((wp, originalIndex) => ({ originalIndex, order: wp.waypoint_index }))
+          .sort((a, b) => a.order - b.order)
 
-        const optimized = waypointOrder.map((w: any) => withCoords[w.originalIndex]?.id)
-        if (optimized.length === withCoords.length && optimized.every(Boolean)) {
+        const optimized = waypointOrder.map((w) => withCoords[w.originalIndex]?.id)
+        if (optimized.length === withCoords.length && optimized.every((id): id is string => Boolean(id))) {
           orderedSequence = optimized
         }
       }
@@ -113,7 +114,8 @@ export async function POST(req: NextRequest) {
     await notifyUser(driverId, newStopsMessage(orderedSequence.length, await getAcceptMinutes()))
     await notifyCustomersAssigned(orderedSequence)
     return NextResponse.json({ success: true, routeId, stopCount: orderedSequence.length })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'Some selected orders are no longer available. Refresh and try again.' }, { status: 409 })
     }

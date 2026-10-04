@@ -20,8 +20,13 @@ export function cleanText(value: unknown, max: number): string | null {
   return trimmed
 }
 
+/// A parsed JSON request body. It is untrusted input of any shape, so every field must be checked
+// before use (body?.field, then a type or range check); that is why it is loosely typed.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type JsonBody = any
+
 // Reads a JSON body safely: returns null instead of crashing on junk input.
-export async function readJson(req: Request): Promise<any | null> {
+export async function readJson(req: Request): Promise<JsonBody | null> {
   try {
     return await req.json()
   } catch {
@@ -31,7 +36,7 @@ export async function readJson(req: Request): Promise<any | null> {
 
 // Optional GPS pair: both valid, or both absent.
 export function parseGps(
-  body: any
+  body: JsonBody
 ): { ok: true; lat: number | null; lng: number | null } | { ok: false } {
   const lat = body?.gpsLat ?? null
   const lng = body?.gpsLng ?? null

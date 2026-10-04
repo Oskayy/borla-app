@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useClientValue } from '@/lib/use-client-value'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
@@ -14,23 +15,24 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 
 type State = 'checking' | 'unsupported' | 'off' | 'on' | 'blocked' | 'working'
 
-const DEFAULT_MESSAGE = 'Turn on alerts so your phone rings when stops are added to your route, even when Borla is closed.'
+const DEFAULT_MESSAGE = 'Turn on alerts so your phone rings when stops are added to your route, even when Trashit is closed.'
 
-// "Turn on alerts": lets Borla ring this phone or computer (new stops for drivers, plan ready for ops,
+// "Turn on alerts": lets Trashit ring this phone or computer (new stops for drivers, plan ready for ops,
 // pickup moved for customers), even with the app closed.
 export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = false }: { message?: string; compact?: boolean }) {
-  const [state, setState] = useState<State>('checking')
+  // What the browser rules out before we ask anything (read on the client only).
+  const support = useClientValue<'ok' | 'unsupported' | 'blocked'>(() => {
+    if (!VAPID_PUBLIC_KEY || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      return 'unsupported'
+    }
+    return Notification.permission === 'denied' ? 'blocked' : 'ok'
+  }, 'ok')
+  const [checked, setState] = useState<State>('checking')
   const [error, setError] = useState('')
+  const state: State = support === 'ok' ? checked : support
 
   useEffect(() => {
-    if (!VAPID_PUBLIC_KEY || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-      setState('unsupported')
-      return
-    }
-    if (Notification.permission === 'denied') {
-      setState('blocked')
-      return
-    }
+    if (support !== 'ok') return
     navigator.serviceWorker
       .register('/sw.js')
       .then((reg) => reg.pushManager.getSubscription())
@@ -48,7 +50,7 @@ export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = fals
         }
       })
       .catch(() => setState('unsupported'))
-  }, [])
+  }, [support])
 
   async function turnOn() {
     setError('')
@@ -82,7 +84,7 @@ export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = fals
   if (state === 'unsupported') {
     return (
       <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-        This browser can&apos;t show alerts when Borla is closed. Keep Borla open during your shift. (On iPhone, add Borla to
+        This browser can&apos;t show alerts when Trashit is closed. Keep Trashit open during your shift. (On iPhone, add Trashit to
         your home screen first.)
       </p>
     )
@@ -90,7 +92,7 @@ export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = fals
   if (state === 'blocked') {
     return (
       <p style={{ fontSize: 12, color: '#B3261E', marginBottom: 12 }}>
-        Alerts are blocked for Borla. Allow notifications in your browser settings so you don&apos;t miss new stops.
+        Alerts are blocked for Trashit. Allow notifications in your browser settings so you don&apos;t miss new stops.
       </p>
     )
   }

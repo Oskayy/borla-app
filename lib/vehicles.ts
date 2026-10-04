@@ -1,4 +1,4 @@
-import { cleanText } from '@/lib/validate'
+import { cleanText, type JsonBody } from '@/lib/validate'
 import { inRange } from '@/lib/numbers'
 
 export const VEHICLE_EDIT_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER']
@@ -12,7 +12,7 @@ export interface VehicleInput {
 }
 
 // Returns clean vehicle details, or an error message.
-export function parseVehicleBody(body: any): { ok: boolean; error: string; data: VehicleInput } {
+export function parseVehicleBody(body: JsonBody): { ok: boolean; error: string; data: VehicleInput } {
   const bad = (error: string) => ({ ok: false, error, data: null as unknown as VehicleInput })
 
   const name = cleanText(body?.name, 60)

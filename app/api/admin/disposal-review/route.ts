@@ -6,6 +6,7 @@ import { isUuid, readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
 import { notifyCustomersCompleted } from '@/lib/customer-updates'
 import { DISPOSAL_REVIEW_ROLES, releaseDisposal } from '@/lib/disposal-release'
+import { caught } from '@/lib/errors'
 
 // Ops decide on unloads that couldn't be checked automatically (photo outside the site's geofence, or no GPS).
 // approve: the orders are completed and the driver's disposal share is paid.
@@ -93,7 +94,8 @@ export async function POST(req: NextRequest) {
     })
     await logAdminAction(auth.user.id, 'DISPOSAL_REJECTED', driverId, `${orders.length} order(s): ${note}`)
     return NextResponse.json({ success: true })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.code === 'P2002') return NextResponse.json({ success: true, note: 'Already processed' })
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'Some orders were already reviewed. Refresh the page.' }, { status: 409 })

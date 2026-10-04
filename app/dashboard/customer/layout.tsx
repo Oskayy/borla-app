@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,13 +12,13 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         gap: 24,
         background: 'white',
       }}>
-        <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: 18, color: 'var(--color-primary)' }}>
-          Borla
-        </span>
+        <Link href="/dashboard" aria-label="Trashit home" style={{ display: 'inline-flex' }}>
+          <Logo height={26} />
+        </Link>
         <Link href="/dashboard/customer" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>Home</Link>
         <Link href="/dashboard/customer/book" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>Book a Pickup</Link>
         <Link href="/dashboard/customer/orders" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>My Orders</Link>
-                <Link href="/dashboard/customer/home-location" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>My Home</Link>
+        <Link href="/dashboard/customer/home-location" style={{ color: 'var(--color-ink)', textDecoration: 'none', fontSize: 14 }}>My Home</Link>
       </nav>
       {children}
     </div>

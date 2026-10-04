@@ -136,7 +136,7 @@ export default function VehicleTypesClient({
       router.refresh()
       return null
     } catch {
-      return 'Could not reach Borla. Please try again.'
+      return 'Could not reach Trashit. Please try again.'
     }
   }
 
@@ -165,7 +165,7 @@ export default function VehicleTypesClient({
                 <span style={{ fontSize: 12, color: '#999' }}>No picture yet</span>
               )}
             </div>
-                        {canEdit && <VehicleImageUpload vehicleId={v.id} imagePath={v.imagePath} />}
+            {canEdit && <VehicleImageUpload vehicleId={v.id} imagePath={v.imagePath} />}
 
             {editingId === v.id ? (
               <VehicleForm

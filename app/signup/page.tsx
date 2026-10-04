@@ -64,7 +64,7 @@ export default function SignupPage() {
         <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
           <h1 style={{ fontSize: 24, marginBottom: 8 }}>Check your email</h1>
           <p style={{ fontSize: 14, color: '#444', marginBottom: 12 }}>
-            We sent a link to <strong>{email}</strong>. Tap it to confirm your address, then you can start using Borla.
+            We sent a link to <strong>{email}</strong>. Tap it to confirm your address, then you can start using Trashit.
           </p>
           <p style={{ fontSize: 13, color: '#666' }}>
             Nothing after a few minutes? Check your spam folder, or go to the login page and ask for the email again.
@@ -77,7 +77,7 @@ export default function SignupPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Create your Borla account</h1>
+        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Create your Trashit account</h1>
         <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Takes under a minute.</p>
         <form onSubmit={handleSignup}>
           <input
@@ -122,8 +122,8 @@ export default function SignupPage() {
           </div>
 
           <select value={role} onChange={(e) => setRole(e.target.value)} className="input-field">
-            <option value="CUSTOMER">I'm a customer</option>
-            <option value="DRIVER">I'm a driver</option>
+            <option value="CUSTOMER">I&apos;m a customer</option>
+            <option value="DRIVER">I&apos;m a driver</option>
           </select>
 
           {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}

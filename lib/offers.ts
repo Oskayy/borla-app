@@ -57,7 +57,7 @@ export function describeTimeLeft(deadline: Date, now: Date): string {
 export function newStopsMessage(count: number, acceptMinutes: number): { title: string; body: string; url: string } {
   return {
     title: count === 1 ? 'New stop for you' : `${count} new stops for you`,
-    body: `Open Borla to accept or decline. Once the shift is running you have ${acceptMinutes} min, then unanswered stops go to another driver.`,
+    body: `Open Trashit to accept or decline. Once the shift is running you have ${acceptMinutes} min, then unanswered stops go to another driver.`,
     url: '/dashboard/driver',
   }
 }

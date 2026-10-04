@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { createRefund } from '@/lib/paystack'
 import { LIVE_REFUND_STATUSES, refundable, refundStatusFromPaystack } from '@/lib/refunds'
 import { notifyUser } from '@/lib/notify'
+import { caught } from '@/lib/errors'
 
 export interface RefundOutcome {
   ok: boolean
@@ -58,21 +59,22 @@ export async function refundOrder(args: {
       },
       { isolationLevel: 'Serializable', timeout: 15000 }
     )
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.message === 'NOTHING_LEFT') return { ok: false, error: 'Nothing left to refund on this payment', refunded: 0 }
     if (typeof e?.message === 'string' && e.message.startsWith('TOO_MUCH:')) {
       return { ok: false, error: `At most GHS ${e.message.slice(9)} can be refunded`, refunded: 0 }
     }
     if (e?.code === 'P2034') return { ok: false, error: 'Another refund is being made on this order. Please refresh and try again.', refunded: 0 }
-    throw e
+    throw err
   }
   const amount = refund.amount
 
   const r = await createRefund({
     transaction: payment.providerRef,
     amountGhs: amount,
-    merchantNote: `Borla order ${order.id}: ${args.reason}`,
-    customerNote: 'Refund from Borla',
+    merchantNote: `Trashit order ${order.id}: ${args.reason}`,
+    customerNote: 'Refund from Trashit',
   })
   if (!r.ok && !r.uncertain) {
     // Paystack clearly refused: nothing was sent, so the amount is released.
@@ -114,7 +116,7 @@ export async function refundOrder(args: {
     title: 'Refund on its way',
     body: `We've started a refund of GHS ${amount.toFixed(2)} to the account you paid with. It usually arrives within a few working days.`,
     url: `/dashboard/customer/orders/${order.id}`,
-    sms: `Borla: a refund of GHS ${amount.toFixed(2)} is on its way to the account you paid with.`,
+    sms: `Trashit: a refund of GHS ${amount.toFixed(2)} is on its way to the account you paid with.`,
   })
   return { ok: true, error: '', refunded: amount }
 }
@@ -164,8 +166,9 @@ export async function markRefundProcessed(refundId: string): Promise<void> {
       })
       await tx.refund.update({ where: { id: refund.id }, data: { status: 'PROCESSED' } })
     })
-  } catch (e: any) {
-    if (e?.code !== 'P2002') throw e
+  } catch (err) {
+    const e = caught(err)
+    if (e?.code !== 'P2002') throw err
     // Already in the ledger: make sure the refund row says so too.
     await prisma.refund.update({ where: { id: refund.id }, data: { status: 'PROCESSED' } })
   }

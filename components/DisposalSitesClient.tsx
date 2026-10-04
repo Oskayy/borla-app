@@ -138,7 +138,7 @@ export default function DisposalSitesClient({
       setPin(null)
       router.refresh()
     } catch {
-      setError('Could not reach Borla. Please try again.')
+      setError('Could not reach Trashit. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -157,7 +157,7 @@ export default function DisposalSitesClient({
       if (!res.ok) setNotice(data.error || 'Could not change the status')
       router.refresh()
     } catch {
-      setNotice('Could not reach Borla. Please try again.')
+      setNotice('Could not reach Trashit. Please try again.')
     } finally {
       setStatusBusy(null)
     }

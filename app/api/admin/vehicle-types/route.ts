@@ -5,6 +5,7 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
 import { parseVehicleBody, slugify, VEHICLE_EDIT_ROLES } from '@/lib/vehicles'
+import { caught } from '@/lib/errors'
 
 export async function GET() {
   const auth = await requireAuth([...OPS_ROLES, 'FINANCE'])
@@ -43,7 +44,8 @@ export async function POST(req: NextRequest) {
       `"${v.name}": ${v.capacityLitres} L, radius ${v.defaultRadiusKm} km (max ${v.maxRadiusKm} km)`
     )
     return NextResponse.json({ success: true, vehicleType })
-  } catch (e: any) {
+  } catch (err) {
+    const e = caught(err)
     if (e?.code === 'P2002') return NextResponse.json({ error: 'A vehicle with that name already exists' }, { status: 400 })
     console.error('[vehicle-types] create failed:', e)
     return NextResponse.json({ error: 'Could not add the vehicle' }, { status: 500 })
