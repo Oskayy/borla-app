@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ZoneMap from './ZoneMap'
+import { AlertCircle, Check, Search, Truck } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 interface Zone {
   id: string
@@ -153,103 +155,126 @@ export default function DriverProfileSetupForm({
     }
   }
 
-  const labelStyle = { fontSize: 13, color: '#666', display: 'block', marginBottom: 6 } as const
-
+  const label = 'text-sm font-semibold text-ink'
   return (
-    <div>
-      <label style={labelStyle}>Your vehicle</label>
-      {vehicleTypes.length === 0 && (
-        <p style={{ fontSize: 13, color: '#B3261E', marginBottom: 12 }}>No vehicles are set up yet. Please contact Trashit support.</p>
-      )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginBottom: 16 }}>
-        {vehicleTypes.map((v) => {
-          const selected = v.id === vehicleTypeId
-          return (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => chooseVehicle(v)}
-              aria-pressed={selected}
-              style={{
-                border: selected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                background: selected ? '#F2F7F4' : 'white',
-                borderRadius: 6,
-                padding: 8,
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
-                {v.imagePath ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={v.imagePath} alt="" style={{ maxHeight: 60, maxWidth: '100%' }} />
-                ) : null}
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>{v.name}</span>
-            </button>
-          )
-        })}
+    <div className="grid gap-6">
+      <fieldset>
+        <legend className={label}>Your vehicle</legend>
+        {vehicleTypes.length === 0 && <p className="mt-2 text-sm text-danger">No vehicles are set up yet. Please contact Trashit support.</p>}
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          {vehicleTypes.map((v) => {
+            const selected = v.id === vehicleTypeId
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => chooseVehicle(v)}
+                aria-pressed={selected}
+                className={`relative rounded-card p-3 text-center ring-1 transition ${
+                  selected ? 'bg-action-wash ring-2 ring-action' : 'bg-surface ring-line hover:ring-line-strong'
+                }`}
+              >
+                <span className="flex h-16 items-center justify-center">
+                  {v.imagePath ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={v.imagePath} alt="" className="max-h-14 max-w-full" />
+                  ) : (
+                    <Truck aria-hidden className="size-8 text-ink-3" />
+                  )}
+                </span>
+                <span className="mt-1 block text-sm font-semibold">{v.name}</span>
+                <span className="block text-xs text-ink-3 tabular-nums">{v.capacityLitres.toLocaleString()} L</span>
+                {selected && <Check aria-hidden className="absolute right-2.5 top-2.5 size-4 text-action" strokeWidth={3} />}
+              </button>
+            )
+          })}
+        </div>
+      </fieldset>
+
+      <div>
+        <label htmlFor="plate" className={label}>
+          Vehicle plate number <span className="font-normal text-ink-3">(optional for now)</span>
+        </label>
+        <input id="plate" value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. GT 1234-24" />
       </div>
 
-      <label style={labelStyle}>Vehicle plate number (optional for now)</label>
-      <input value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} className="input-field" placeholder="e.g. GT 1234-24" />
+      <div>
+        <label htmlFor="home-base" className={label}>
+          Your home base <span className="font-normal text-ink-3">(where you start each night)</span>
+        </label>
+        <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="home-base"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={`${FIELD} sm:flex-1`}
+            placeholder="e.g. Tema Community 4, near the market"
+          />
+          <button type="button" onClick={findZone} disabled={finding} className={BUTTON_QUIET}>
+            <Search aria-hidden className="size-4" /> {finding ? 'Finding…' : 'Find on map'}
+          </button>
+        </div>
+      </div>
 
-      <label style={labelStyle}>Your home base (where you start each night)</label>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <div>
+        <label htmlFor="radius" className={`${label} flex items-baseline justify-between gap-3`}>
+          How far will you travel for pickups? <span className="text-lg font-bold tabular-nums text-action">{radiusKm} km</span>
+        </label>
         <input
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          className="input-field"
-          placeholder="e.g. Tema Community 4, near the market"
-          style={{ marginBottom: 0, flex: 1 }}
+          id="radius"
+          type="range"
+          min={0.5}
+          max={maxRadius}
+          step={0.5}
+          value={Math.min(radiusKm, maxRadius)}
+          onChange={(e) => setRadiusKm(Number(e.target.value))}
+          className="mt-2 block h-11 w-full accent-[var(--color-action)]"
         />
-        <button type="button" onClick={findZone} disabled={finding} className="btn-primary" style={{ whiteSpace: 'nowrap' }}>
-          {finding ? 'Finding...' : 'Find on map'}
-        </button>
+        <p className="text-sm text-ink-3">
+          Up to {maxRadius} km for {vehicle ? `${/^[aeiou]/i.test(vehicle.name) ? 'an' : 'a'} ${vehicle.name.toLowerCase()}` : 'this vehicle'}. The circle on the map shows your area; a
+          smaller radius means shorter trips.
+        </p>
       </div>
 
-      <label style={labelStyle}>
-        How far will you travel for pickups? <strong style={{ color: 'var(--color-ink)' }}>{radiusKm} km</strong>
-      </label>
-      <input
-        type="range"
-        min={0.5}
-        max={maxRadius}
-        step={0.5}
-        value={Math.min(radiusKm, maxRadius)}
-        onChange={(e) => setRadiusKm(Number(e.target.value))}
-        style={{ display: 'block', width: '100%', marginBottom: 4 }}
-      />
-      <p style={{ fontSize: 12, color: '#999', marginBottom: 12 }}>
-        Up to {maxRadius} km for {vehicle ? `a ${vehicle.name.toLowerCase()}` : 'this vehicle'}. The orange circle on the map shows
-        your area. A smaller radius means shorter trips.
-      </p>
-
-      <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>Tap the map to move your home base.</p>
-      <div style={{ marginBottom: 16 }}>
-        <ZoneMap
-          zones={zones}
-          pin={pin}
-          onPinChange={handleMapClick}
-          preview={pin ? { centerLat: pin.lat, centerLng: pin.lng, radiusKm, name: 'Your area' } : null}
-        />
+      <div>
+        <p className="mb-2 text-sm text-ink-2">Tap the map to move your home base.</p>
+        <div className="overflow-hidden rounded-card ring-1 ring-line">
+          <ZoneMap
+            zones={zones}
+            pin={pin}
+            onPinChange={handleMapClick}
+            preview={pin ? { centerLat: pin.lat, centerLng: pin.lng, radiusKm, name: 'Your area' } : null}
+          />
+        </div>
+        {matchInfo && (
+          <p role="status" className="mt-2 text-sm text-customer-deep">
+            {matchInfo}
+          </p>
+        )}
       </div>
 
-      {matchInfo && <p style={{ fontSize: 13, color: '#2F7A4D', marginBottom: 12 }}>{matchInfo}</p>}
+      <div>
+        <label htmlFor="zone" className={label}>
+          Operating zone
+        </label>
+        <select id="zone" value={zoneId} onChange={(e) => setZoneId(e.target.value)} className={`${FIELD} mt-1.5`}>
+          <option value="">No zone / unassigned</option>
+          {zones.map((z) => (
+            <option key={z.id} value={z.id}>
+              {z.name} — {z.city}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <label style={labelStyle}>Operating zone</label>
-      <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="input-field">
-        <option value="">No zone / unassigned</option>
-        {zones.map((z) => (
-          <option key={z.id} value={z.id}>
-            {z.name} — {z.city}
-          </option>
-        ))}
-      </select>
+      {error && (
+        <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+          <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+        </p>
+      )}
 
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-
-      <button onClick={submit} disabled={loading} className="btn-accent" style={{ width: '100%' }}>
-        {loading ? 'Saving...' : 'Save and continue'}
+      <button onClick={submit} disabled={loading} className={`w-full min-h-12 ${BUTTON_PRIMARY}`}>
+        {loading ? 'Saving…' : 'Save and continue'}
       </button>
     </div>
   )

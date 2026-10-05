@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
+import { AlertCircle, Check } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
 
 export default function ConfirmDisposalButton({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null)
@@ -50,19 +52,30 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
   }
 
   return (
-    <div>
-      <PhotoCapture
-        label={file ? 'Retake Photo' : 'Take Photo'}
-        onCapture={(f, lat, lng) => {
-          setFile(f)
-          setGpsLat(lat)
-          setGpsLng(lng)
-        }}
-      />
-      {file && <p style={{ fontSize: 12, color: '#2F7A4D', margin: '6px 0' }}>Photo captured ✓</p>}
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      <button onClick={confirmDisposal} disabled={loading} className="btn-accent" style={{ width: '100%' }}>
-        {loading ? 'Confirming...' : 'Confirm Disposal'}
+    <div className="grid gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <PhotoCapture
+          label={file ? 'Retake photo' : 'Take photo at the site'}
+          buttonClassName={`min-h-12 ${BUTTON_QUIET}`}
+          onCapture={(f, lat, lng) => {
+            setFile(f)
+            setGpsLat(lat)
+            setGpsLng(lng)
+          }}
+        />
+        {file && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-action-deep">
+            <Check aria-hidden className="size-4" strokeWidth={3} /> Photo ready
+          </span>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="flex items-start gap-1.5 text-sm text-danger">
+          <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+        </p>
+      )}
+      <button onClick={confirmDisposal} disabled={loading} className={`min-h-12 w-full ${BUTTON_PRIMARY}`}>
+        {loading ? 'Confirming…' : 'Confirm unload'}
       </button>
     </div>
   )

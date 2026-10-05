@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, Camera, Check } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
 import { compressImage } from '@/lib/compress-image'
 
 interface DocType {
@@ -70,17 +72,22 @@ export default function DriverDocumentsForm({
   const missingRequired = types.filter((t) => t.required && !have[t.code])
 
   return (
-    <div>
-      {types.map((t) => (
-        <div key={t.code} className="panel" style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-          <div>
-            <p style={{ fontWeight: 600 }}>
-              {t.label} {!t.required && <span style={{ fontWeight: 400, fontSize: 12, color: '#999' }}>(optional)</span>}
-            </p>
-            <p style={{ fontSize: 12, color: '#666' }}>{t.hint}</p>
-            {have[t.code] && <p style={{ fontSize: 12, color: '#2F7A4D' }}>✓ Uploaded</p>}
-          </div>
-          <div>
+    <div className="grid gap-3">
+      <ul className="grid gap-3">
+        {types.map((t) => (
+          <li key={t.code} className="flex flex-wrap items-center gap-4 rounded-card bg-surface p-4 ring-1 ring-line sm:p-5">
+            <span
+              className={`grid size-11 shrink-0 place-items-center rounded-full ${have[t.code] ? 'bg-customer-wash text-customer-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
+            >
+              {have[t.code] ? <Check aria-hidden className="size-5" strokeWidth={3} /> : <Camera aria-hidden className="size-5" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">
+                {t.label} {!t.required && <span className="text-sm font-normal text-ink-3">(optional)</span>}
+              </span>
+              <span className="block text-sm text-ink-3">{t.hint}</span>
+              {have[t.code] && <span className="block text-sm font-medium text-customer-deep">Uploaded</span>}
+            </span>
             <input
               ref={(el) => {
                 inputs.current[t.code] = el
@@ -88,24 +95,28 @@ export default function DriverDocumentsForm({
               type="file"
               accept="image/*"
               capture={t.code === 'profile_photo' ? 'user' : 'environment'}
-              style={{ display: 'none' }}
+              className="hidden"
+              aria-label={`${t.label} photo`}
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 e.target.value = ''
                 if (f) upload(t.code, f)
               }}
             />
-            <button className={have[t.code] ? undefined : 'btn-primary'} onClick={() => inputs.current[t.code]?.click()} disabled={busy !== null}
-              style={have[t.code] ? { background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '8px 12px', fontSize: 13 } : undefined}>
-              {busy === t.code ? 'Uploading...' : have[t.code] ? 'Replace' : 'Take photo'}
+            <button onClick={() => inputs.current[t.code]?.click()} disabled={busy !== null} className={BUTTON_QUIET}>
+              {busy === t.code ? 'Uploading…' : have[t.code] ? 'Replace' : 'Take photo'}
             </button>
-          </div>
-        </div>
-      ))}
-      {error && <p style={{ color: '#B3261E', fontSize: 13, margin: '8px 0' }}>{error}</p>}
+          </li>
+        ))}
+      </ul>
+      {error && (
+        <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+          <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+        </p>
+      )}
       {!submitted && (
-        <button onClick={submit} disabled={sending || missingRequired.length > 0} className="btn-accent" style={{ width: '100%', marginTop: 8 }}>
-          {sending ? 'Sending...' : missingRequired.length > 0 ? `Add ${missingRequired.map((m) => m.label).join(', ')} first` : 'Send for review'}
+        <button onClick={submit} disabled={sending || missingRequired.length > 0} className={`mt-2 w-full min-h-12 ${BUTTON_PRIMARY}`}>
+          {sending ? 'Sending…' : missingRequired.length > 0 ? `Add ${missingRequired.map((m) => m.label).join(', ')} first` : 'Send for review'}
         </button>
       )}
     </div>

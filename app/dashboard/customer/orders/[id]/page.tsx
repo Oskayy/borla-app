@@ -8,7 +8,7 @@ import { classifyBooking, describeCollection, type ShiftSettings } from '@/lib/s
 import { customerCancelCheck } from '@/lib/refunds'
 import { binsText, CUSTOMER_STAGES, customerStatus, ghs, type OrderSnapshot } from '@/lib/order-status'
 import { dateLabel, dateTimeLabel } from '@/lib/format'
-import { BUTTON_QUIET, Card, CardTitle, StatusPill } from '@/components/customer/ui'
+import { BUTTON_QUIET, Card, CardTitle, StatusPill } from '@/components/ui'
 import CancelOrderButton from '@/components/CancelOrderButton'
 
 export const dynamic = 'force-dynamic'

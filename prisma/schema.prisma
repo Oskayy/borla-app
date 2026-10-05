@@ -104,6 +104,8 @@ model DriverProfile {
   paystackRecipientCode String? // Paystack transfer recipient for the number above
   recipientFor     String?   // "<provider>:<number>" the recipient code was made for
   momoChangedAt    DateTime? // when the wallet above last replaced an earlier one; withdrawals wait 24 h after
+  workNights       Int[]     @default([0, 1, 2, 3, 4, 5, 6]) // nights the driver works (0 = Sunday, by the shift's start date)
+  nightsOff        String[]  @default([]) // single nights off, as shift dates (YYYY-MM-DD)
 }
 
 model Zone {

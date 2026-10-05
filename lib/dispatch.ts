@@ -17,6 +17,7 @@ export interface DispatchDriver {
   name: string
   isActive: boolean
   available: boolean // online now (see isDriverAvailable)
+  offNight?: boolean // the driver marked this night as off (lib/availability.ts): dispatch leaves them out
   radiusKm: number | null
   capacityLitres: number | null
   homeLat: number | null
@@ -90,6 +91,10 @@ export function assessDriver(
   let counts = d.isActive && setUp
   if (!d.isActive) reasons.push('Paused')
   else if (!setUp) reasons.push('Profile not finished')
+  if (d.offNight) {
+    counts = false
+    reasons.push('Off this night (their availability)')
+  }
   if (shiftRunning && !d.available) {
     counts = false
     reasons.push('Offline')

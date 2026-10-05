@@ -99,14 +99,14 @@ export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = fals
   }
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-card bg-surface p-4 ring-1 ring-line">
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-customer-wash text-customer-deep">
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-action-wash text-action-deep">
         <BellRing aria-hidden className="size-5" />
       </span>
       <p className="min-w-[12rem] flex-1 text-[15px] text-ink-2">{message}</p>
       <button
         onClick={turnOn}
         disabled={state === 'working'}
-        className="inline-flex min-h-11 items-center gap-2 rounded-control bg-customer px-4 text-[15px] font-semibold text-white transition hover:bg-customer-deep disabled:opacity-60"
+        className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action px-4 text-[15px] font-semibold text-on-action transition hover:brightness-95 disabled:opacity-60"
       >
         {state === 'working' ? 'Turning on…' : 'Turn on alerts'}
       </button>

@@ -229,6 +229,8 @@ export function proposePlan(
       const reason =
         drivers.length === 0
           ? 'No drivers yet'
+          : drivers.every((d) => d.offNight)
+          ? 'No drivers working this night'
           : shiftRunning && anyone.every((f) => !f.counts)
           ? 'No drivers online'
           : 'No driver in range with room'

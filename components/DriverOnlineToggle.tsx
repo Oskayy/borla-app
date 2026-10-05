@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { LocateFixed, Power } from 'lucide-react'
 
 const SEND_EVERY_MS = 30_000 // send the position at most every 30 seconds
 
@@ -88,59 +89,50 @@ export default function DriverOnlineToggle({
   const disabled = busy || (!online && !canGoOnline)
 
   return (
-    <div
-      className="panel"
-      style={{
-        marginBottom: 16,
-        borderLeft: `4px solid ${online ? 'var(--color-success)' : '#999'}`,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div>
-          <p style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: 5,
-                background: online ? 'var(--color-success)' : '#999',
-                display: 'inline-block',
-              }}
-            />
-            {online ? 'You are online' : 'You are offline'}
-          </p>
-          <p style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-            Shift hours: {shiftLabel}
-            {overrideUntil && ` · Extra hours allowed until ${new Date(overrideUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}
+    <section className={`rounded-card p-4 ring-1 sm:p-5 ${online ? 'bg-action-wash ring-action/40' : 'bg-surface ring-line'}`}>
+      <div className="flex items-center gap-4">
+        <span className={`relative grid size-12 shrink-0 place-items-center rounded-full ${online ? 'bg-action text-on-action' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}>
+          <Power aria-hidden className="size-5" strokeWidth={2.5} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-lg font-bold tracking-tight">{online ? 'You are online' : 'You are offline'}</p>
+          <p className="text-sm text-ink-3">
+            Shift {shiftLabel}
+            {overrideUntil && ` · extra hours until ${new Date(overrideUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}
           </p>
         </div>
         <button
+          type="button"
+          role="switch"
+          aria-checked={online}
+          aria-label={online ? 'Go offline' : 'Go online'}
           onClick={toggle}
           disabled={disabled}
-          className={online ? undefined : 'btn-accent'}
-          style={
-            online
-              ? { background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '8px 14px', fontSize: 14 }
-              : { padding: '8px 14px', opacity: disabled ? 0.5 : 1 }
-          }
+          className={`min-h-12 shrink-0 rounded-full px-5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+            online ? 'bg-canvas text-ink ring-1 ring-line-strong' : 'bg-action text-on-action shadow-card hover:brightness-95'
+          }`}
         >
-          {busy ? '...' : online ? 'Go offline' : 'Go online'}
+          {busy ? '…' : online ? 'Go offline' : 'Go online'}
         </button>
       </div>
 
-      {!online && !canGoOnline && (
-        <p style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
-          You can go online when the shift starts. Collections only happen during shift hours.
+      {!online && !canGoOnline && <p className="mt-3 text-sm text-ink-3">You can go online when the shift starts. Collections only happen during shift hours.</p>}
+      {online && gps === 'on' && (
+        <p className="mt-3 flex items-center gap-1.5 text-sm text-ink-2">
+          <LocateFixed aria-hidden className="size-4 text-action" /> Sharing your location while you are online
         </p>
       )}
-      {online && gps === 'on' && <p style={{ fontSize: 11, color: '#999', marginTop: 8 }}>📍 Sharing your location while you are online</p>}
-      {online && gps === 'idle' && <p style={{ fontSize: 11, color: '#999', marginTop: 8 }}>Getting your location...</p>}
+      {online && gps === 'idle' && <p className="mt-3 text-sm text-ink-3">Getting your location…</p>}
       {online && gps === 'denied' && (
-        <p style={{ fontSize: 12, color: '#B3261E', marginTop: 8 }}>
+        <p role="alert" className="mt-3 text-sm text-danger">
           Location is blocked. Turn it on in your browser settings so we can send you nearby pickups.
         </p>
       )}
-      {error && <p style={{ fontSize: 12, color: '#B3261E', marginTop: 8 }}>{error}</p>}
-    </div>
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {error}
+        </p>
+      )}
+    </section>
   )
 }

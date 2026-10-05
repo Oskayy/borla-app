@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { AlertCircle, Check, Home as HomeIcon, Lock, MapPin, MapPinOff, Minus, Moon, Plus, Recycle, Trash2 } from 'lucide-react'
 import PhotoCapture from '@/components/PhotoCapture'
 import PinPicker from '@/components/PinPicker'
-import { BUTTON_PRIMARY, BUTTON_QUIET, Card, FIELD, PageHeader } from '@/components/customer/ui'
+import { BUTTON_PRIMARY, BUTTON_QUIET, Card, FIELD, PageHeader } from '@/components/ui'
 
 interface BinSizeOption {
   code: string

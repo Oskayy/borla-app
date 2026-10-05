@@ -1,37 +1,36 @@
 'use client'
 
+import { Navigation } from 'lucide-react'
 import { googleDirectionsUrl, wazeUrl } from '@/lib/navigation'
 import { useLivePosition } from '@/lib/use-live-position'
 
 // Opens turn-by-turn directions in the driver's own navigation app, starting from the phone's live position.
-export default function NavigateButtons({ lat, lng, big = false }: { lat: number; lng: number; big?: boolean }) {
+// `quiet`: outlined, for lists where another button (e.g. Confirm pickup) is the main action.
+export default function NavigateButtons({ lat, lng, big = false, quiet = false }: { lat: number; lng: number; big?: boolean; quiet?: boolean }) {
   const { position } = useLivePosition()
   const origin = position ? { lat: position.lat, lng: position.lng } : null
   const google = googleDirectionsUrl({ lat, lng }, origin)
   const waze = wazeUrl({ lat, lng })
-  const style = {
-    display: 'inline-block',
-    fontSize: big ? 16 : 13,
-    padding: big ? '12px 18px' : '6px 12px',
-    borderRadius: 4,
-    textDecoration: 'none',
-    border: '1px solid var(--color-primary)',
-    color: 'var(--color-primary)',
-    background: 'white',
-    textAlign: 'center',
-  } as const
+  const size = big ? 'min-h-14 text-base' : 'min-h-11 text-[15px]'
 
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+    <div className="grid grid-cols-[1fr_auto] gap-2">
       <a
         href={google}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ ...style, background: 'var(--color-primary)', color: 'white', flex: big ? 1 : undefined }}
+        className={`inline-flex items-center justify-center gap-2 rounded-control px-4 font-semibold transition ${size} ${
+          quiet ? 'text-action-deep ring-1 ring-action/50 hover:bg-action-wash' : 'bg-action text-on-action shadow-card hover:brightness-95'
+        }`}
       >
-        Navigate (Google Maps)
+        <Navigation aria-hidden className="size-5" /> Navigate with Google Maps
       </a>
-      <a href={waze} target="_blank" rel="noopener noreferrer" style={style}>
+      <a
+        href={waze}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`inline-flex items-center justify-center rounded-control px-4 font-semibold text-ink ring-1 ring-line-strong transition hover:bg-canvas ${size}`}
+      >
         Waze
       </a>
     </div>

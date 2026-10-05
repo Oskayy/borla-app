@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { binsText, customerStatus, ghs, type OrderSnapshot } from '@/lib/order-status'
 import { dateLabel } from '@/lib/format'
-import { BUTTON_PRIMARY, Card, PageHeader, StatusPill } from '@/components/customer/ui'
+import { BUTTON_PRIMARY, Card, PageHeader, StatusPill } from '@/components/ui'
 import DeleteDraftButton from '@/components/DeleteDraftButton'
 
 export const dynamic = 'force-dynamic'

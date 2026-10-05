@@ -1,52 +1,23 @@
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
-import ConfirmPickupButton from './confirm-pickup-button'
-import ConfirmDisposalButton from './confirm-disposal-button'
-import DriverOnlineToggle from '@/components/DriverOnlineToggle'
-import NavigateButtons from '@/components/NavigateButtons'
-import DriverRouteMap, { type RoutePoint } from '@/components/DriverRouteMap'
-import ConfirmTripUnload from '@/components/ConfirmTripUnload'
-import NextStopCard from '@/components/NextStopCard'
-import StopResponse from '@/components/StopResponse'
+import type { RoutePoint } from '@/components/DriverRouteMap'
 import { nextPoint } from '@/lib/driver-next'
 import { pickupLocationSource } from '@/lib/navigation'
-import DriverLiveUpdates from '@/components/DriverLiveUpdates'
-import EnableAlerts from '@/components/EnableAlerts'
-import InstallPrompt from '@/components/InstallPrompt'
 import { sweepExpiredOffers } from '@/lib/offers-server'
 import { offerDeadline } from '@/lib/offers'
 import { driverRouteVersion } from '@/lib/driver-updates'
 import { getAcceptMinutes } from '@/lib/settings'
-import Link from 'next/link'
 import { getWalletSummary } from '@/lib/wallet-server'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import { describeHours } from '@/lib/disposal-sites'
+import { planningShiftDate } from '@/lib/schedule'
+import { worksNight } from '@/lib/availability'
 
 export const dynamic = 'force-dynamic'
 
-interface TripGroup {
-  key: string
-  routeId: string | null
-  routeTripNumber: number // the trip number stored on the route (used when confirming)
-  tripNumber: number // shown to the driver, counted across the whole night
-  orders: {
-    id: string
-    status: string
-    sequence: number | null
-    address: string
-    price: number | null
-    bins: string | null
-    lat: number | null
-    lng: number | null
-    accepted: boolean
-    deadline: string | null // when an unaccepted stop goes to another driver
-    approximate: boolean // the customer didn't pin this spot; the position was looked up from text
-    customerPhone: string | null
-  }[]
-  site: { name: string; lat: number | null; lng: number | null; hours: string; notes: string | null; status: string } | null
-}
+import TonightView, { type TripGroup } from '@/components/driver/TonightView'
 
 export default async function DriverDashboard() {
   const supabase = await createClient()
@@ -159,122 +130,23 @@ export default async function DriverDashboard() {
   const nextPhone =
     next?.kind === 'stop' ? groups.flatMap((g) => g.orders).find((o) => o.id === next.orderId)?.customerPhone ?? null : null
 
-  stopNo = 0
   return (
-    <div style={{ maxWidth: 480, margin: '40px auto', padding: '0 20px' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 4 }}>Driver Dashboard</h1>
-      <DriverOnlineToggle
-        initialOnline={online}
-        canGoOnline={canGoOnline}
-        shiftLabel={windowLabel(settings)}
-        overrideUntil={override ? driverProfile.onlineOverrideUntil!.toISOString() : null}
-      />
-
-      <DriverLiveUpdates initialVersion={routeVersion} />
-      <InstallPrompt />
-      <EnableAlerts />
-      <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
-
-      <Link
-        href="/dashboard/driver/earnings"
-        className="panel"
-        style={{ display: 'block', textDecoration: 'none', marginBottom: 24, background: 'var(--color-primary)', border: 'none', color: 'white' }}
-      >
-        <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>Balance to withdraw</p>
-        <p style={{ margin: 0, fontSize: 28, fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
-          GHS {wallet.available.toFixed(2)}
-        </p>
-        <p style={{ margin: 0, fontSize: 12, opacity: 0.8 }}>Earned GHS {wallet.earned.toFixed(2)} in total · tap to withdraw →</p>
-      </Link>
-
-      <h2 style={{ fontSize: 16, marginBottom: 12, color: '#666' }}>
-        Tonight&apos;s route{orders.length > 0 && ` · ${orders.length} stop(s) · ${groups.length} trip(s)`}
-      </h2>
-
-      {orders.length === 0 && (
-        <div className="panel">
-          <p>No active orders right now.</p>
-        </div>
-      )}
-
-      {mapPoints.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <DriverRouteMap start={start} points={mapPoints} live={online} />
-          <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-            🔵 = you · numbers are stops in order · 🏁 = where to unload · faded = already collected
-          </p>
-        </div>
-      )}
-
-      {groups.map((g) => (
-        <div key={g.key} style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', marginBottom: 8 }}>TRIP {g.tripNumber}</p>
-
-          {g.orders.map((order) => {
-            stopNo++
-            return (
-              <div key={order.id} className="panel" style={{ marginBottom: 10, opacity: order.status === 'PICKED_UP' ? 0.75 : 1 }}>
-                <p style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 600, marginBottom: 2 }}>STOP {stopNo}</p>
-                <p style={{ fontWeight: 500, marginBottom: 4 }}>{order.address}</p>
-                {order.bins && <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>{order.bins}</p>}
-                <p style={{ fontSize: 13, marginBottom: 10 }}>
-                  <span className="status-dot" style={{ background: 'var(--color-accent)' }} />
-                  {order.status === 'PICKED_UP'
-                    ? 'Collected, on board'
-                    : order.status === 'DISPOSAL_PENDING'
-                    ? 'Unloaded, waiting for ops to check the photo'
-                    : order.accepted
-                    ? 'To collect'
-                    : 'New: accept or decline'}
-                  {order.price != null && <span style={{ color: '#999' }}> · GHS {order.price}</span>}
-                </p>
-                {order.status === 'ASSIGNED' && order.approximate && (
-                  <p style={{ fontSize: 12, color: '#9A6415', marginBottom: 8 }}>
-                    ⚠ Approximate location (no pin).{' '}
-                    {order.customerPhone && <a href={`tel:${order.customerPhone}`}>Call the customer</a>}
-                  </p>
-                )}
-                {order.status === 'ASSIGNED' && !order.accepted && <StopResponse orderId={order.id} deadline={order.deadline} />}
-                {order.status === 'ASSIGNED' && order.accepted && order.lat != null && order.lng != null && (
-                  <NavigateButtons lat={order.lat} lng={order.lng} />
-                )}
-                {order.status === 'ASSIGNED' && order.accepted && <ConfirmPickupButton orderId={order.id} />}
-                {order.status === 'PICKED_UP' && !g.routeId && <ConfirmDisposalButton orderId={order.id} />}
-              </div>
-            )
-          })}
-
-          <div className="panel" style={{ borderLeft: '4px solid var(--color-primary)', background: '#F2F7F4' }}>
-            {g.site ? (
-              <>
-                <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', marginBottom: 2 }}>🏁 THEN UNLOAD AT</p>
-                <p style={{ fontWeight: 600 }}>{g.site.name}</p>
-                <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                  {g.site.hours}
-                  {g.site.status !== 'OPEN' && <span style={{ color: '#B3261E' }}> · currently {g.site.status.toLowerCase()}: call ops</span>}
-                  {g.site.notes && ` · ${g.site.notes}`}
-                </p>
-                {g.site.lat != null && g.site.lng != null && <NavigateButtons lat={g.site.lat} lng={g.site.lng} />}
-              </>
-            ) : (
-              <p style={{ fontSize: 13, color: '#B3261E' }}>🏁 No disposal site set for this trip. Please call ops before unloading.</p>
-            )}
-            {(() => {
-              const collected = g.orders.filter((o) => o.status === 'PICKED_UP')
-              if (!g.routeId || collected.length === 0) return null
-              return (
-                <ConfirmTripUnload
-                  routeId={g.routeId}
-                  tripNumber={g.routeTripNumber}
-                  photoOrderId={collected[0].id}
-                  collectedCount={collected.length}
-                  waitingCount={g.orders.filter((o) => o.status === 'ASSIGNED').length}
-                />
-              )
-            })()}
-          </div>
-        </div>
-      ))}
-    </div>
+    <TonightView
+      orderCount={orders.length}
+      groups={groups}
+      online={online}
+      canGoOnline={canGoOnline}
+      shiftLabel={windowLabel(settings)}
+      overrideUntil={override ? driverProfile.onlineOverrideUntil!.toISOString() : null}
+      routeVersion={routeVersion}
+      next={next}
+      waitingIds={waitingIds}
+      firstDeadline={firstDeadline}
+      nextPhone={nextPhone}
+      wallet={{ available: wallet.available, earned: wallet.earned }}
+      mapPoints={mapPoints}
+      offTonight={!worksNight(driverProfile, planningShiftDate(now, settings))}
+      start={start}
+    />
   )
 }

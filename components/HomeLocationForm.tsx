@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Search } from 'lucide-react'
 import PinPicker from './PinPicker'
-import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/customer/ui'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 interface Zone {
   id: string

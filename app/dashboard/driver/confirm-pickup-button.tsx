@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
 import { errorMessage } from '@/lib/errors'
+import { AlertCircle, Camera, Check } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null)
@@ -89,54 +91,65 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
   }
 
   return (
-    <div>
-      <PhotoCapture
-        label={file ? 'Retake Photo' : 'Take Photo'}
-        onCapture={(f, lat, lng, accuracy) => {
-          setFile(f)
-          setGpsLat(lat)
-          setGpsLng(lng)
-          setGpsAccuracy(accuracy ?? null)
-        }}
-      />
-      {file && <p style={{ fontSize: 12, color: '#2F7A4D', margin: '6px 0' }}>Photo captured ✓</p>}
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      {warning && <p style={{ color: '#E8A33D', fontSize: 13, marginBottom: 8 }}>{warning}</p>}
+    <div className="grid gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <PhotoCapture
+          label={file ? 'Retake photo' : 'Take pickup photo'}
+          buttonClassName={`min-h-12 ${BUTTON_QUIET}`}
+          onCapture={(f, lat, lng, accuracy) => {
+            setFile(f)
+            setGpsLat(lat)
+            setGpsLng(lng)
+            setGpsAccuracy(accuracy ?? null)
+          }}
+        />
+        {file && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-action-deep">
+            <Check aria-hidden className="size-4" strokeWidth={3} /> Photo ready
+          </span>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="flex items-start gap-1.5 text-sm text-danger">
+          <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+        </p>
+      )}
+      {warning && (
+        <p role="status" className="rounded-control bg-driver-wash p-3 text-sm text-ink">
+          {warning}
+        </p>
+      )}
 
       {!reporting ? (
-        <>
-          <button onClick={confirmPickup} disabled={loading} className="btn-accent" style={{ width: '100%', marginBottom: 8 }}>
-            {loading ? 'Confirming...' : 'Confirm Pickup'}
+        <div className="grid gap-2">
+          <button onClick={confirmPickup} disabled={loading} className={`min-h-12 w-full ${BUTTON_PRIMARY}`}>
+            <Camera aria-hidden className="size-5" /> {loading ? 'Confirming…' : 'Confirm pickup'}
           </button>
-          <button
-            onClick={() => setReporting(true)}
-            disabled={loading}
-            style={{ width: '100%', background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: 8, fontSize: 13 }}
-          >
-            Report an issue instead
+          <button onClick={() => setReporting(true)} disabled={loading} className="min-h-11 text-sm font-semibold text-ink-3 hover:text-ink">
+            Can&apos;t collect? Report a problem
           </button>
-        </>
+        </div>
       ) : (
-        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10, marginTop: 10 }}>
-          <select value={issueType} onChange={(e) => setIssueType(e.target.value)} className="input-field">
-            <option value="LOCKED_GATE">Locked gate / no bin accessible</option>
+        <div className="grid gap-3 border-t border-line pt-4">
+          <label className="text-sm font-medium text-ink-2" htmlFor={`issue-${orderId}`}>
+            What happened?
+          </label>
+          <select id={`issue-${orderId}`} value={issueType} onChange={(e) => setIssueType(e.target.value)} className={FIELD}>
+            <option value="LOCKED_GATE">Locked gate / no bin I can reach</option>
             <option value="SPILL_HAZARD">Spill or hazard concern</option>
           </select>
           <textarea
-            placeholder="Brief note (what happened?)"
+            placeholder="Short note for ops"
+            aria-label="Note for ops"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="input-field"
+            className={FIELD}
             rows={3}
           />
-          <button onClick={submitIssue} disabled={loading} className="btn-primary" style={{ width: '100%', marginBottom: 8 }}>
-            {loading ? 'Submitting...' : 'Submit report'}
+          <button onClick={submitIssue} disabled={loading} className={`min-h-12 w-full ${BUTTON_PRIMARY}`}>
+            {loading ? 'Sending…' : 'Send report'}
           </button>
-          <button
-            onClick={() => setReporting(false)}
-            disabled={loading}
-            style={{ width: '100%', background: 'none', border: 'none', fontSize: 13, color: '#666' }}
-          >
+          <button onClick={() => setReporting(false)} disabled={loading} className="min-h-11 text-sm font-semibold text-ink-3 hover:text-ink">
             Cancel
           </button>
         </div>

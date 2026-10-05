@@ -4,7 +4,7 @@ import { Bell, BellOff, ChevronRight } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { dateTimeLabel } from '@/lib/format'
-import { Card, PageHeader } from '@/components/customer/ui'
+import { Card, PageHeader } from '@/components/ui'
 import MarkAllRead from '@/components/customer/MarkAllRead'
 import EnableAlerts from '@/components/EnableAlerts'
 

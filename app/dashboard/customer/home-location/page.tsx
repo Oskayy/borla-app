@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import HomeLocationForm from '@/components/HomeLocationForm'
-import { Card, PageHeader } from '@/components/customer/ui'
+import { Card, PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 

@@ -46,7 +46,7 @@ export default function DriverRouteMap({
 
     const m = new mapboxgl.Map({
       container: container.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: 'mapbox://styles/mapbox/dark-v11', // night theme: drivers use this outdoors in the dark
       center: [start.lng, start.lat],
       zoom: 12,
     })
@@ -61,17 +61,18 @@ export default function DriverRouteMap({
         id: 'route-line',
         type: 'line',
         source: 'route',
-        paint: { 'line-color': '#0F3D3E', 'line-width': 3, 'line-opacity': 0.6, 'line-dasharray': [2, 1] },
+        paint: { 'line-color': '#f0a43a', 'line-width': 3, 'line-opacity': 0.8, 'line-dasharray': [2, 1] },
       })
 
       for (const p of points) {
         const el = document.createElement('div')
         if (p.kind === 'stop') {
           el.textContent = p.label
-          el.style.cssText = `width:26px;height:26px;border-radius:13px;background:${p.done ? '#9BB5B5' : '#E8A33D'};color:#1B2321;font:600 12px sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.3)`
+          el.style.cssText = `width:26px;height:26px;border-radius:13px;background:${p.done ? '#3d5175' : '#f0a43a'};color:${p.done ? '#c6cfdc' : '#0e1726'};font:700 12px sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid #0e1726;box-shadow:0 1px 3px rgba(0,0,0,.3)`
         } else {
-          el.textContent = '🏁'
-          el.style.cssText = 'font-size:22px;line-height:22px'
+          el.innerHTML =
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
+          el.style.cssText = `width:28px;height:28px;border-radius:8px;background:${p.done ? '#3d5175' : '#4b40e0'};display:flex;align-items:center;justify-content:center;border:2px solid #b5b0ff;box-shadow:0 1px 3px rgba(0,0,0,.4)`
         }
         new mapboxgl.Marker({ element: el })
           .setLngLat([p.lng, p.lat])
@@ -132,5 +133,5 @@ export default function DriverRouteMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [position, loaded])
 
-  return <div ref={container} style={{ width: '100%', height: 280, borderRadius: 8 }} />
+  return <div ref={container} style={{ width: '100%', height: 280 }} />
 }

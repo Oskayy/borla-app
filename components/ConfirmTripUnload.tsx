@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
+import { AlertCircle, Check, Flag } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
 
 // One photo at the disposal site confirms the whole trip.
 export default function ConfirmTripUnload({
@@ -70,27 +72,45 @@ export default function ConfirmTripUnload({
   }
 
   return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
-      <p style={{ fontSize: 13, marginBottom: 8 }}>
-        At the site? Take one photo of the unloading to confirm all <strong>{collectedCount}</strong> collected order(s) on
-        this trip.
+    <div className="mt-4 grid gap-3 border-t border-line pt-4">
+      <p className="text-[15px] text-ink-2">
+        At the site? Take one photo of the unloading to confirm all <strong className="text-ink">{collectedCount}</strong> collected
+        {collectedCount === 1 ? ' order' : ' orders'} on this trip.
         {waitingCount > 0 && (
-          <span style={{ color: '#9A6415' }}> {waitingCount} stop(s) on this trip aren&apos;t collected yet and will stay on your list.</span>
+          <span className="text-driver-deep">
+            {' '}
+            {waitingCount} {waitingCount === 1 ? 'stop' : 'stops'} on this trip aren&apos;t collected yet and will stay on your list.
+          </span>
         )}
       </p>
-      <PhotoCapture
-        label={file ? 'Retake photo' : 'Take photo at site'}
-        onCapture={(f, lat, lng) => {
-          setFile(f)
-          setGpsLat(lat)
-          setGpsLng(lng)
-        }}
-      />
-      {file && <p style={{ fontSize: 12, color: '#2F7A4D', margin: '6px 0' }}>Photo captured ✓</p>}
-      {error && <p style={{ color: '#B3261E', fontSize: 13, margin: '6px 0' }}>{error}</p>}
-      {result && <p style={{ color: '#2F7A4D', fontSize: 13, margin: '6px 0' }}>{result}</p>}
-      <button onClick={confirm} disabled={loading || !file} className="btn-accent" style={{ width: '100%', marginTop: 6 }}>
-        {loading ? 'Confirming...' : 'Confirm unload'}
+      <div className="flex flex-wrap items-center gap-3">
+        <PhotoCapture
+          label={file ? 'Retake photo' : 'Take photo at the site'}
+          buttonClassName={`min-h-12 ${BUTTON_QUIET}`}
+          onCapture={(f, lat, lng) => {
+            setFile(f)
+            setGpsLat(lat)
+            setGpsLng(lng)
+          }}
+        />
+        {file && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-action-deep">
+            <Check aria-hidden className="size-4" strokeWidth={3} /> Photo ready
+          </span>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="flex items-start gap-1.5 text-sm text-danger">
+          <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+        </p>
+      )}
+      {result && (
+        <p role="status" className="rounded-control bg-customer-wash p-3 text-sm text-ink">
+          {result}
+        </p>
+      )}
+      <button onClick={confirm} disabled={loading || !file} className={`min-h-12 w-full ${BUTTON_PRIMARY}`}>
+        <Flag aria-hidden className="size-5" /> {loading ? 'Confirming…' : 'Confirm unload'}
       </button>
     </div>
   )

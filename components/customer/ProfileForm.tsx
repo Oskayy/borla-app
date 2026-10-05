@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
-import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/customer/ui'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 export default function ProfileForm({ initial, email }: { initial: { name: string; phone: string }; email: string }) {
   const [name, setName] = useState(initial.name)

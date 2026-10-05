@@ -4,7 +4,7 @@ import { ChevronRight, MapPin } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { dateLabel } from '@/lib/format'
-import { Card, CardTitle, PageHeader } from '@/components/customer/ui'
+import { Card, CardTitle, PageHeader } from '@/components/ui'
 import ProfileForm from '@/components/customer/ProfileForm'
 
 export const dynamic = 'force-dynamic'

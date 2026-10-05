@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ShieldAlert } from 'lucide-react'
+import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
 
 export default function PayoutAccountForm({
   initial,
@@ -46,41 +48,57 @@ export default function PayoutAccountForm({
     }
   }
 
+  const label = 'text-sm font-medium text-ink-2'
   return (
-    <div>
-      <label style={{ fontSize: 12, color: '#666' }}>Network</label>
-      <select
-        value={values.momoProvider}
-        onChange={(e) => setValues((v) => ({ ...v, momoProvider: e.target.value }))}
-        className="input-field"
-        disabled={locked}
-      >
-        {providers.map((p) => (
-          <option key={p.code} value={p.code}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-      <label style={{ fontSize: 12, color: '#666' }}>MoMo number</label>
-      <input
-        value={values.momoNumber}
-        onChange={(e) => setValues((v) => ({ ...v, momoNumber: e.target.value }))}
-        className="input-field"
-        inputMode="tel"
-        placeholder="e.g. 024 412 3456"
-        disabled={locked}
-      />
-      <label style={{ fontSize: 12, color: '#666' }}>Name on the wallet</label>
-      <input
-        value={values.momoName}
-        onChange={(e) => setValues((v) => ({ ...v, momoName: e.target.value }))}
-        className="input-field"
-        placeholder="As registered with the network"
-        disabled={locked}
-      />
+    <div className="grid gap-4">
+      <div>
+        <label htmlFor="momo-network" className={label}>
+          Network
+        </label>
+        <select
+          id="momo-network"
+          value={values.momoProvider}
+          onChange={(e) => setValues((v) => ({ ...v, momoProvider: e.target.value }))}
+          className={`${FIELD} mt-1.5`}
+          disabled={locked}
+        >
+          {providers.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="momo-number" className={label}>
+          MoMo number
+        </label>
+        <input
+          id="momo-number"
+          value={values.momoNumber}
+          onChange={(e) => setValues((v) => ({ ...v, momoNumber: e.target.value }))}
+          className={`${FIELD} mt-1.5`}
+          inputMode="tel"
+          placeholder="e.g. 024 412 3456"
+          disabled={locked}
+        />
+      </div>
+      <div>
+        <label htmlFor="momo-name" className={label}>
+          Name on the wallet
+        </label>
+        <input
+          id="momo-name"
+          value={values.momoName}
+          onChange={(e) => setValues((v) => ({ ...v, momoName: e.target.value }))}
+          className={`${FIELD} mt-1.5`}
+          placeholder="As registered with the network"
+          disabled={locked}
+        />
+      </div>
       {!locked && changed && (
-        <>
-          <label htmlFor="payout-password" style={{ fontSize: 12, color: '#666' }}>
+        <div className="grid gap-2 rounded-control bg-canvas p-4 ring-1 ring-line">
+          <label htmlFor="payout-password" className={label}>
             Your Trashit password (to confirm it&apos;s you)
           </label>
           <input
@@ -89,23 +107,28 @@ export default function PayoutAccountForm({
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input-field"
+            className={FIELD}
           />
           {replacing && (
-            <p style={{ fontSize: 12, color: '#9A6415', marginBottom: 8 }}>
+            <p className="flex items-start gap-2 text-sm text-driver-deep">
+              <ShieldAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
               Changing your wallet pauses withdrawals for 24 hours, and we&apos;ll alert you about the change.
             </p>
           )}
-        </>
+        </div>
       )}
       {locked ? (
-        <p style={{ fontSize: 12, color: '#666' }}>You can change your wallet once your current withdrawal is finished.</p>
+        <p className="text-sm text-ink-3">You can change your wallet once your current withdrawal is finished.</p>
       ) : (
-        <button onClick={save} disabled={busy || !changed || !password} className="btn-primary" style={{ width: '100%' }}>
-          {busy ? 'Saving...' : 'Save wallet'}
+        <button onClick={save} disabled={busy || !changed || !password} className={`w-full min-h-12 ${BUTTON_PRIMARY}`}>
+          {busy ? 'Saving…' : 'Save wallet'}
         </button>
       )}
-      {msg && <p style={{ fontSize: 13, marginTop: 6, color: msg.ok ? '#2F7A4D' : '#B3261E' }}>{msg.text}</p>}
+      {msg && (
+        <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-customer-deep' : 'text-danger'}`}>
+          {msg.text}
+        </p>
+      )}
     </div>
   )
 }

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { DOC_TYPES } from '@/lib/driver-docs'
 import DriverDocumentsForm from '@/components/DriverDocumentsForm'
+import { AlertTriangle, Clock } from 'lucide-react'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,27 +25,33 @@ export default async function DriverVerificationPage() {
   const waiting = profile.approvalStatus === 'PENDING' && !!profile.submittedAt
 
   return (
-    <div style={{ maxWidth: 520, margin: '40px auto', padding: '0 20px' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Get approved to drive</h1>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader title="Get approved to drive" />
       {waiting && (
-        <div className="panel" style={{ marginBottom: 16, borderLeft: '4px solid var(--color-accent)' }}>
-          <p style={{ fontWeight: 600 }}>Thanks! Your documents are being checked.</p>
-          <p style={{ fontSize: 13, color: '#666' }}>
-            This usually takes a day or two. We&apos;ll send you a message as soon as you&apos;re approved. You can still replace a
-            photo below if you need to.
-          </p>
+        <div className="mb-6 flex items-start gap-3 rounded-card bg-action-wash p-5 ring-1 ring-action/30">
+          <Clock aria-hidden className="mt-0.5 size-5 shrink-0 text-action" />
+          <div>
+            <p className="font-semibold">Thanks! Your documents are being checked.</p>
+            <p className="mt-1 text-[15px] text-ink-2">
+              This usually takes a day or two. We&apos;ll send you a message as soon as you&apos;re approved. You can still replace a photo
+              below if you need to.
+            </p>
+          </div>
         </div>
       )}
       {profile.approvalStatus === 'REJECTED' && (
-        <div className="panel" style={{ marginBottom: 16, borderLeft: '4px solid #B3261E' }}>
-          <p style={{ fontWeight: 600 }}>Please update your documents</p>
-          <p style={{ fontSize: 13 }}>{profile.approvalNote}</p>
+        <div className="mb-6 flex items-start gap-3 rounded-card bg-danger-wash p-5 ring-1 ring-danger/30">
+          <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0 text-danger" />
+          <div>
+            <p className="font-semibold">Please update your documents</p>
+            <p className="mt-1 text-[15px] text-ink-2">{profile.approvalNote}</p>
+          </div>
         </div>
       )}
       {!waiting && profile.approvalStatus !== 'REJECTED' && (
-        <p style={{ fontSize: 14, color: '#444', marginBottom: 16 }}>
-          To keep customers safe, every Trashit driver is checked before their first pickup. Take clear photos of the items
-          below, then send them for review.
+        <p className="mb-6 max-w-[60ch] text-[15px] text-ink-2">
+          To keep customers safe, every Trashit driver is checked before their first pickup. Take clear photos of the items below, then
+          send them for review.
         </p>
       )}
       <DriverDocumentsForm types={DOC_TYPES} uploaded={uploaded} submitted={waiting} />

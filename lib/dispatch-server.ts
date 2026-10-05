@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
 import { isDriverAvailable, isWithinShift, localParts } from '@/lib/shift'
+import { planningShiftDate } from '@/lib/schedule'
+import { worksNight } from '@/lib/availability'
 import { coversShift, isOpenAt } from '@/lib/disposal-sites'
 import type { PlanSite } from '@/lib/planner'
 import { assessDriver, orderLitres, type DispatchDriver, type DispatchOrder, type DriverFit } from '@/lib/dispatch'
@@ -14,6 +16,7 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
   const now = new Date()
   const [settings, tripsPerNight] = await Promise.all([getShiftSettings(), getMaxTripsPerNight()])
   const shiftRunning = isWithinShift(now, settings)
+  const night = planningShiftDate(now, settings) // the running shift, or tonight's between shifts
 
   const users = await prisma.user.findMany({
     // Only approved drivers with an active account can be given work.
@@ -27,6 +30,8 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
           isActive: true,
           isOnline: true,
           onlineOverrideUntil: true,
+          workNights: true,
+          nightsOff: true,
           radiusKm: true,
           homeLat: true,
           homeLng: true,
@@ -50,6 +55,7 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
       name: u.name,
       isActive: p.isActive,
       available: isDriverAvailable(p, now, settings),
+      offNight: !worksNight(p, night),
       radiusKm: p.radiusKm,
       capacityLitres: p.vehicleTypeRef?.capacityLitres ?? null,
       homeLat: p.homeLat,

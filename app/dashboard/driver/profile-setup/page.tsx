@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import DriverProfileSetupForm from '@/components/DriverProfileSetupForm'
+import { Card, PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,16 +39,18 @@ export default async function DriverProfileSetupPage() {
   const isSetUp = !!profile?.vehicleTypeId && profile.homeLat != null
 
   return (
-    <div style={{ maxWidth: 560, margin: '40px auto', padding: '0 20px' }}>
-      <div className="panel">
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>{isSetUp ? 'My vehicle and area' : `Welcome to Trashit, ${dbUser.name}`}</h1>
-        <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
-          {isSetUp
-            ? 'Update your vehicle, where you start each night, and how far you travel for pickups.'
-            : "Let's finish setting up your driver profile before you start receiving jobs."}
-        </p>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title={isSetUp ? 'Vehicle & area' : `Welcome to Trashit, ${dbUser.name.split(/\s+/)[0]}`}
+        lead={
+          isSetUp
+            ? 'Your vehicle, where you start each night, and how far you travel for pickups.'
+            : "Let's finish setting up your driver profile before you start receiving stops."
+        }
+      />
+      <Card>
         <DriverProfileSetupForm zones={zones} vehicleTypes={vehicleTypes} initial={profile} />
-      </div>
+      </Card>
     </div>
   )
 }

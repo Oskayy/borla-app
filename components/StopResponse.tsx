@@ -1,7 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, Check, Timer, X } from 'lucide-react'
+import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
+import { useNow } from '@/lib/use-now'
 
 const REASONS = [
   'Too far from my area',
@@ -32,16 +35,43 @@ function timeLeft(deadlineIso: string, now: number): string {
   return `Accept by ${new Date(deadlineIso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, or it goes to another driver`
 }
 
-// A live "accept within 12 min" line.
-export function AcceptCountdown({ deadline }: { deadline: string }) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 15_000)
-    return () => clearInterval(t)
-  }, [])
-  const text = timeLeft(deadline, now)
-  const urgent = new Date(deadline).getTime() - now < 5 * 60_000
-  return <p style={{ fontSize: 12, color: urgent ? '#B3261E' : '#9A6415', fontWeight: urgent ? 600 : 400, margin: '4px 0 6px' }}>⏱ {text}</p>
+function clock(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000))
+  const m = Math.floor(s / 60)
+  return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m}:${String(s % 60).padStart(2, '0')}`
+}
+
+// A live accept deadline. `big` shows a large mm:ss clock (the top card); otherwise one line.
+export function AcceptCountdown({ deadline, big = false }: { deadline: string; big?: boolean }) {
+  const now = useNow(big ? 1000 : 15_000)
+  const left = now == null ? null : new Date(deadline).getTime() - now
+  const urgent = left != null && left < 5 * 60_000
+
+  if (big) {
+    return (
+      <div className="my-4">
+        <p className="flex items-baseline gap-3">
+          <span className={`text-5xl font-bold tabular-nums tracking-tight ${urgent ? 'text-danger' : 'text-action'}`}>{left == null ? '–:––' : clock(left)}</span>
+          <span className="text-sm text-ink-3">{left == null || left > 0 ? 'left to accept' : 'time is up'}</span>
+        </p>
+        <span className="mt-3 block h-1.5 overflow-hidden rounded-full bg-line">
+          <span
+            className={`block h-full rounded-full ${urgent ? 'bg-danger' : 'bg-action'}`}
+            style={{ width: `${left == null ? 100 : Math.max(0, Math.min(100, (left / (15 * 60_000)) * 100))}%` }}
+          />
+        </span>
+        <p className="sr-only" aria-live="polite">
+          {now != null && timeLeft(deadline, now)}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <p className={`my-2 flex items-center gap-1.5 text-sm ${urgent ? 'font-semibold text-danger' : 'text-action-deep'}`}>
+      <Timer aria-hidden className="size-4 shrink-0" /> {now == null ? 'Accept soon, or it goes to another driver' : timeLeft(deadline, now)}
+    </p>
+  )
 }
 
 // "Accept all" for every new stop at once.
@@ -61,12 +91,16 @@ export function AcceptAllButton({ orderIds }: { orderIds: string[] }) {
           else router.refresh()
         }}
         disabled={busy}
-        className="btn-accent"
-        style={{ width: '100%', marginTop: 8 }}
+        className={`w-full min-h-12 ${BUTTON_PRIMARY}`}
       >
-        {busy ? 'Accepting...' : `Accept all ${orderIds.length} stop(s)`}
+        <Check aria-hidden className="size-5" strokeWidth={2.5} />
+        {busy ? 'Accepting…' : orderIds.length === 1 ? 'Accept stop' : `Accept all ${orderIds.length} stops`}
       </button>
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginTop: 6 }}>{error}</p>}
+      {error && (
+        <p role="alert" className="mt-2 flex items-center gap-1.5 text-sm text-danger">
+          <AlertCircle aria-hidden className="size-4" /> {error}
+        </p>
+      )}
     </>
   )
 }
@@ -109,38 +143,38 @@ export default function StopResponse({ orderId, deadline }: { orderId: string; d
 
   if (mode === 'declining') {
     return (
-      <div style={{ background: '#FBEDEC', borderRadius: 4, padding: 10 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Why are you declining this stop?</p>
-        <select value={reason} onChange={(e) => setReason(e.target.value)} className="input-field" style={{ marginBottom: 6 }}>
-          <option value="">Choose a reason</option>
-          {REASONS.map((r) => (
-            <option key={r} value={r}>
+      <div className="grid gap-3 rounded-card bg-danger-wash p-4">
+        <p className="font-semibold">Why are you declining this stop?</p>
+        <div className="grid gap-2" role="radiogroup" aria-label="Reason">
+          {[...REASONS, 'Other'].map((r) => (
+            <label
+              key={r}
+              className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-control px-3 text-[15px] ring-1 ${
+                reason === r ? 'bg-surface ring-danger' : 'ring-line hover:bg-surface'
+              }`}
+            >
+              <input type="radio" name={`reason-${orderId}`} checked={reason === r} onChange={() => setReason(r)} className="size-4 accent-[var(--color-danger)]" />
               {r}
-            </option>
+            </label>
           ))}
-          <option value="Other">Other</option>
-        </select>
+        </div>
         {reason === 'Other' && (
-          <input value={other} onChange={(e) => setOther(e.target.value)} className="input-field" placeholder="Type the reason" style={{ marginBottom: 6 }} />
+          <input value={other} onChange={(e) => setOther(e.target.value)} className={FIELD} placeholder="Type the reason" aria-label="Your reason" />
         )}
-        <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>The stop goes to another driver straight away and won&apos;t come back to you.</p>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={decline}
-            disabled={busy}
-            style={{ background: '#B3261E', color: 'white', border: 'none', borderRadius: 4, padding: '8px 14px', fontSize: 14 }}
-          >
-            {busy ? 'Declining...' : 'Decline stop'}
+        <p className="text-sm text-ink-3">The stop goes to another driver straight away and won&apos;t come back to you.</p>
+        {error && (
+          <p role="alert" className="flex items-center gap-1.5 text-sm text-danger">
+            <AlertCircle aria-hidden className="size-4" /> {error}
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={decline} disabled={busy} className="min-h-12 rounded-control bg-danger px-4 font-semibold text-canvas disabled:opacity-60">
+            {busy ? 'Declining…' : 'Decline stop'}
           </button>
-          <button
-            onClick={() => setMode('idle')}
-            disabled={busy}
-            style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '8px 14px', fontSize: 14 }}
-          >
+          <button onClick={() => setMode('idle')} disabled={busy} className="min-h-12 rounded-control px-4 font-semibold ring-1 ring-line-strong">
             Keep it
           </button>
         </div>
-        {error && <p style={{ color: '#B3261E', fontSize: 13, marginTop: 6 }}>{error}</p>}
       </div>
     )
   }
@@ -148,7 +182,7 @@ export default function StopResponse({ orderId, deadline }: { orderId: string; d
   return (
     <div>
       {deadline && <AcceptCountdown deadline={deadline} />}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="grid grid-cols-[1fr_auto] gap-2">
         <button
           onClick={async () => {
             setBusy(true)
@@ -159,20 +193,23 @@ export default function StopResponse({ orderId, deadline }: { orderId: string; d
             else router.refresh()
           }}
           disabled={busy}
-          className="btn-accent"
-          style={{ flex: 1 }}
+          className={`min-h-12 ${BUTTON_PRIMARY}`}
         >
-          {busy ? '...' : 'Accept'}
+          <Check aria-hidden className="size-5" strokeWidth={2.5} /> {busy ? 'Accepting…' : 'Accept'}
         </button>
         <button
           onClick={() => setMode('declining')}
           disabled={busy}
-          style={{ flex: 1, background: 'none', border: '1px solid #B3261E', color: '#B3261E', borderRadius: 4, padding: '8px 14px', fontSize: 14 }}
+          className="inline-flex min-h-12 items-center gap-1.5 rounded-control px-4 font-semibold text-danger ring-1 ring-danger/50"
         >
-          Decline
+          <X aria-hidden className="size-4" /> Decline
         </button>
       </div>
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginTop: 6 }}>{error}</p>}
+      {error && (
+        <p role="alert" className="mt-2 flex items-center gap-1.5 text-sm text-danger">
+          <AlertCircle aria-hidden className="size-4" /> {error}
+        </p>
+      )}
     </div>
   )
 }

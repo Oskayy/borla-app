@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Bell, ChevronRight, Headphones, MapPin, Settings, User } from 'lucide-react'
-import { PageHeader } from '@/components/customer/ui'
+import { PageHeader } from '@/components/ui'
 import { supportHref } from '@/lib/support'
 
 // Phones: the account pages that don't fit in the bottom tabs.

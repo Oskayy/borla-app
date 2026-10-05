@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { CUSTOMER_STAGES, TONE_PILL, type CustomerStatus } from '@/lib/order-status'
 
-// Small building blocks shared by the customer screens.
+// Small building blocks shared by the app screens. They use the action colour, which each workspace sets
+// (customer green, driver amber on the night theme, ops indigo).
 
 export function PageHeader({ title, lead, action }: { title: string; lead?: string; action?: React.ReactNode }) {
   return (
@@ -65,15 +66,15 @@ export function StageTrack({ stage, problem = false }: { stage: number; problem?
 }
 
 export const BUTTON_PRIMARY =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-customer px-5 text-[15px] font-semibold text-white shadow-card transition hover:bg-customer-deep disabled:cursor-not-allowed disabled:opacity-60'
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-action px-5 text-[15px] font-semibold text-on-action shadow-card transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60'
 export const BUTTON_QUIET =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-surface px-4 text-[15px] font-semibold text-ink ring-1 ring-line-strong transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60'
 export const FIELD =
-  'block w-full rounded-control border border-line-strong bg-surface px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-3 focus:border-customer focus:outline-none focus:ring-3 focus:ring-customer/15'
+  'block w-full rounded-control border border-line-strong bg-surface px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-3 focus:border-action focus:outline-none focus:ring-3 focus:ring-action/20'
 
 export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="text-sm font-semibold text-customer-deep hover:underline">
+    <Link href={href} className="text-sm font-semibold text-action-deep hover:underline">
       {children}
     </Link>
   )

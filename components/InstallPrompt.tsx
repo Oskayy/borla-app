@@ -72,7 +72,7 @@ export default function InstallPrompt() {
             <p className="mt-0.5 text-sm text-ink-2">Opens straight from your home screen, full screen, with alerts.</p>
             <button
               onClick={install}
-              className="mt-3 inline-flex min-h-11 items-center rounded-control bg-customer px-4 text-[15px] font-semibold text-white transition hover:bg-customer-deep"
+              className="mt-3 inline-flex min-h-11 items-center rounded-control bg-action px-4 text-[15px] font-semibold text-on-action transition hover:brightness-95"
             >
               Install
             </button>

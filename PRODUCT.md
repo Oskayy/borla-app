@@ -67,8 +67,12 @@ product decision before building, because most touch money or personal data:
   removed. The customer's own waste photos are deleted; driver pickup/unload proof is kept. The login is deleted.
   Customers can also download their data as a file. (Purging anonymised records after 6 years is still to be built.)
 - Support contact: none yet. The "Need help?" panel stays hidden until a phone, WhatsApp or email is configured.
-- Driver: weekly shift availability, operating-zone selection, customer star ratings and feedback, completion and
-  acceptance analytics, missed-trip history, earnings statements and tax summaries.
+- Driver (decided Oct 2026): weekly shift availability that dispatch respects (the 6pm plan and auto-assign only use
+  drivers available that night; exact rule to be confirmed before the planner changes); customer 1–5 star ratings with
+  an optional comment on completed pickups, shown to the driver (average + recent) and to ops (low ratings);
+  completion/acceptance analytics and missed-trip history from existing data; earnings statements as PDF and CSV
+  ("for your records", not tax advice); a vehicle-type change sends the driver back for approval with new vehicle
+  photos before the new capacity is used.
 - Business: enterprise / property-manager accounts.
 - Ops: financial analytics console, live fleet view, needs-attention queue.
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertCircle, AlertTriangle, Trash2 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import PasswordInput from '@/components/PasswordInput'
-import { FIELD } from '@/components/customer/ui'
+import { FIELD } from '@/components/ui'
 
 // Deletes the customer's account after a password check and typing DELETE (rules in the API route).
 export default function DeleteAccount() {

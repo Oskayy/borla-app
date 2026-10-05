@@ -7,7 +7,7 @@ import { getShiftSettings } from '@/lib/settings'
 import { classifyBooking, describeCollection, type ShiftSettings } from '@/lib/shift'
 import { binsText, customerStatus, ghs, type OrderSnapshot } from '@/lib/order-status'
 import { dateLabel, greeting } from '@/lib/format'
-import { BUTTON_PRIMARY, Card, CardTitle, StageTrack, StatusPill, TextLink } from '@/components/customer/ui'
+import { BUTTON_PRIMARY, Card, CardTitle, StageTrack, StatusPill, TextLink } from '@/components/ui'
 import EnableAlerts from '@/components/EnableAlerts'
 import InstallPrompt from '@/components/InstallPrompt'
 

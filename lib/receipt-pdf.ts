@@ -31,7 +31,7 @@ const GREEN = rgb(0.07, 0.51, 0.35)
 
 // Standard PDF fonts only cover Western European characters; map the rest to the closest plain letter.
 const FALLBACK: Record<string, string> = { Ɔ: 'O', ɔ: 'o', Ɛ: 'E', ɛ: 'e', Ŋ: 'N', ŋ: 'n', '₵': 'GHS ' }
-function safe(font: PDFFont, text: string): string {
+export function safe(font: PDFFont, text: string): string {
   let out = ''
   for (const ch of text.normalize('NFC')) {
     try {
