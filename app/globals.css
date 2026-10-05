@@ -119,6 +119,19 @@ body:has([data-surface="new"]) { background: var(--color-surface); }
 .theme-night ::selection { background: rgb(240 164 58 / 0.3); color: #fff; }
 body:has(.theme-night) { background: #0e1726; }
 
+/* ---- Ops theme: the ops console (desktop, daylight) ----
+   Indigo actions on light panels; the sidebar is night navy, so its focus ring is a lighter indigo. */
+.theme-ops {
+  --color-action: #4b40e0;
+  --color-action-deep: #3a30c2;
+  --color-action-wash: #ecebfd;
+  --color-on-action: #ffffff;
+}
+.theme-ops ::selection { background: var(--color-ops-wash); color: var(--color-ops-deep); }
+.theme-ops .bg-night :focus-visible { outline-color: #a9a3ff; }
+.theme-ops .ops-scroll { scrollbar-color: #2a3b58 transparent; scrollbar-width: thin; }
+body:has(.theme-ops) { background: var(--color-canvas); }
+
 html { scrollbar-color: var(--color-line-strong) transparent; }
 
 ::selection { background: var(--color-customer-wash); color: var(--color-customer-deep); }

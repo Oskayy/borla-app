@@ -10,6 +10,10 @@ import { sweepExpiredOffers } from '@/lib/offers-server'
 import { newStopsMessage } from '@/lib/offers'
 import { notifyOps, notifyUser } from '@/lib/notify'
 import { caught } from '@/lib/errors'
+import { dateLabel } from '@/lib/format'
+
+// "1 order", "3 orders": for messages people read.
+const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 // The night's automatic jobs. Called every 2 minutes by the scheduler, and also (at most once a minute)
 // whenever driver or ops screens check for updates, so they keep running even without the scheduler.
@@ -140,7 +144,7 @@ async function planReadyNotice(shiftDate: string, startLabel: string): Promise<s
   await notifyOps({
     title: "Tonight's plan is ready",
     body:
-      `${orders.length} order(s): ${placed} fit across ${plan.drivers.length} driver(s)` +
+      `${count(orders.length, 'order')}: ${placed} fit across ${count(plan.drivers.length, 'driver')}` +
       (plan.unassigned.length ? `, ${plan.unassigned.length} can't be placed yet` : '') +
       `. Review and approve on the Assign page before ${startLabel}.` +
       (auto ? ' Anything not approved is assigned automatically once the shift starts.' : ''),
@@ -163,7 +167,7 @@ async function shiftStartNotice(shiftDate: string, auto: boolean): Promise<strin
   for (const g of unaccepted as { driverId: string; _count: { _all: number } }[]) {
     await notifyUser(g.driverId, {
       title: 'The shift has started',
-      body: `Go online and accept your ${g._count._all} stop(s) within ${acceptMinutes} min, or they go to another driver.`,
+      body: `Go online and accept your ${count(g._count._all, 'stop')} within ${acceptMinutes} min, or they go to another driver.`,
       url: '/dashboard/driver',
     })
   }
@@ -171,8 +175,8 @@ async function shiftStartNotice(shiftDate: string, auto: boolean): Promise<strin
     await notifyOps({
       title: 'Shift started with orders waiting',
       body: auto
-        ? `${waiting} order(s) have no driver yet. They'll be assigned automatically as drivers come online.`
-        : `${waiting} order(s) have no driver yet. Assign them on the Assign page.`,
+        ? `${count(waiting, 'order has', 'orders have')} no driver yet. They'll be assigned automatically as drivers come online.`
+        : `${count(waiting, 'order has', 'orders have')} no driver yet. Assign them on the Assign page.`,
       url: '/ops/assign',
     })
   }
@@ -314,8 +318,8 @@ async function rollOver(endedShiftDate: string): Promise<number> {
     await notifyOps({
       title: 'Night finished',
       body:
-        (moved > 0 ? `${moved} order(s) weren't collected and moved to the night of ${next}. ` : '') +
-        (stillOnBoard > 0 ? `${stillOnBoard} collected order(s) still haven't been confirmed as unloaded.` : ''),
+        (moved > 0 ? `${count(moved, "order wasn't", "orders weren't")} collected and moved to the night of ${dateLabel(`${next}T12:00:00Z`)}. ` : '') +
+        (stillOnBoard > 0 ? `${count(stillOnBoard, "collected order hasn't", "collected orders haven't")} been confirmed as unloaded yet.` : ''),
       url: moved > 0 ? '/ops/assign' : '/ops/disposal-review',
     })
   }
