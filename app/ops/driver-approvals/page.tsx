@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { APPROVAL_ROLES, DOC_TYPES, DRIVER_DOCS_BUCKET } from '@/lib/driver-docs'
 import DriverApprovalsClient, { type ApplicantRow } from '@/components/DriverApprovalsClient'
+import VehicleChangeReviews, { type VehicleChangeRow } from '@/components/ops/VehicleChangeReviews'
+import { VEHICLE_CHANGE_DOC } from '@/lib/vehicle-change'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +53,38 @@ export default async function DriverApprovalsPage() {
       docs,
     })
   }
+  // Approved drivers who asked to switch vehicle type and sent a photo of the new one.
+  const changing = await prisma.user.findMany({
+    where: { role: 'DRIVER', driverProfile: { is: { pendingVehicleAt: { not: null } } } },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      driverProfile: {
+        select: { vehiclePlate: true, pendingVehicleTypeId: true, pendingVehicleAt: true, vehicleTypeRef: { select: { name: true, capacityLitres: true } } },
+      },
+      driverDocuments: { where: { type: { in: ['vehicle_photo', VEHICLE_CHANGE_DOC] } }, select: { type: true, path: true } },
+    },
+  })
+  const vehicleTypes = await prisma.vehicleType.findMany({ select: { id: true, name: true, capacityLitres: true } })
+  const signed = async (path: string | undefined) =>
+    path ? (await admin.storage.from(DRIVER_DOCS_BUCKET).createSignedUrl(path, 60 * 30)).data?.signedUrl ?? null : null
+  const changes: VehicleChangeRow[] = []
+  for (const d of changing) {
+    const p = d.driverProfile!
+    changes.push({
+      id: d.id,
+      name: d.name,
+      phone: d.phone,
+      plate: p.vehiclePlate,
+      from: p.vehicleTypeRef,
+      to: vehicleTypes.find((v) => v.id === p.pendingVehicleTypeId) ?? null,
+      sentAt: p.pendingVehicleAt!.toISOString(),
+      oldPhoto: await signed(d.driverDocuments.find((x) => x.type === 'vehicle_photo')?.path),
+      newPhoto: await signed(d.driverDocuments.find((x) => x.type === VEHICLE_CHANGE_DOC)?.path),
+    })
+  }
+
   const waiting = rows.filter((r) => r.status === 'PENDING' && r.submittedAt)
   const notSent = rows.filter((r) => r.status === 'PENDING' && !r.submittedAt)
   const rejected = rows.filter((r) => r.status === 'REJECTED')
@@ -62,6 +96,7 @@ export default async function DriverApprovalsPage() {
         New drivers can&apos;t go online or receive pickups until they&apos;re approved here. Check the Ghana Card photo matches
         the driver&apos;s photo and name, and that the vehicle looks roadworthy.
       </p>
+      <VehicleChangeReviews rows={changes} />
       <DriverApprovalsClient waiting={waiting} notSent={notSent} rejected={rejected} />
     </div>
   )

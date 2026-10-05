@@ -79,6 +79,11 @@ product decision before building, because most touch money or personal data:
   Analytics (last 30 days): acceptance = accepted / (accepted + declined + not answered); completion = collected /
   (collected + left on the list at shift end). Missed stops are recorded in DriverMiss (history of declines and
   expiries backfilled; "not collected" counts from Oct 2026).
+- Vehicle change (built Oct 2026): an approved driver who picks a different vehicle type keeps working on the current
+  vehicle (its capacity; radius capped to its limit) until they send a photo of the new one and ops approve it on Driver
+  Approvals. Approval switches the vehicle and radius and makes the new photo their vehicle photo; sending back keeps the
+  current vehicle and shows the driver the note. Plate, home base and zone changes save straight away. Drivers not yet
+  approved change vehicle directly.
 - Business: enterprise / property-manager accounts.
 - Ops: financial analytics console, live fleet view, needs-attention queue.
 

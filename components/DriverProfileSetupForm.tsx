@@ -34,21 +34,28 @@ interface ExistingProfile {
   homeAddress: string | null
   homeLat: number | null
   homeLng: number | null
+  pendingVehicleTypeId?: string | null
+  pendingRadiusKm?: number | null
 }
 
 export default function DriverProfileSetupForm({
   zones,
   vehicleTypes,
   initial,
+  approved = false,
 }: {
   zones: Zone[]
   vehicleTypes: VehicleOption[]
   initial: ExistingProfile | null
+  approved?: boolean // approved drivers' vehicle changes wait for ops (lib/vehicle-change.ts)
 }) {
-  const startVehicle = vehicleTypes.find((v) => v.id === initial?.vehicleTypeId) ?? vehicleTypes[0] ?? null
+  // A vehicle change that is waiting shows as the chosen vehicle, so saving again keeps it.
+  const startVehicle =
+    vehicleTypes.find((v) => v.id === (initial?.pendingVehicleTypeId ?? initial?.vehicleTypeId)) ?? vehicleTypes[0] ?? null
+  const currentVehicle = vehicleTypes.find((v) => v.id === initial?.vehicleTypeId) ?? null
 
   const [vehicleTypeId, setVehicleTypeId] = useState(startVehicle?.id ?? '')
-  const [radiusKm, setRadiusKm] = useState(initial?.radiusKm ?? startVehicle?.defaultRadiusKm ?? 3)
+  const [radiusKm, setRadiusKm] = useState(initial?.pendingRadiusKm ?? initial?.radiusKm ?? startVehicle?.defaultRadiusKm ?? 3)
   const [vehiclePlate, setVehiclePlate] = useState(initial?.vehiclePlate ?? '')
   const [address, setAddress] = useState(initial?.homeAddress ?? '')
   const [zoneId, setZoneId] = useState(initial?.zoneId ?? '')
@@ -63,6 +70,7 @@ export default function DriverProfileSetupForm({
 
   const vehicle = vehicleTypes.find((v) => v.id === vehicleTypeId) ?? null
   const maxRadius = vehicle?.maxRadiusKm ?? 10
+  const changingVehicle = approved && !!currentVehicle && vehicleTypeId !== currentVehicle.id
 
   function chooseVehicle(v: VehicleOption) {
     setVehicleTypeId(v.id)
@@ -146,6 +154,12 @@ export default function DriverProfileSetupForm({
         setError(data.error || 'Could not save your profile')
         return
       }
+      if (data.vehicleChange === 'pending') {
+        // Stay here: the vehicle change card at the top asks for the new vehicle's photo.
+        router.refresh()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
       router.push('/dashboard/driver')
       router.refresh()
     } catch {
@@ -189,6 +203,12 @@ export default function DriverProfileSetupForm({
             )
           })}
         </div>
+        {changingVehicle && (
+          <p className="mt-3 rounded-control bg-driver-wash p-3.5 text-[15px] text-ink">
+            A new vehicle needs Trashit&apos;s approval. After you save, add a photo of it and send it. Until it&apos;s approved, you keep
+            working with your {currentVehicle.name.toLowerCase()}.
+          </p>
+        )}
       </fieldset>
 
       <div>

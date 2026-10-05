@@ -5,8 +5,10 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { detectImageType } from '@/lib/vehicle-images'
 import { DRIVER_DOCS_BUCKET, MAX_DOC_BYTES, isDocType } from '@/lib/driver-docs'
+import { VEHICLE_CHANGE_DOC } from '@/lib/vehicle-change'
 
 // A driver uploads one approval document (photo). Stored privately; only staff can view it.
+// Approved drivers can only upload the photo of a new vehicle they've asked to change to.
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
   if (!auth.ok) return auth.response
@@ -15,11 +17,11 @@ export async function POST(req: NextRequest) {
     return tooManyRequests()
   }
 
-  const profile = await prisma.driverProfile.findUnique({ where: { userId: auth.user.id }, select: { approvalStatus: true } })
+  const profile = await prisma.driverProfile.findUnique({
+    where: { userId: auth.user.id },
+    select: { approvalStatus: true, pendingVehicleTypeId: true, pendingVehicleAt: true },
+  })
   if (!profile) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
-  if (profile.approvalStatus === 'APPROVED') {
-    return NextResponse.json({ error: 'Your account is already approved. Contact Trashit to update your documents.' }, { status: 409 })
-  }
 
   let form: FormData
   try {
@@ -29,7 +31,15 @@ export async function POST(req: NextRequest) {
   }
   const type = form.get('type')
   const file = form.get('file') as File | null
-  if (!isDocType(type)) return NextResponse.json({ error: 'Invalid document type' }, { status: 400 })
+  if (type === VEHICLE_CHANGE_DOC) {
+    if (!profile.pendingVehicleTypeId) return NextResponse.json({ error: 'Choose your new vehicle first' }, { status: 409 })
+    if (profile.pendingVehicleAt) return NextResponse.json({ error: 'Your vehicle change is already with Trashit for review' }, { status: 409 })
+  } else {
+    if (!isDocType(type)) return NextResponse.json({ error: 'Invalid document type' }, { status: 400 })
+    if (profile.approvalStatus === 'APPROVED') {
+      return NextResponse.json({ error: 'Your account is already approved. Contact Trashit to update your documents.' }, { status: 409 })
+    }
+  }
   if (!file || typeof file.arrayBuffer !== 'function') return NextResponse.json({ error: 'Please choose a photo' }, { status: 400 })
   if (file.size > MAX_DOC_BYTES) return NextResponse.json({ error: 'That photo is too large (max 5 MB).' }, { status: 400 })
 

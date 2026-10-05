@@ -108,6 +108,11 @@ model DriverProfile {
   momoChangedAt    DateTime? // when the wallet above last replaced an earlier one; withdrawals wait 24 h after
   workNights       Int[]     @default([0, 1, 2, 3, 4, 5, 6]) // nights the driver works (0 = Sunday, by the shift's start date)
   nightsOff        String[]  @default([]) // single nights off, as shift dates (YYYY-MM-DD)
+  // A change of vehicle type by an approved driver waits for ops approval; until then the current vehicle is used.
+  pendingVehicleTypeId String?   // the vehicle type asked for
+  pendingRadiusKm      Float?    // the radius asked for with it (within the new vehicle's limit)
+  pendingVehicleAt     DateTime? // when the driver sent it for approval (with a photo of the new vehicle)
+  vehicleChangeNote    String?   // why ops sent the change back, shown to the driver
 }
 
 model Zone {

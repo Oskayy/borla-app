@@ -4,8 +4,12 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { cleanText, isUuid, isValidLat, isValidLng, readJson } from '@/lib/validate'
 import { inRange } from '@/lib/numbers'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { DRIVER_DOCS_BUCKET } from '@/lib/driver-docs'
+import { planVehicleChange, VEHICLE_CHANGE_DOC } from '@/lib/vehicle-change'
 
 // Saves the driver's vehicle, home base (where they start each night) and working radius.
+// An approved driver's change of vehicle type waits for ops (lib/vehicle-change.ts); everything else saves now.
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
   if (!auth.ok) return auth.response
@@ -52,20 +56,65 @@ export async function POST(req: NextRequest) {
     if (!zone) return NextResponse.json({ error: 'That zone is not available' }, { status: 400 })
   }
 
-  const updated = await prisma.driverProfile.updateMany({
+  const current = await prisma.driverProfile.findUnique({
+    where: { userId: auth.user.id },
+    select: { approvalStatus: true, vehicleTypeId: true, pendingVehicleTypeId: true, vehicleTypeRef: { select: { maxRadiusKm: true } } },
+  })
+  if (!current) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
+
+  const plan = planVehicleChange({
+    approved: current.approvalStatus === 'APPROVED',
+    currentVehicleId: current.vehicleTypeId,
+    requestedVehicleId: vehicle.id,
+    requestedRadiusKm: radiusKm,
+    currentMaxRadiusKm: current.vehicleTypeRef?.maxRadiusKm ?? null,
+  })
+  const place = { vehiclePlate, zoneId, homeAddress, homeLat, homeLng }
+
+  if (plan.kind === 'pending') {
+    // Keep working on today's vehicle; the new one waits for a photo and ops approval.
+    const changed = current.pendingVehicleTypeId !== vehicle.id
+    await prisma.driverProfile.update({
+      where: { userId: auth.user.id },
+      data: {
+        ...place,
+        radiusKm: plan.currentRadiusKm,
+        pendingVehicleTypeId: vehicle.id,
+        pendingRadiusKm: radiusKm,
+        vehicleChangeNote: null,
+        ...(changed ? { pendingVehicleAt: null } : {}),
+      },
+    })
+    // A different vehicle than the one already asked for needs a new photo.
+    if (changed) await removeChangePhotos(auth.user.id)
+    return NextResponse.json({ success: true, vehicleChange: 'pending' })
+  }
+
+  await prisma.driverProfile.update({
     where: { userId: auth.user.id },
     data: {
+      ...place,
       vehicleTypeId: vehicle.id,
       vehicleType: vehicle.name, // kept in step for older screens that read the name
-      vehiclePlate,
       radiusKm,
-      zoneId,
-      homeAddress,
-      homeLat,
-      homeLng,
+      // Choosing today's vehicle again cancels a change that was waiting.
+      pendingVehicleTypeId: null,
+      pendingRadiusKm: null,
+      pendingVehicleAt: null,
     },
   })
-  if (updated.count === 0) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
+  if (current.pendingVehicleTypeId) await removeChangePhotos(auth.user.id)
 
   return NextResponse.json({ success: true })
+}
+
+// Deletes the photo sent with a vehicle change (records and files).
+async function removeChangePhotos(driverId: string) {
+  const docs = await prisma.driverDocument.findMany({ where: { driverId, type: VEHICLE_CHANGE_DOC }, select: { id: true, path: true } })
+  if (docs.length === 0) return
+  await prisma.driverDocument.deleteMany({ where: { id: { in: docs.map((d) => d.id) } } })
+  await createAdminClient()
+    .storage.from(DRIVER_DOCS_BUCKET)
+    .remove(docs.map((d) => d.path))
+    .catch((e) => console.error('[vehicle-change] could not remove photo', e))
 }
