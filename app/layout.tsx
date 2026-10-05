@@ -29,11 +29,17 @@ export const viewport: Viewport = {
   themeColor: "#0e1726",
 };
 
+const THEME_SCRIPT = "try{var t=localStorage.getItem('trashit-theme');if(t!=='dark')t='light';document.documentElement.dataset.theme=t}catch(e){}"
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Sets light or dark before the page paints (the saved choice; light until someone picks dark), so there is no flash. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className={geist.variable}>
         {children}
         <Footer />

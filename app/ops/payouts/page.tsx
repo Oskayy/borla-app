@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import PayoutRuleForm from '@/components/PayoutRuleForm'
 import { PageHeader } from '@/components/ui'
-import { Chip, SectionTitle } from '@/components/ops/kit'
+import { SectionTitle } from '@/components/ops/kit'
+import RuleActions from '@/components/ops/RuleActions'
 import { dateLabel } from '@/lib/format'
 
 export default async function PayoutRulesPage() {
@@ -35,7 +36,7 @@ export default async function PayoutRulesPage() {
                 </span>
                 <span className="block text-sm text-ink-3">Created {dateLabel(rule.createdAt)}</span>
               </span>
-              {rule.active && <Chip tone="ops">Active</Chip>}
+              <RuleActions kind="payout" id={rule.id} active={rule.active} label={`${rule.pickupPercent}% / ${rule.disposalPercent}%`} />
             </li>
           ))}
         </ul>

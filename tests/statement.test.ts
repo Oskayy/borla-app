@@ -1,13 +1,13 @@
 // The driver's monthly statement: month parsing, totals, a spreadsheet-safe CSV and a real PDF.
 import { describe, expect, it } from 'vitest'
-import { monthRange, parseMonth, recentMonths, statementCsv, statementTotals, type StatementData } from '@/lib/statement'
+import { monthRange, parseMonth, parsePeriod, recentMonths, recentPeriods, statementCsv, statementTotals, weekStart, type StatementData } from '@/lib/statement'
 import { buildStatementPdf } from '@/lib/statement-pdf'
 
 const now = new Date('2026-10-05T12:00:00Z')
 
 const sample: StatementData = {
   driverName: 'Kwame Ɔsei',
-  month: { year: 2026, month: 10 },
+  period: { label: 'October 2026', key: '2026-10' },
   earnings: [
     { date: new Date('2026-10-02T21:10:00Z'), orderRef: 'TR-AAAA0001', address: 'House 12, blue gate, Tema', kind: 'pickup', amount: 12 },
     { date: new Date('2026-10-02T23:40:00Z'), orderRef: 'TR-AAAA0001', address: 'House 12, blue gate, Tema', kind: 'unload', amount: 18 },
@@ -60,5 +60,31 @@ describe('driver statement', () => {
     expect(Buffer.from(bytes.slice(0, 5)).toString()).toBe('%PDF-')
     const { PDFDocument } = await import('pdf-lib')
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThan(1)
+  })
+})
+
+describe('statement periods', () => {
+  const q = (o: Record<string, string>) => ({ get: (k: string) => o[k] ?? null })
+  const now = new Date('2026-10-05T12:00:00Z') // a Monday
+
+  it('weeks start on a Monday and run 7 days', () => {
+    const p = parsePeriod(q({ week: '2026-09-28' }), now)
+    expect(p?.label).toBe('Week of 28 Sept 2026')
+    expect(p?.to.toISOString()).toBe('2026-10-05T00:00:00.000Z')
+    expect(parsePeriod(q({ week: '2026-09-29' }), now)).toBeNull() // a Tuesday
+    expect(parsePeriod(q({ week: '2026-10-12' }), now)).toBeNull() // future
+  })
+
+  it('years cover the whole calendar year, up to this one', () => {
+    expect(parsePeriod(q({ year: '2026' }), now)?.to.toISOString()).toBe('2027-01-01T00:00:00.000Z')
+    expect(parsePeriod(q({ year: '2027' }), now)).toBeNull()
+  })
+
+  it('months still work, and the lists start with the current period', () => {
+    expect(parsePeriod(q({ month: '2026-10' }), now)?.label).toBe('October 2026')
+    const r = recentPeriods(now)
+    expect(r.weeks[0].from.toISOString().slice(0, 10)).toBe('2026-10-05')
+    expect(weekStart(new Date('2026-10-11T23:00:00Z')).toISOString().slice(0, 10)).toBe('2026-10-05')
+    expect(r.months[0].key).toBe('2026-10')
   })
 })

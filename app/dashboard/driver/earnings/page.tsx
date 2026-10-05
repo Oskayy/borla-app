@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation'
-import { ArrowDownToLine, Camera, Clock, FileText, Flag, Wallet } from 'lucide-react'
+import { ArrowDownToLine, Clock, FileText, Wallet } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getEarningsHistory, getWalletSummary } from '@/lib/wallet-server'
 import { MIN_WITHDRAWAL_GHS, OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
 import { MOMO_PROVIDERS } from '@/lib/phone'
 import { dateLabel, dateTimeLabel } from '@/lib/format'
-import { monthKey, monthLabel, recentMonths } from '@/lib/statement'
-import { Card, CardTitle, PageHeader } from '@/components/ui'
+import Link from 'next/link'
+import { BUTTON_QUIET, Card, CardTitle, PageHeader } from '@/components/ui'
 import PayoutAccountForm from '@/components/PayoutAccountForm'
 import WithdrawForm from '@/components/WithdrawForm'
 
@@ -39,11 +39,10 @@ export default async function DriverEarningsPage() {
   })
   if (!profile) redirect('/dashboard/driver/profile-setup')
 
-  const [wallet, history, withdrawals, rule] = await Promise.all([
+  const [wallet, history, withdrawals] = await Promise.all([
     getWalletSummary(user.id),
     getEarningsHistory(user.id),
     prisma.withdrawal.findMany({ where: { driverId: user.id }, orderBy: { requestedAt: 'desc' }, take: 20 }),
-    prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true, disposalPercent: true } }),
   ])
   const hasOpen = withdrawals.some((w: { status: string }) => OPEN_WITHDRAWAL_STATUSES.includes(w.status))
   const holdUntil = holdEndsLabel(profile.momoChangedAt)
@@ -51,7 +50,14 @@ export default async function DriverEarningsPage() {
 
   return (
     <div>
-      <PageHeader title="Earnings" lead="Your balance, withdrawals to mobile money, and what each trip paid." />
+      <PageHeader
+        title="Earnings"
+        action={
+          <Link href="/dashboard/driver/account/statements" className={BUTTON_QUIET}>
+            <FileText aria-hidden className="size-4" /> Statements
+          </Link>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-card bg-surface p-5 ring-1 ring-action/40 sm:col-span-1">
@@ -69,7 +75,7 @@ export default async function DriverEarningsPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className="mt-6">
         <Card>
           <CardTitle>Withdraw to mobile money</CardTitle>
           {profile.approvalStatus !== 'APPROVED' ? (
@@ -92,30 +98,6 @@ export default async function DriverEarningsPage() {
           )}
         </Card>
 
-        <Card>
-          <CardTitle>How you&apos;re paid for each stop</CardTitle>
-          <ol className="grid gap-3 text-[15px]">
-            <li className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-action-wash text-action-deep">
-                <Camera aria-hidden className="size-4" />
-              </span>
-              <span>
-                <strong className="font-semibold">{rule ? `${rule.pickupPercent}%` : 'Part'} at pickup</strong>
-                <span className="block text-ink-3">When you confirm the pickup with a photo at the gate.</span>
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-ops-wash text-ops-deep">
-                <Flag aria-hidden className="size-4" />
-              </span>
-              <span>
-                <strong className="font-semibold">{rule ? `${rule.disposalPercent}%` : 'The rest'} at unload</strong>
-                <span className="block text-ink-3">When the unload at the disposal site is verified (by the site check, or by ops).</span>
-              </span>
-            </li>
-          </ol>
-          <p className="mt-4 text-sm text-ink-3">Shares are of the driver pool: the order price after Trashit&apos;s platform fee.</p>
-        </Card>
       </div>
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
@@ -178,35 +160,6 @@ export default async function DriverEarningsPage() {
         )}
       </Card>
 
-      <Card className="mt-6">
-        <CardTitle>Monthly statements</CardTitle>
-        <p className="mb-3 text-[15px] text-ink-3">Every pickup and unload share, and every withdrawal, for one month. PDF to keep or print, CSV for a spreadsheet.</p>
-        <ul className="-mx-1 divide-y divide-line">
-          {recentMonths(6).map((m) => (
-            <li key={monthKey(m)} className="flex items-center justify-between gap-3 px-1 py-2">
-              <span className="flex items-center gap-2 font-medium">
-                <FileText aria-hidden className="size-4 text-ink-3" /> {monthLabel(m)}
-              </span>
-              <span className="flex gap-2">
-                <a
-                  href={`/api/driver/statement?month=${monthKey(m)}&format=pdf`}
-                  className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-semibold text-action-deep ring-1 ring-action/50 hover:bg-action-wash"
-                  aria-label={`${monthLabel(m)} statement, PDF`}
-                >
-                  PDF
-                </a>
-                <a
-                  href={`/api/driver/statement?month=${monthKey(m)}&format=csv`}
-                  className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-semibold text-ink-2 ring-1 ring-line-strong hover:bg-canvas"
-                  aria-label={`${monthLabel(m)} statement, CSV`}
-                >
-                  CSV
-                </a>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
     </div>
   )
 }

@@ -6,9 +6,10 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { detectImageType } from '@/lib/vehicle-images'
 import { DRIVER_DOCS_BUCKET, MAX_DOC_BYTES, isDocType } from '@/lib/driver-docs'
 import { VEHICLE_CHANGE_DOC } from '@/lib/vehicle-change'
+import { AVATAR_DOC } from '@/lib/driver-photos'
 
 // A driver uploads one approval document (photo). Stored privately; only staff can view it.
-// Approved drivers can only upload the photo of a new vehicle they've asked to change to.
+// Approved drivers can upload a profile picture, a fresh photo of their vehicle, or the photo of a new vehicle.
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
   if (!auth.ok) return auth.response
@@ -34,9 +35,12 @@ export async function POST(req: NextRequest) {
   if (type === VEHICLE_CHANGE_DOC) {
     if (!profile.pendingVehicleTypeId) return NextResponse.json({ error: 'Choose your new vehicle first' }, { status: 409 })
     if (profile.pendingVehicleAt) return NextResponse.json({ error: 'Your vehicle change is already with Trashit for review' }, { status: 409 })
+  } else if (type === AVATAR_DOC) {
+    // A profile picture: any time.
   } else {
     if (!isDocType(type)) return NextResponse.json({ error: 'Invalid document type' }, { status: 400 })
-    if (profile.approvalStatus === 'APPROVED') {
+    // Approved drivers can refresh their vehicle photo (same vehicle); verification documents stay as approved.
+    if (profile.approvalStatus === 'APPROVED' && type !== 'vehicle_photo') {
       return NextResponse.json({ error: 'Your account is already approved. Contact Trashit to update your documents.' }, { status: 409 })
     }
   }

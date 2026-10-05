@@ -3,9 +3,24 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { proposePlan, buildDriverPlan, type PlanOrder, type PlanSite } from '@/lib/planner'
-import { assessDriver, nightCapacity, type DispatchDriver } from '@/lib/dispatch'
+import dynamic from 'next/dynamic'
+import { assessDriver, driverPosition, nightCapacity, type DispatchDriver } from '@/lib/dispatch'
+import type { MapRoute } from '@/components/ops/AssignMap'
 import { AlertTriangle, CheckCircle2, Flag, RotateCcw, XCircle } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+
+// The map only loads in the browser, after the rest of the board (it's the heaviest part of the page).
+const AssignMap = dynamic(() => import('@/components/ops/AssignMap'), {
+  ssr: false,
+  loading: () => <div className="h-full min-h-[420px] animate-pulse rounded-card bg-line/60" />,
+})
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
 
 export interface PlanOrderRow extends PlanOrder {
   address: string
@@ -25,12 +40,14 @@ export default function PlanBoard({
   sites,
   shiftRunning,
   nowIso,
+  assigned = [],
 }: {
   orders: PlanOrderRow[]
   drivers: DriverRow[]
   sites: PlanSite[]
   shiftRunning: boolean
   nowIso: string
+  assigned?: MapRoute[] // routes already given to drivers tonight (drawn solid)
 }) {
   const now = useMemo(() => new Date(nowIso), [nowIso])
   const router = useRouter()
@@ -63,6 +80,7 @@ export default function PlanBoard({
   }
   const siteById = useMemo(() => Object.fromEntries(sites.map((st) => [st.id, st])), [sites])
   const [busy, setBusy] = useState(false)
+  const [selected, setSelected] = useState<string | null>(null) // driver whose route the map highlights
   const [messages, setMessages] = useState<{ ok: boolean; text: string }[]>([])
 
   const orderById = useMemo(() => Object.fromEntries(orders.map((o) => [o.id, o])), [orders])
@@ -185,9 +203,49 @@ export default function PlanBoard({
     )
   }
 
+  // Each driver's route for the map: start, then each trip's stops in order, then that trip's disposal site.
+  const mapRoutes: MapRoute[] = plans.map((p) => {
+    const d = driverById[p.driverId]
+    const pos = driverPosition(d as unknown as DispatchDriver, shiftRunning, now)
+    const points: MapRoute['points'] = []
+    for (const t of p.trips) {
+      for (const id of t.orderIds) {
+        const o = orderById[id]
+        if (o?.latitude != null && o.longitude != null) points.push({ kind: 'stop', lat: o.latitude, lng: o.longitude, label: o.address })
+      }
+      const siteId = siteChoices[p.driverId]?.[String(t.tripNumber)] ?? t.siteId
+      const site = siteId ? siteById[siteId] : null
+      if (site) points.push({ kind: 'site', lat: site.lat, lng: site.lng, label: site.name })
+    }
+    return { driverId: p.driverId, name: d.name, initials: initialsOf(d.name), start: pos ? { lat: pos.lat, lng: pos.lng } : null, points, problem: p.problems.length > 0, planned: true }
+  })
+  const mapUnassigned = unassignedOrders
+    .filter((o) => o.latitude != null && o.longitude != null)
+    .map((o) => ({ lat: o.latitude as number, lng: o.longitude as number, label: o.address }))
+  const tripCount = plans.reduce((n, p) => n + p.trips.length, 0)
+  const freeLitres = drivers
+    .filter((d) => assessDriver(d as unknown as DispatchDriver, [], shiftRunning, now).counts)
+    .reduce((n, d) => n + Math.max(0, nightCapacity(d as unknown as DispatchDriver) - d.loadLitres), 0)
+  const plannedLitres = plans.reduce((n, p) => n + p.litres, 0)
+  const conflicts = plans.filter((p) => p.problems.length > 0).length
+  const kpis = [
+    { label: 'Unassigned orders', value: String(unassignedOrders.length), tone: unassignedOrders.length ? 'text-danger' : '' },
+    { label: 'Suggested trips', value: String(tripCount), tone: '' },
+    { label: 'Free capacity tonight', value: `${Math.max(0, freeLitres - plannedLitres).toLocaleString()} L`, tone: '' },
+    { label: 'Rule conflicts', value: String(conflicts), tone: conflicts ? 'text-driver-deep' : '' },
+  ]
+
   return (
     <div className="grid gap-4">
-      <div className="sticky top-14 z-10 flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface p-4 shadow-card ring-1 ring-line lg:top-4 sm:px-5">
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.label} className="flex items-center justify-between gap-3 rounded-card bg-surface px-4 py-3.5 ring-1 ring-line">
+            <dt className="text-sm text-ink-2">{k.label}</dt>
+            <dd className={`text-xl font-bold tabular-nums tracking-tight ${k.tone}`}>{k.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="sticky top-[4.5rem] z-10 flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface p-4 shadow-card ring-1 ring-line sm:px-5">
         <div>
           <p className="font-semibold">Suggested plan</p>
           <p className="text-sm text-ink-3">
@@ -227,13 +285,22 @@ export default function PlanBoard({
         </ul>
       )}
 
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+      <div className="grid gap-4">
       {plans.map((p) => {
         const d = driverById[p.driverId]
         const cap = nightCapacity(d)
         const used = p.litres + d.loadLitres
         const hasProblems = p.problems.length > 0
         return (
-          <section key={p.driverId} aria-label={d.name} className={`rounded-card bg-surface p-5 ring-1 sm:p-6 ${hasProblems ? 'ring-danger/40' : 'ring-line'}`}>
+          <section
+            key={p.driverId}
+            aria-label={d.name}
+            onClick={() => setSelected(p.driverId)}
+            className={`cursor-pointer rounded-card bg-surface p-5 transition sm:p-6 ${
+              selected === p.driverId ? 'ring-2 ring-driver' : hasProblems ? 'ring-1 ring-danger/40' : 'ring-1 ring-line hover:ring-line-strong'
+            }`}
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1 basis-72">
                 <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight">
@@ -381,8 +448,14 @@ export default function PlanBoard({
         </section>
       )}
 
+      </div>
+      <div className="h-[60vh] lg:sticky lg:top-24 lg:h-[calc(100dvh-8rem)]">
+        <AssignMap routes={[...assigned, ...mapRoutes]} unassigned={mapUnassigned} selected={selected} onSelect={setSelected} />
+      </div>
+      </div>
+
       <p className="text-sm text-ink-3">
-        In each “Move” list, drivers under “Can take it” could take that order on its own. Moving orders re-checks radius, capacity and
+        Tap a driver to see their route on the map. In each “Move” list, drivers under “Can take it” could take that order on its own. Moving orders re-checks radius, capacity and
         online status; a driver’s card turns red if their plan breaks a rule.
       </p>
     </div>

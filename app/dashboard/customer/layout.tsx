@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Bell, Headphones, MapPin } from 'lucide-react'
+import ThemeToggle from '@/components/ThemeToggle'
 import Logo from '@/components/Logo'
 import { BottomTabs, SidebarNav } from '@/components/customer/CustomerNav'
 import { createClient } from '@/utils/supabase/server'
@@ -75,13 +76,18 @@ export default async function CustomerLayout({ children }: { children: React.Rea
               </Link>
             )}
             <span className="ml-auto hidden text-sm text-ink-3 sm:block">{today}</span>
+            <ThemeToggle className="ml-auto ring-0 sm:ml-0" />
             <Link
               href="/dashboard/customer/notifications"
               aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-              className="relative ml-auto grid size-11 place-items-center rounded-full text-ink-2 hover:bg-canvas sm:ml-0"
+              className="press relative grid size-11 place-items-center rounded-full text-ink-2 hover:bg-canvas"
             >
               <Bell aria-hidden className="size-5" />
-              {unread > 0 && <span aria-hidden className="absolute right-2.5 top-2.5 size-2.5 rounded-full bg-customer ring-2 ring-surface" />}
+              {unread > 0 && (
+                <span aria-hidden className="absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-danger px-1 text-[11px] font-bold leading-5 text-white ring-2 ring-surface">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
             </Link>
             <Link href="/dashboard/customer/profile" aria-label="Your profile" className="grid size-9 place-items-center rounded-full bg-customer text-sm font-semibold text-white lg:hidden">
               {initials}

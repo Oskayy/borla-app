@@ -85,9 +85,12 @@ export default function TonightView({
               : `${orderCount} ${orderCount === 1 ? 'stop' : 'stops'} in ${groups.length} ${groups.length === 1 ? 'trip' : 'trips'}`}
           </p>
         </div>
-        <Link href="/dashboard/driver/availability" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-action-deep hover:underline">
-          <CalendarDays aria-hidden className="size-4" /> My nights
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/driver/availability" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-action-deep hover:underline">
+            <CalendarDays aria-hidden className="size-4" /> My nights
+          </Link>
+          <DriverLiveUpdates initialVersion={routeVersion} />
+        </div>
       </div>
 
       {offTonight && (
@@ -101,8 +104,6 @@ export default function TonightView({
           </span>
         </p>
       )}
-
-      <DriverLiveUpdates initialVersion={routeVersion} />
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.15fr_1fr]">
         <div className="grid gap-4">

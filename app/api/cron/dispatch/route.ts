@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'crypto'
 import { runScheduledJobs } from '@/lib/nightly-jobs'
+import { prisma } from '@/lib/prisma'
+import { HEARTBEAT_KEY } from '@/lib/system-health'
 
 // Called every 2 minutes by the scheduler (Supabase pg_cron): moves on stops drivers didn't accept in time,
 // sends the plan-ready notice, assigns waiting orders during the shift, and rolls over uncollected orders.
@@ -17,6 +19,8 @@ function authorised(req: NextRequest): boolean {
 
 async function run(req: NextRequest) {
   if (!authorised(req)) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+  // Heartbeat for the ops console's system health ("Scheduler running").
+  await prisma.jobRun.upsert({ where: { key: HEARTBEAT_KEY }, update: { ranAt: new Date() }, create: { key: HEARTBEAT_KEY } }).catch(() => {})
   const summary = await runScheduledJobs(true)
   return NextResponse.json({ success: true, ...summary })
 }

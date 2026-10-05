@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import PricingRuleForm from '@/components/PricingRuleForm'
 import { PageHeader } from '@/components/ui'
-import { Chip, SectionTitle } from '@/components/ops/kit'
+import { SectionTitle } from '@/components/ops/kit'
+import RuleActions from '@/components/ops/RuleActions'
 import { dateLabel } from '@/lib/format'
 
 export default async function PricingRulesPage() {
@@ -49,7 +50,7 @@ export default async function PricingRulesPage() {
               <li key={rule.id} className="p-4 sm:px-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className={`font-semibold ${rule.active ? '' : 'text-ink-3'}`}>{rule.name}</span>
-                  {rule.active && <Chip tone="ops">Active</Chip>}
+                  <RuleActions kind="pricing" id={rule.id} active={rule.active} label={rule.name} />
                 </div>
                 <p className="mt-1 text-[15px] tabular-nums text-ink-2">{bins || 'No bin prices'}</p>
                 <p className="mt-1 text-sm tabular-nums text-ink-3">

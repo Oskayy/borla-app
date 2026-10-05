@@ -10,14 +10,13 @@ import DeleteAccount from '@/components/customer/DeleteAccount'
 
 export const dynamic = 'force-dynamic'
 
-function Row({ href, icon: Icon, title, text }: { href: string; icon: typeof KeyRound; title: string; text: string }) {
+// A settings row: icon, title, and an optional short value on the right (no hint text underneath).
+function Row({ href, icon: Icon, title, value }: { href: string; icon: typeof KeyRound; title: string; value?: string }) {
   return (
-    <Link href={href} className="-mx-2 flex items-center gap-3 rounded-control p-2 hover:bg-canvas">
+    <Link href={href} className="press -mx-2 flex min-h-12 items-center gap-3 rounded-control p-2 hover:bg-canvas">
       <Icon aria-hidden className="size-5 shrink-0 text-ink-2" />
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium">{title}</span>
-        <span className="block text-sm text-ink-3">{text}</span>
-      </span>
+      <span className="min-w-0 flex-1 font-medium">{title}</span>
+      {value && <span className="shrink-0 text-sm text-ink-3">{value}</span>}
       <ChevronRight aria-hidden className="size-4 text-ink-3" />
     </Link>
   )
@@ -38,12 +37,12 @@ export default async function SettingsPage() {
         <Card>
           <CardTitle>Sign-in and security</CardTitle>
           <div className="grid gap-1">
-            <Row href="/reset-password" icon={KeyRound} title="Change password" text="Choose a new password for your account" />
+            <Row href="/reset-password" icon={KeyRound} title="Change password" />
             <Row
               href="/account/security"
               icon={ShieldCheck}
               title="Two-factor authentication"
-              text={has2fa ? 'On: a code from your authenticator app is needed to sign in' : 'Off: add a code from an authenticator app when you sign in'}
+              value={has2fa ? 'On' : 'Off'}
             />
           </div>
         </Card>
@@ -62,9 +61,9 @@ export default async function SettingsPage() {
         <Card>
           <CardTitle>Privacy and terms</CardTitle>
           <div className="grid gap-1">
-            <Row href="/privacy-policy" icon={FileText} title="Privacy policy" text="What we collect and why" />
-            <Row href="/terms" icon={FileText} title="Terms of service" text="The rules for using Trashit" />
-            <Row href="/refund-policy" icon={FileText} title="Refund policy" text="Cancellations and refunds" />
+            <Row href="/privacy-policy" icon={FileText} title="Privacy policy" />
+            <Row href="/terms" icon={FileText} title="Terms of service" />
+            <Row href="/refund-policy" icon={FileText} title="Refund policy" />
           </div>
         </Card>
 

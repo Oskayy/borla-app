@@ -1,5 +1,5 @@
-// A driver's monthly earnings statement: what they earned and what was sent to their MoMo in one calendar month.
-// Accra is UTC+0 all year, so a calendar month in Ghana is the same month in UTC.
+// A driver's earnings statement: what they earned and what was sent to their MoMo in one week, month or year.
+// Accra is UTC+0 all year, so periods in Ghana are the same in UTC.
 
 export interface StatementEarning {
   date: Date
@@ -19,7 +19,7 @@ export interface StatementWithdrawal {
 
 export interface StatementData {
   driverName: string
-  month: { year: number; month: number } // month 1-12
+  period: { label: string; key: string }
   earnings: StatementEarning[]
   withdrawals: StatementWithdrawal[]
 }
@@ -53,6 +53,68 @@ export function recentMonths(count: number, now: Date = new Date()): { year: num
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))
     return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 }
   })
+}
+
+// A statement period: a week (Monday to Sunday), a calendar month, or a calendar year.
+export interface Period {
+  kind: 'week' | 'month' | 'year'
+  key: string // "2026-W2026-09-28", "2026-10", "2026"
+  label: string // "Week of 28 Sept 2026", "October 2026", "2026"
+  from: Date
+  to: Date
+}
+
+const DAY = 86_400_000
+const ymd = (d: Date) => d.toISOString().slice(0, 10)
+
+// The Monday that starts the week containing `d` (UTC, which is Ghana time).
+export function weekStart(d: Date): Date {
+  const day = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+  return new Date(day.getTime() - ((day.getUTCDay() + 6) % 7) * DAY)
+}
+
+function weekPeriod(start: Date): Period {
+  const label = start.toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
+  return { kind: 'week', key: `week-${ymd(start)}`, label: `Week of ${label}`, from: start, to: new Date(start.getTime() + 7 * DAY) }
+}
+function monthPeriod(m: { year: number; month: number }): Period {
+  return { kind: 'month', key: monthKey(m), label: monthLabel(m), ...monthRange(m) }
+}
+function yearPeriod(year: number): Period {
+  return { kind: 'year', key: String(year), label: String(year), from: new Date(Date.UTC(year, 0, 1)), to: new Date(Date.UTC(year + 1, 0, 1)) }
+}
+
+// ?week=YYYY-MM-DD (a Monday) | ?month=YYYY-MM | ?year=YYYY. Future periods are refused.
+export function parsePeriod(params: { get(name: string): string | null }, now: Date = new Date()): Period | null {
+  const week = params.get('week')
+  if (week) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) return null
+    const d = new Date(`${week}T00:00:00Z`)
+    if (Number.isNaN(d.getTime()) || d.getUTCDay() !== 1 || d > now || d.getUTCFullYear() < 2024) return null
+    return weekPeriod(d)
+  }
+  const year = params.get('year')
+  if (year) {
+    const y = /^\d{4}$/.test(year) ? Number(year) : NaN
+    if (!(y >= 2024 && y <= now.getUTCFullYear())) return null
+    return yearPeriod(y)
+  }
+  const m = parseMonth(params.get('month'), now)
+  return m ? monthPeriod(m) : null
+}
+
+// The download lists: last `count` weeks, months and years, newest first.
+export function recentPeriods(now: Date = new Date()) {
+  const thisWeek = weekStart(now)
+  return {
+    weeks: Array.from({ length: 8 }, (_, i) => weekPeriod(new Date(thisWeek.getTime() - i * 7 * DAY))),
+    months: recentMonths(6, now).map(monthPeriod),
+    years: [now.getUTCFullYear(), now.getUTCFullYear() - 1].filter((y) => y >= 2026).map(yearPeriod),
+  }
+}
+
+export function periodQuery(p: Period): string {
+  return p.kind === 'week' ? `week=${ymd(p.from)}` : p.kind === 'month' ? `month=${p.key}` : `year=${p.key}`
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100

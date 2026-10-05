@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import BinIllustration from '@/components/BinIllustration'
 import { AlertCircle, Check, Home as HomeIcon, Lock, MapPin, MapPinOff, Minus, Moon, Plus, Recycle, Trash2 } from 'lucide-react'
 import PhotoCapture from '@/components/PhotoCapture'
 import PinPicker from '@/components/PinPicker'
@@ -384,7 +385,7 @@ export default function BookingForm({
                       key={size.code}
                       className={`rounded-card border px-1.5 py-3.5 text-center transition sm:p-4 ${count > 0 ? 'border-customer bg-customer-wash' : 'border-line-strong'}`}
                     >
-                      <Trash2 aria-hidden className={`mx-auto size-6 ${count > 0 ? 'text-customer' : 'text-ink-3'}`} />
+                      <BinIllustration litres={size.litres} active={count > 0} className="mx-auto h-24 w-auto text-ink" />
                       <p className="mt-1.5 font-semibold">{size.litres} L</p>
                       <p className="text-xs text-ink-3">{size.label}</p>
                       <div className="mt-3 flex items-center justify-center gap-1.5 sm:gap-3">

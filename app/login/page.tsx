@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, Lock } from 'lucide-react'
+import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import PasswordInput from '@/components/PasswordInput'
 import AuthShell, { AUTH_BUTTON, AUTH_FIELD, AuthTabs, ErrorLine } from '@/components/auth/AuthShell'
 import { useClientValue } from '@/lib/use-client-value'
@@ -146,7 +146,7 @@ export default function LoginPage() {
         <>
           <AuthTabs current="signin" />
           <h1 className="mt-7 text-2xl font-bold tracking-tight">Welcome back</h1>
-          <p className="mt-2 text-[15px] text-ink-2">Sign in to your pickups, your night&apos;s stops, or the ops console.</p>
+          <p className="mt-2 text-[15px] text-ink-2">Sign in to your pickups or your night&apos;s stops.</p>
           {notice && (
             <p role="status" className="mt-5 flex items-start gap-2 rounded-control bg-customer-wash px-3.5 py-3 text-sm text-customer-deep">
               <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0" /> {notice}
@@ -208,9 +208,6 @@ export default function LoginPage() {
               {loading ? 'Signing in…' : 'Sign in'} {!loading && <ArrowRight aria-hidden className="size-4" />}
             </button>
           </form>
-          <p className="mt-6 flex items-center gap-2 text-xs text-ink-3">
-            <Lock aria-hidden className="size-3.5" /> Staff accounts also need a 2FA code from an authenticator app.
-          </p>
         </>
       )}
     </AuthShell>

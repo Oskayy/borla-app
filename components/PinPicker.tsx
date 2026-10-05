@@ -106,15 +106,18 @@ export default function PinPicker({
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={useMyLocation}
-        disabled={locating}
-        className="flex min-h-11 w-full items-center justify-center gap-2 bg-canvas px-4 text-[15px] font-semibold text-ink transition hover:bg-line disabled:opacity-60"
-      >
-        <LocateFixed aria-hidden className="size-4 text-customer" />
-        {locating ? 'Finding you…' : "I'm at the pickup spot: use my location"}
-      </button>
+      <div className="bg-canvas p-3">
+        <button
+          type="button"
+          onClick={useMyLocation}
+          disabled={locating}
+          className="press flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-action px-4 text-[15px] font-semibold text-on-action shadow-card transition hover:brightness-95 disabled:opacity-60"
+        >
+          <LocateFixed aria-hidden className={locating ? 'size-5 animate-spin' : 'size-5'} />
+          {locating ? 'Finding you…' : 'Use my location'}
+        </button>
+        <p className="mt-1.5 text-center text-xs text-ink-3">Only when you&apos;re standing at the pickup spot</p>
+      </div>
       {gpsNote && (
         <p role="status" className="bg-canvas px-4 pb-2 text-sm text-ink-2">
           {gpsNote}

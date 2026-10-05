@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import AlertBell from '@/components/AlertBell'
 
 const CHECK_EVERY_MS = 20_000
 
@@ -86,9 +87,8 @@ export default function DriverLiveUpdates({ initialVersion }: { initialVersion: 
     }
   }, [router])
 
-  async function dismiss() {
-    const ids = alerts.map((a) => a.id)
-    setAlerts([])
+  async function dismiss(ids: string[]) {
+    setAlerts((prev) => prev.filter((a) => !ids.includes(a.id)))
     await fetch('/api/driver/updates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,21 +96,5 @@ export default function DriverLiveUpdates({ initialVersion }: { initialVersion: 
     }).catch(() => {})
   }
 
-  if (alerts.length === 0) return null
-  return (
-    <div
-      role="alert"
-      style={{ marginBottom: 16, borderRadius: 8, padding: 12, background: '#FFF6E5', border: '2px solid var(--color-accent)' }}
-    >
-      {alerts.map((a) => (
-        <div key={a.id} style={{ marginBottom: 6 }}>
-          <p style={{ fontWeight: 600, fontSize: 14 }}>🔔 {a.title}</p>
-          <p style={{ fontSize: 13 }}>{a.body}</p>
-        </div>
-      ))}
-      <button onClick={dismiss} className="btn-primary" style={{ width: '100%', marginTop: 4 }}>
-        OK
-      </button>
-    </div>
-  )
+  return <AlertBell alerts={alerts} onDismiss={dismiss} label="Alerts" />
 }

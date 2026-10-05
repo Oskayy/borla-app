@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { receiptNumber } from '@/lib/receipt-pdf'
-import { monthKey, monthRange, parseMonth, statementCsv, type StatementData } from '@/lib/statement'
+import { parsePeriod, statementCsv, type StatementData } from '@/lib/statement'
 import { buildStatementPdf } from '@/lib/statement-pdf'
 
 const WITHDRAWAL_STATUS: Record<string, string> = {
@@ -15,7 +15,7 @@ const WITHDRAWAL_STATUS: Record<string, string> = {
   REJECTED: 'Not approved',
 }
 
-// The signed-in driver's earnings statement for one month: ?month=2026-10&format=pdf|csv
+// The signed-in driver's earnings statement: ?week=2026-09-28 | ?month=2026-10 | ?year=2026, and &format=pdf|csv
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
   if (!auth.ok) return auth.response
@@ -24,10 +24,10 @@ export async function GET(req: NextRequest) {
     return tooManyRequests()
   }
 
-  const month = parseMonth(req.nextUrl.searchParams.get('month'))
-  if (!month) return NextResponse.json({ error: 'Choose a month, e.g. 2026-10' }, { status: 400 })
+  const period = parsePeriod(req.nextUrl.searchParams)
+  if (!period) return NextResponse.json({ error: 'Choose a week, month or year that has started' }, { status: 400 })
   const format = req.nextUrl.searchParams.get('format') === 'csv' ? 'csv' : 'pdf'
-  const { from, to } = monthRange(month)
+  const { from, to } = period
 
   const [user, earnings, withdrawals] = await Promise.all([
     prisma.user.findUnique({ where: { id: auth.user.id }, select: { name: true } }),
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
   const data: StatementData = {
     driverName: user?.name ?? 'Driver',
-    month,
+    period: { label: period.label, key: period.key },
     earnings: earnings.map((e) => ({
       date: e.createdAt,
       orderRef: receiptNumber(e.orderId),
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     })),
   }
 
-  const name = `trashit-earnings-${monthKey(month)}`
+  const name = `trashit-earnings-${period.key}`
   if (format === 'csv') {
     return new NextResponse(statementCsv(data), {
       headers: {

@@ -132,6 +132,41 @@ body:has(.theme-night) { background: #0e1726; }
 .theme-ops .ops-scroll { scrollbar-color: #2a3b58 transparent; scrollbar-width: thin; }
 body:has(.theme-ops) { background: var(--color-canvas); }
 
+/* ---- Dark mode (the theme toggle sets data-theme on <html>; first visit follows the device setting) ----
+   Remaps the day tokens. The driver app is always night (.theme-night), whatever this says. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #0b1220;
+  --color-surface: #131d2e;
+  --color-ink: #e8edf5;
+  --color-ink-2: #c6cfdc;
+  --color-ink-3: #97a3b6;
+  --color-line: #243349;
+  --color-line-strong: #36496a;
+  --color-customer-deep: #3fd99a;
+  --color-customer-wash: rgb(63 217 154 / 0.14);
+  --color-driver-deep: #f7c06f;
+  --color-driver-wash: rgb(240 164 58 / 0.14);
+  --color-ops-deep: #b5b0ff;
+  --color-ops-wash: rgb(139 132 255 / 0.16);
+  --color-danger: #ff8a7a;
+  --color-danger-wash: rgb(255 138 122 / 0.14);
+  --color-action-deep: #3fd99a;
+  --color-action-wash: rgb(63 217 154 / 0.14);
+  --color-bg: #0b1220;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
+  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.35), 0 18px 40px -18px rgb(0 0 0 / 0.6);
+}
+/* Show one of two versions of something (e.g. the logo for light or dark grounds). */
+.only-dark { display: none; }
+:root[data-theme="dark"] .only-dark { display: revert; }
+:root[data-theme="dark"] .only-light { display: none; }
+:root[data-theme="dark"] .theme-ops {
+  --color-action-deep: #b5b0ff;
+  --color-action-wash: rgb(139 132 255 / 0.16);
+}
+
+
 html { scrollbar-color: var(--color-line-strong) transparent; }
 
 ::selection { background: var(--color-customer-wash); color: var(--color-customer-deep); }
@@ -225,4 +260,10 @@ input, textarea, select { caret-color: var(--color-customer); }
 .flow-screen { animation: flow-screen 0.45s var(--ease-out-expo) both; }
 @media (prefers-reduced-motion: reduce) {
   .flow-signal, .flow-flash, .flow-screen { animation: none; }
+}
+
+/* Pressed feedback on every button (and links styled as buttons): a quick, small sink. */
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled), .press { transition-property: transform, background-color, color, box-shadow, opacity; transition-duration: 120ms; }
+  button:not(:disabled):active, .press:active { transform: scale(0.97); }
 }

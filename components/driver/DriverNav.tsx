@@ -2,16 +2,20 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Moon, Truck, User, Wallet } from 'lucide-react'
+import { Moon, User, Wallet } from 'lucide-react'
 
 const BASE = '/dashboard/driver'
 
-const LINKS = [
+// Vehicle, availability, statistics and statements live under Account.
+const LINKS: { href: string; label: string; short?: string; icon: typeof Moon; exact?: boolean; also?: string[] }[] = [
   { href: BASE, label: 'Tonight', icon: Moon, exact: true },
   { href: `${BASE}/earnings`, label: 'Earnings', icon: Wallet },
-  { href: `${BASE}/performance`, label: 'Performance', short: 'Stats', icon: BarChart3 },
-  { href: `${BASE}/profile-setup`, label: 'Vehicle & area', short: 'Vehicle', icon: Truck },
-  { href: `${BASE}/account`, label: 'Account', icon: User },
+  {
+    href: `${BASE}/account`,
+    label: 'Account',
+    icon: User,
+    also: [`${BASE}/performance`, `${BASE}/profile-setup`, `${BASE}/availability`, `${BASE}/vehicle`],
+  },
 ]
 
 function isActive(pathname: string, href: string, exact?: boolean) {
@@ -24,8 +28,8 @@ export function DriverTabs() {
   return (
     <nav aria-label="Driver" className="hidden border-b border-line lg:block">
       <ul className="mx-auto flex max-w-5xl gap-1 px-6">
-        {LINKS.map(({ href, label, icon: Icon, exact }) => {
-          const on = isActive(pathname, href, exact)
+        {LINKS.map(({ href, label, icon: Icon, exact, also }) => {
+          const on = isActive(pathname, href, exact) || !!also?.some((p) => pathname.startsWith(p))
           return (
             <li key={href}>
               <Link
@@ -50,9 +54,9 @@ export function DriverBottomTabs() {
   const pathname = usePathname()
   return (
     <nav aria-label="Driver" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
-      <ul className="mx-auto grid max-w-md grid-cols-5">
-        {LINKS.map(({ href, label, short, icon: Icon, exact }) => {
-          const on = isActive(pathname, href, exact)
+      <ul className="mx-auto grid max-w-md grid-cols-3">
+        {LINKS.map(({ href, label, short, icon: Icon, exact, also }) => {
+          const on = isActive(pathname, href, exact) || !!also?.some((p) => pathname.startsWith(p))
           return (
             <li key={href}>
               <Link

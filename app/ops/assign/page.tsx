@@ -11,6 +11,8 @@ import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
 import { AlertTriangle, CalendarClock, CheckCircle2, ChevronRight } from 'lucide-react'
 import { PageHeader } from '@/components/ui'
+import { loadAssignedRoutes } from '@/lib/assigned-routes'
+import TonightMap from '@/components/ops/TonightMap'
 
 const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
 
@@ -69,6 +71,9 @@ export default async function AssignOrdersPage() {
     }
   })
 
+  // Routes already given to drivers tonight, for the map.
+  const assigned = await loadAssignedRoutes(dispatch.drivers, dispatch.shiftRunning, dispatch.now)
+
   const drivers = dispatch.drivers.map((d) => ({
     ...d,
     lastLocationAt: d.lastLocationAt ? new Date(d.lastLocationAt).toISOString() : null,
@@ -77,7 +82,7 @@ export default async function AssignOrdersPage() {
   const bounced = orders.filter((o) => o.declinedBy.length > 0).length
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <PageHeader
         title="Plan & assign"
         lead={`${
@@ -106,9 +111,13 @@ export default async function AssignOrdersPage() {
           </p>
         )}
         {orders.length === 0 && (
-          <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
-            <CheckCircle2 aria-hidden className="size-5 text-ops" /> No paid orders waiting for a driver.
-          </p>
+          <>
+            <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
+              <CheckCircle2 aria-hidden className="size-5 text-ops" /> No paid orders waiting for a driver.
+              {assigned.length > 0 && (assigned.length === 1 ? " Tonight's route is on the map." : " Tonight's routes are on the map.")}
+            </p>
+            {assigned.length > 0 && <TonightMap routes={assigned} />}
+          </>
         )}
         {orders.length > 0 && (
           <>
@@ -118,6 +127,7 @@ export default async function AssignOrdersPage() {
               sites={sites}
               shiftRunning={dispatch.shiftRunning}
               nowIso={dispatch.now.toISOString()}
+              assigned={assigned}
             />
 
             <details className="group mt-4">

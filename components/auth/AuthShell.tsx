@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertCircle, Home, LayoutGrid, Truck } from 'lucide-react'
+import { AlertCircle, Home, Truck } from 'lucide-react'
 import Logo from '@/components/Logo'
 
 // The frame shared by sign-in and create-account: the three workspaces on the left, the form on the right
@@ -16,7 +16,6 @@ export const AUTH_BUTTON =
 const WORKSPACES = [
   { name: 'Customer', text: 'Book, pay and track your pickups', icon: Home, chip: 'bg-customer text-white' },
   { name: 'Driver', text: 'Your night’s stops and earnings', icon: Truck, chip: 'bg-driver text-night' },
-  { name: 'Operations', text: 'Plan routes, check unloads, pay out', icon: LayoutGrid, chip: 'bg-ops text-white' },
 ]
 
 export function ErrorLine({ text }: { text: string }) {
