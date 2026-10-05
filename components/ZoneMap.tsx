@@ -94,18 +94,18 @@ export default function ZoneMap({
           id: `zone-fill-${zone.id}`,
           type: 'fill',
           source: `zone-${zone.id}`,
-          paint: { 'fill-color': zone.active ? '#0F3D3E' : '#999999', 'fill-opacity': 0.15 },
+          paint: { 'fill-color': zone.active ? '#4b40e0' : '#8a94a3', 'fill-opacity': 0.15 },
         })
         map.current!.addLayer({
           id: `zone-outline-${zone.id}`,
           type: 'line',
           source: `zone-${zone.id}`,
-          paint: { 'line-color': zone.active ? '#0F3D3E' : '#999999', 'line-width': 2 },
+          paint: { 'line-color': zone.active ? '#4b40e0' : '#8a94a3', 'line-width': 2 },
         })
 
         const popupHtml = `<strong>${zone.name}</strong><br/>${zone.city} · ${zone.radiusKm}km radius<br/>${zone.coveredAreas.length > 0 ? zone.coveredAreas.join(', ') : 'No towns listed'}`
 
-        new mapboxgl.Marker({ color: '#E8A33D' })
+        new mapboxgl.Marker({ color: '#4b40e0' })
           .setLngLat([zone.centerLng!, zone.centerLat!])
           .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupHtml))
           .addTo(map.current!)
@@ -155,13 +155,13 @@ export default function ZoneMap({
       id: 'preview-fill',
       type: 'fill',
       source: 'preview',
-      paint: { 'fill-color': '#E8A33D', 'fill-opacity': 0.25 },
+      paint: { 'fill-color': '#3a30c2', 'fill-opacity': 0.25 },
     })
     map.current.addLayer({
       id: 'preview-outline',
       type: 'line',
       source: 'preview',
-      paint: { 'line-color': '#E8A33D', 'line-width': 3, 'line-dasharray': [2, 1] },
+      paint: { 'line-color': '#3a30c2', 'line-width': 3, 'line-dasharray': [2, 1] },
     })
 
     map.current.flyTo({ center: [preview.centerLng, preview.centerLat], zoom: 12 })
@@ -177,7 +177,7 @@ export default function ZoneMap({
     }
 
     if (!pinMarker.current) {
-      pinMarker.current = new mapboxgl.Marker({ color: '#2F7A4D' })
+      pinMarker.current = new mapboxgl.Marker({ color: '#f0a43a' }) // the driver's home base: driver amber
     }
     pinMarker.current.setLngLat([pin.lng, pin.lat]).addTo(map.current)
     map.current.flyTo({ center: [pin.lng, pin.lat], zoom: 13 })

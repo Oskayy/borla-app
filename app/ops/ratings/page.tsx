@@ -7,6 +7,7 @@ import { dateLabel } from '@/lib/format'
 import { receiptNumber } from '@/lib/receipt-pdf'
 import { LOW_RATING, STATS_DAYS } from '@/lib/ratings'
 import ReviewRatingButton from '@/components/ops/ReviewRatingButton'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,13 +69,13 @@ export default async function OpsRatingsPage() {
   }))
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-bold tracking-tight">Driver ratings</h1>
-      <p className="mt-1 text-[15px] text-ink-2">
-        Customers rate pickups from 1 to 5 stars. Ratings of {LOW_RATING} stars or fewer wait here until someone has looked into them.
-      </p>
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Driver ratings"
+        lead={`Customers rate pickups from 1 to 5 stars. Ratings of ${LOW_RATING} stars or fewer wait here until someone has looked into them.`}
+      />
 
-      <section className="mt-6 rounded-card bg-surface p-5 ring-1 ring-line">
+      <section className="rounded-card bg-surface p-5 ring-1 ring-line">
         <h2 className="text-base font-semibold">Low ratings to review ({toReview.length})</h2>
         {toReview.length === 0 ? (
           <p className="mt-3 text-[15px] text-ink-3">Nothing to review.</p>

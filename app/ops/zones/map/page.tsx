@@ -2,6 +2,10 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import ZoneMap from '@/components/ZoneMap'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+import { BUTTON_QUIET, PageHeader } from '@/components/ui'
+import { AllClear } from '@/components/ops/kit'
 
 const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
 
@@ -20,16 +24,23 @@ export default async function ZoneMapPage() {
   const zonesWithCoords = zones.filter((z) => z.centerLat != null && z.centerLng != null)
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 6 }}>Zone Map</h1>
-      <p style={{ color: '#666', marginBottom: 20 }}>
-        Shaded circles show each zone&apos;s approximate coverage area. Click a marker for details.
-      </p>
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Zone map"
+        lead="Shaded circles show each zone's approximate coverage. Click a marker for details."
+        action={
+          <Link href="/ops/zones" className={BUTTON_QUIET}>
+            <ArrowLeft aria-hidden className="size-4" /> Zones
+          </Link>
+        }
+      />
 
       {zonesWithCoords.length === 0 ? (
-        <div className="panel"><p>No zones with coordinates yet. Add center latitude/longitude to a zone to see it here.</p></div>
+        <AllClear>No zones with a centre yet. Add a centre latitude and longitude to a zone to see it here.</AllClear>
       ) : (
-        <ZoneMap zones={zonesWithCoords} />
+        <div className="overflow-hidden rounded-card ring-1 ring-line">
+          <ZoneMap zones={zonesWithCoords} />
+        </div>
       )}
     </div>
   )

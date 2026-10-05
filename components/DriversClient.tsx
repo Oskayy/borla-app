@@ -2,6 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Clock, MapPin, Phone } from 'lucide-react'
+import { BUTTON_QUIET } from '@/components/ui'
+import { AllClear, Chip, Result, SELECT } from '@/components/ops/kit'
+import { TZ } from '@/lib/format'
+import { useNow } from '@/lib/use-now'
 
 interface DriverRow {
   id: string
@@ -19,15 +24,16 @@ interface DriverRow {
   lastLocationAt: string | null
 }
 
-function minutesAgo(iso: string): string {
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+function ago(iso: string, now: number): string {
+  const mins = Math.round((now - new Date(iso).getTime()) / 60000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins} min ago`
   return `${Math.floor(mins / 60)} h ${mins % 60} min ago`
 }
 
+// Ghana time, so the server and the browser agree.
 function clock(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString('en-GB', { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
 export default function DriversClient({ drivers }: { drivers: DriverRow[] }) {
@@ -35,6 +41,7 @@ export default function DriversClient({ drivers }: { drivers: DriverRow[] }) {
   const [hours, setHours] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const router = useRouter()
+  const now = useNow(60_000) // null until the browser has its clock
 
   async function setOverride(driverId: string, h: number) {
     setBusy(driverId)
@@ -58,93 +65,77 @@ export default function DriversClient({ drivers }: { drivers: DriverRow[] }) {
     }
   }
 
-  const smallButton = {
-    background: 'none',
-    border: '1px solid var(--color-border)',
-    borderRadius: 4,
-    padding: '4px 10px',
-    fontSize: 12,
-  } as const
+  if (drivers.length === 0) return <AllClear>No drivers yet.</AllClear>
 
   return (
     <div>
-      {message && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{message}</p>}
-      {drivers.length === 0 && (
-        <div className="panel">
-          <p>No drivers yet.</p>
-        </div>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <Result msg={message ? { ok: false, text: message } : null} />
+      <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
         {drivers.map((d) => (
-          <div key={d.id} className="panel" style={{ opacity: d.active ? 1 : 0.55 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      display: 'inline-block',
-                      background: d.online ? 'var(--color-success)' : '#bbb',
-                    }}
-                  />
-                  {d.name}
-                  <span style={{ fontSize: 12, fontWeight: 400, color: '#666' }}>{d.phone}</span>
-                  {!d.active && <span style={{ fontSize: 11, color: '#B3261E' }}>PAUSED</span>}
-                </p>
-                <p style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+          <li key={d.id} className={`flex flex-wrap items-start justify-between gap-4 p-4 sm:px-5 ${d.active ? '' : 'bg-canvas/60'}`}>
+            <div className="min-w-0 flex-1 basis-72">
+              <p className="flex flex-wrap items-center gap-2">
+                <span className={`size-2.5 shrink-0 rounded-full ${d.online ? 'bg-driver' : 'bg-line-strong'}`} aria-hidden />
+                <span className="font-semibold">{d.name}</span>
+                <span className="sr-only">{d.online ? 'online' : 'offline'}</span>
+                {!d.active && <Chip tone="danger">Paused</Chip>}
+                {d.online && <Chip tone="driver">Online</Chip>}
+              </p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
+                <a href={`tel:${d.phone}`} className="inline-flex items-center gap-1 font-medium text-ops-deep hover:underline">
+                  <Phone aria-hidden className="size-3.5" /> {d.phone}
+                </a>
+                <span>
                   {d.vehicle ?? 'No vehicle set'}
                   {d.capacityLitres != null && ` (${d.capacityLitres.toLocaleString()} L)`}
                   {d.radiusKm != null && ` · ${d.radiusKm} km radius`}
                   {d.zone && ` · ${d.zone}`}
-                  {!d.hasHomeBase && ' · no home base yet'}
+                </span>
+                {!d.hasHomeBase && <span className="text-danger">No home base yet</span>}
+              </p>
+              {d.online && (
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-3">
+                  <MapPin aria-hidden className="size-3.5" />
+                  {d.onlineSince ? `Online since ${clock(d.onlineSince)}` : 'Online'}
+                  {' · '}
+                  {d.lastLocationAt ? `location ${now == null ? 'received' : ago(d.lastLocationAt, now)}` : 'waiting for location'}
                 </p>
-                <p style={{ fontSize: 12, marginTop: 2, color: d.online ? '#2F7A4D' : '#999' }}>
-                  {d.online
-                    ? `Online${d.onlineSince ? ` since ${clock(d.onlineSince)}` : ''}${
-                        d.lastLocationAt ? ` · location ${minutesAgo(d.lastLocationAt)}` : ' · waiting for location'
-                      }`
-                    : 'Offline'}
+              )}
+              {d.overrideUntil && (
+                <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-driver-deep">
+                  <Clock aria-hidden className="size-3.5" /> Extra hours allowed until {clock(d.overrideUntil)}
                 </p>
-                {d.overrideUntil && (
-                  <p style={{ fontSize: 12, marginTop: 2, color: '#9A6415' }}>Extra hours allowed until {clock(d.overrideUntil)}</p>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                {d.overrideUntil ? (
-                  <button onClick={() => setOverride(d.id, 0)} disabled={busy === d.id} style={smallButton}>
-                    Remove extra hours
-                  </button>
-                ) : (
-                  <>
-                    <select
-                      value={hours[d.id] ?? '2'}
-                      onChange={(e) => setHours((h) => ({ ...h, [d.id]: e.target.value }))}
-                      style={{ fontSize: 12, padding: '4px 6px', border: '1px solid var(--color-border)', borderRadius: 4 }}
-                      aria-label={`Extra hours for ${d.name}`}
-                    >
-                      {[1, 2, 4, 8, 12].map((h) => (
-                        <option key={h} value={h}>
-                          {h} h
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => setOverride(d.id, Number(hours[d.id] ?? '2'))}
-                      disabled={busy === d.id || !d.active}
-                      style={smallButton}
-                    >
-                      Allow extra hours
-                    </button>
-                  </>
-                )}
-              </div>
+              )}
             </div>
-          </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {d.overrideUntil ? (
+                <button type="button" onClick={() => setOverride(d.id, 0)} disabled={busy === d.id} className={BUTTON_QUIET}>
+                  Remove extra hours
+                </button>
+              ) : (
+                <>
+                  <select
+                    value={hours[d.id] ?? '2'}
+                    onChange={(e) => setHours((h) => ({ ...h, [d.id]: e.target.value }))}
+                    className={SELECT}
+                    aria-label={`Extra hours for ${d.name}`}
+                  >
+                    {[1, 2, 4, 8, 12].map((h) => (
+                      <option key={h} value={h}>
+                        {h} h
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setOverride(d.id, Number(hours[d.id] ?? '2'))} disabled={busy === d.id || !d.active} className={BUTTON_QUIET}>
+                    Allow extra hours
+                  </button>
+                </>
+              )}
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }

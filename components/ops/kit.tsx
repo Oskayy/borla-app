@@ -1,0 +1,51 @@
+import { CheckCircle2 } from 'lucide-react'
+
+// Small pieces the ops pages share, on the design tokens. Tones follow the Legend Rule:
+// ops (indigo) = verified / done by ops, driver (amber) = with a driver or in progress, danger = needs a person.
+
+export type Tone = 'neutral' | 'ops' | 'driver' | 'danger'
+
+const TONES: Record<Tone, string> = {
+  neutral: 'bg-canvas text-ink-2 ring-1 ring-line',
+  ops: 'bg-ops-wash text-ops-deep',
+  driver: 'bg-driver-wash text-driver-deep',
+  danger: 'bg-danger-wash text-danger',
+}
+
+export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: React.ReactNode }) {
+  return <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONES[tone]}`}>{children}</span>
+}
+
+export function SectionTitle({ children, count, hint, id }: { children: React.ReactNode; count?: number; hint?: string; id?: string }) {
+  return (
+    <div className="mb-3">
+      <h2 id={id} className="text-lg font-semibold tracking-tight">
+        {children}
+        {count != null && <span className="ml-1.5 text-base font-normal tabular-nums text-ink-3">({count})</span>}
+      </h2>
+      {hint && <p className="mt-0.5 text-sm text-ink-3">{hint}</p>}
+    </div>
+  )
+}
+
+export function AllClear({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-[15px] text-ink-2 ring-1 ring-line sm:px-5">
+      <CheckCircle2 aria-hidden className="size-5 shrink-0 text-ops" /> {children}
+    </p>
+  )
+}
+
+// The result of an action, announced to screen readers; empty until there is one.
+export function Result({ msg }: { msg?: { ok: boolean; text: string } | null }) {
+  return (
+    <p aria-live="polite" className={`mt-2 text-sm empty:hidden ${msg?.ok ? 'text-ops-deep' : 'text-danger'}`}>
+      {msg?.text}
+    </p>
+  )
+}
+
+export const PANEL = 'rounded-card bg-surface p-5 ring-1 ring-line sm:p-6'
+export const SELECT =
+  'min-h-11 rounded-control border border-line-strong bg-surface px-3 text-[15px] text-ink focus:border-action focus:outline-none focus:ring-3 focus:ring-action/20'
+export const CHECK = 'size-4 accent-[var(--color-ops)]'

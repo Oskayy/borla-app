@@ -5,6 +5,7 @@ import { OPS_ROLES } from '@/lib/auth'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import DriversClient from '@/components/DriversClient'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,13 +71,13 @@ export default async function DriversPage() {
   const onlineCount = rows.filter((r) => r.online).length
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Drivers</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Shift hours {windowLabel(settings)} · the shift is <strong>{shiftRunning ? 'running now' : 'not running'}</strong> ·{' '}
-        <strong>{onlineCount}</strong> of {rows.length} driver(s) online. Drivers can only go online during shift hours.
-        &quot;Allow extra hours&quot; lets one driver work outside them (for example to clear a backlog).
-      </p>
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Drivers"
+        lead={`Shift hours ${windowLabel(settings)}; the shift is ${shiftRunning ? 'running now' : 'not running'}. ${onlineCount} of ${rows.length} ${
+          rows.length === 1 ? 'driver' : 'drivers'
+        } online. Drivers can only go online during shift hours; "Allow extra hours" lets one driver work outside them, for example to clear a backlog.`}
+      />
       <DriversClient drivers={rows} />
     </div>
   )

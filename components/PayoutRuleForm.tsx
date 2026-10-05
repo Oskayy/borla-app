@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
+import { PANEL, Result } from '@/components/ops/kit'
 
 export default function PayoutRuleForm() {
   const [pickupPercent, setPickupPercent] = useState('40')
@@ -9,54 +11,54 @@ export default function PayoutRuleForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const total = Number(pickupPercent || 0) + Number(disposalPercent || 0)
 
   async function submit() {
     setError('')
     setLoading(true)
-    const res = await fetch('/api/admin/payout-rules', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pickupPercent, disposalPercent }),
-    })
-    const data = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(data.error || 'Failed to create rule')
-      return
+    try {
+      const res = await fetch('/api/admin/payout-rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pickupPercent, disposalPercent }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Failed to create rule')
+        return
+      }
+      router.refresh()
+    } catch {
+      setError('Could not reach Trashit. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    router.refresh()
   }
 
   return (
-    <div className="panel">
-      <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 16, marginBottom: 12 }}>Add New Payout Rule</h2>
-
-      <label style={{ fontSize: 12, color: '#666' }}>Pickup payout (%)</label>
-      <input
-        type="number"
-        value={pickupPercent}
-        onChange={(e) => setPickupPercent(e.target.value)}
-        className="input-field"
-      />
-
-      <label style={{ fontSize: 12, color: '#666' }}>Disposal payout (%)</label>
-      <input
-        type="number"
-        value={disposalPercent}
-        onChange={(e) => setDisposalPercent(e.target.value)}
-        className="input-field"
-      />
-
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-
-      <button onClick={submit} disabled={loading} className="btn-accent" style={{ width: '100%' }}>
-        {loading ? 'Saving...' : 'Activate This Rule'}
-      </button>
-      <p style={{ fontSize: 11, color: '#999', marginTop: 6 }}>
-        Must add up to 100%. This only affects future pickups/disposals — not orders already in progress.
+    <section aria-labelledby="h-new-rule" className={PANEL}>
+      <h2 id="h-new-rule" className="text-base font-semibold tracking-tight">
+        New payout rule
+      </h2>
+      <p className="mt-1 text-sm text-ink-3">How the driver pool (the order price after the platform fee) is split between the two moments of a stop.</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <label>
+          <span className="text-sm font-medium text-ink-2">At pickup (%)</span>
+          <input type="number" min={0} max={100} value={pickupPercent} onChange={(e) => setPickupPercent(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} />
+        </label>
+        <label>
+          <span className="text-sm font-medium text-ink-2">At unload (%)</span>
+          <input type="number" min={0} max={100} value={disposalPercent} onChange={(e) => setDisposalPercent(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} />
+        </label>
+      </div>
+      <p className={`mt-2 text-sm tabular-nums ${total === 100 ? 'text-ink-3' : 'font-medium text-danger'}`}>
+        Total {total}%{total === 100 ? '' : ' (must be 100%)'}
       </p>
-    </div>
+      <Result msg={error ? { ok: false, text: error } : null} />
+      <button type="button" onClick={submit} disabled={loading || total !== 100} className={`${BUTTON_PRIMARY} mt-4 w-full sm:w-auto`}>
+        {loading ? 'Saving…' : 'Make this the active rule'}
+      </button>
+      <p className="mt-2 text-sm text-ink-3">Only affects pickups and unloads from now on, not money already paid.</p>
+    </section>
   )
 }

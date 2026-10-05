@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { ROLE_LABELS, STAFF_ADMIN_ROLES, STAFF_ROLES } from '@/lib/staff'
 import StaffClient, { type StaffRow } from '@/components/StaffClient'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,12 +22,11 @@ export default async function StaffPage() {
   const rows: StaffRow[] = staff.map((s) => ({ ...s, createdAt: s.createdAt.toISOString(), isMe: s.id === user.id }))
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Staff Accounts</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Add staff, change what they can do, or suspend them. New staff get a temporary password to pass on privately (not by
-        email). At first sign-in they choose their own password and set up 2-step verification.
-      </p>
+    <div className="max-w-4xl">
+      <PageHeader
+        title="Staff"
+        lead="Add staff, change what they can do, or suspend them. New staff get a temporary password to pass on privately, not by email. At first sign-in they choose their own password and set up 2-step verification."
+      />
       <StaffClient rows={rows} roles={STAFF_ROLES.map((r) => ({ code: r, label: ROLE_LABELS[r] ?? r }))} />
     </div>
   )

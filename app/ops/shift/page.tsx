@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getMaxTripsPerNight, getShiftSettings, getAcceptMinutes, getAutoDispatch } from '@/lib/settings'
 import { formatClock, toClock } from '@/lib/shift'
 import ShiftSettingsForm from '@/components/ShiftSettingsForm'
+import { PageHeader } from '@/components/ui'
 
 const VIEW_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE']
 const EDIT_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER']
@@ -24,13 +25,13 @@ export default async function ShiftSettingsPage() {
   ])
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Shift Hours</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Collections run from {formatClock(s.shiftStartMinutes)} to {formatClock(s.shiftEndMinutes)} ({s.timezone} time).
-        Orders paid before {formatClock(s.planningSnapshotMinutes)} join tonight&apos;s planned batch. Orders paid after
-        that, until {formatClock(s.hardCutoffMinutes)}, join tonight as late orders. Anything later goes to the next night.
-      </p>
+    <div className="max-w-3xl">
+      <PageHeader
+        title="Shift hours"
+        lead={`Collections run from ${formatClock(s.shiftStartMinutes)} to ${formatClock(s.shiftEndMinutes)} (${s.timezone} time). Orders paid before ${formatClock(
+          s.planningSnapshotMinutes
+        )} join tonight's planned batch; after that, until ${formatClock(s.hardCutoffMinutes)}, they join tonight as late orders. Anything later goes to the next night.`}
+      />
 
       {EDIT_ROLES.includes(dbUser.role) ? (
         <ShiftSettingsForm
@@ -45,9 +46,10 @@ export default async function ShiftSettingsPage() {
           }}
         />
       ) : (
-        <div className="panel">
-          <p style={{ fontSize: 13 }}>Only a Super Admin or Ops Manager can change shift hours.</p>
-        </div>
+        <p className="rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
+          Trips per night: {trips} · minutes to accept: {acceptMinutes} · automatic assignment {autoDispatch ? 'on' : 'off'}. Only a Super Admin or Ops
+          Manager can change these.
+        </p>
       )}
     </div>
   )

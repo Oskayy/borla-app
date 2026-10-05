@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import VehicleImageUpload from './VehicleImageUpload'
+import { Pencil, Plus, Truck } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import { CHECK, Chip, PANEL, Result } from '@/components/ops/kit'
 
 interface VehicleType {
   id: string
@@ -23,7 +26,6 @@ interface FormValues {
   active: boolean
 }
 
-const labelStyle = { fontSize: 12, color: '#666' } as const
 
 function toForm(v?: VehicleType): FormValues {
   return {
@@ -59,42 +61,53 @@ function VehicleForm({
     if (problem) setError(problem)
   }
 
+  const label = 'text-sm font-medium text-ink-2'
   return (
-    <div>
-      <label style={labelStyle}>Name</label>
-      <input value={values.name} onChange={(e) => set('name', e.target.value)} className="input-field" placeholder="e.g. Pickup truck" />
-
-      <label style={labelStyle}>Capacity (litres)</label>
-      <input type="number" min="50" value={values.capacityLitres} onChange={(e) => set('capacityLitres', e.target.value)} className="input-field" />
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Default radius (km)</label>
-          <input type="number" step="0.5" min="0.5" value={values.defaultRadiusKm} onChange={(e) => set('defaultRadiusKm', e.target.value)} className="input-field" />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Maximum radius (km)</label>
-          <input type="number" step="0.5" min="0.5" value={values.maxRadiusKm} onChange={(e) => set('maxRadiusKm', e.target.value)} className="input-field" />
-        </div>
+    <div className="grid gap-4">
+      <label className="block">
+        <span className={label}>Name</span>
+        <input value={values.name} onChange={(e) => set('name', e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Pickup truck" />
+      </label>
+      <label className="block">
+        <span className={label}>Capacity (litres)</span>
+        <input type="number" min="50" value={values.capacityLitres} onChange={(e) => set('capacityLitres', e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} />
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className={label}>Default radius (km)</span>
+          <input
+            type="number"
+            step="0.5"
+            min="0.5"
+            value={values.defaultRadiusKm}
+            onChange={(e) => set('defaultRadiusKm', e.target.value)}
+            className={`${FIELD} mt-1.5 tabular-nums`}
+          />
+        </label>
+        <label className="block">
+          <span className={label}>Maximum radius (km)</span>
+          <input
+            type="number"
+            step="0.5"
+            min="0.5"
+            value={values.maxRadiusKm}
+            onChange={(e) => set('maxRadiusKm', e.target.value)}
+            className={`${FIELD} mt-1.5 tabular-nums`}
+          />
+        </label>
       </div>
-
-      <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <input type="checkbox" checked={values.active} onChange={(e) => set('active', e.target.checked)} />
-        Available for drivers to choose
+      <label className="flex min-h-11 items-center gap-2 text-[15px] font-medium">
+        <input type="checkbox" checked={values.active} onChange={(e) => set('active', e.target.checked)} className={CHECK} />
+        Drivers can choose it
       </label>
 
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={submit} disabled={saving} className="btn-accent" style={{ flex: 1 }}>
-          {saving ? 'Saving...' : submitLabel}
+      <Result msg={error ? { ok: false, text: error } : null} />
+      <div className="flex flex-wrap gap-2.5">
+        <button type="button" onClick={submit} disabled={saving} className={BUTTON_PRIMARY}>
+          {saving ? 'Saving…' : submitLabel}
         </button>
         {onCancel && (
-          <button
-            onClick={onCancel}
-            disabled={saving}
-            style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '0 16px', fontSize: 14 }}
-          >
+          <button type="button" onClick={onCancel} disabled={saving} className={BUTTON_QUIET}>
             Cancel
           </button>
         )}
@@ -128,7 +141,9 @@ export default function VehicleTypesClient({
       if (!res.ok) return data.error || 'Could not save'
       setNotice(
         data.driversAdjusted
-          ? `Saved. ${data.driversAdjusted} driver(s) had a radius above the new maximum and were brought down to it.`
+          ? `Saved. ${data.driversAdjusted} ${data.driversAdjusted === 1 ? 'driver had a radius' : 'drivers had radii'} above the new maximum and ${
+              data.driversAdjusted === 1 ? 'was' : 'were'
+            } brought down to it.`
           : 'Saved.'
       )
       setEditingId(null)
@@ -141,104 +156,101 @@ export default function VehicleTypesClient({
   }
 
   return (
-    <div>
-      {notice && <p style={{ color: '#2F7A4D', fontSize: 13, marginBottom: 12 }}>{notice}</p>}
+    <div className="grid gap-6">
+      <Result msg={notice ? { ok: true, text: notice } : null} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {vehicleTypes.map((v) => (
-          <div key={v.id} className="panel" style={{ opacity: v.active ? 1 : 0.55 }}>
-            <div
-              style={{
-                background: '#F7F5F1',
-                borderRadius: 4,
-                height: 120,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 10,
-              }}
-            >
+          <li key={v.id} className={`${PANEL} ${v.active ? '' : 'opacity-70'}`}>
+            <div className="grid h-32 place-items-center rounded-control bg-canvas">
               {v.imagePath ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={v.imagePath} alt={v.name} style={{ maxHeight: 110, maxWidth: '100%' }} />
+                <img src={v.imagePath} alt={v.name} className="max-h-28 max-w-full" />
               ) : (
-                <span style={{ fontSize: 12, color: '#999' }}>No picture yet</span>
+                <span className="flex flex-col items-center gap-1 text-sm text-ink-3">
+                  <Truck aria-hidden className="size-6" /> No picture yet
+                </span>
               )}
             </div>
             {canEdit && <VehicleImageUpload vehicleId={v.id} imagePath={v.imagePath} />}
 
-            {editingId === v.id ? (
-              <VehicleForm
-                initial={toForm(v)}
-                submitLabel="Save changes"
-                onSubmit={(values) => save(`/api/admin/vehicle-types/${v.id}`, 'PATCH', values)}
-                onCancel={() => setEditingId(null)}
-              />
-            ) : (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <p style={{ fontWeight: 600 }}>{v.name}</p>
-                  {!v.active && <span style={{ fontSize: 11, color: '#B3261E' }}>HIDDEN</span>}
-                </div>
-                <p style={{ fontSize: 13, marginTop: 4 }}>
-                  Capacity: <strong>{v.capacityLitres.toLocaleString()} L</strong>
-                  {largestBin && (
-                    <span style={{ color: '#666' }}>
-                      {' '}
-                      (about {Math.floor(v.capacityLitres / largestBin.litres)} {largestBin.label.toLowerCase()}s)
-                    </span>
+            <div className="mt-3">
+              {editingId === v.id ? (
+                <VehicleForm
+                  initial={toForm(v)}
+                  submitLabel="Save changes"
+                  onSubmit={(values) => save(`/api/admin/vehicle-types/${v.id}`, 'PATCH', values)}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <>
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span className="text-lg font-semibold tracking-tight">{v.name}</span>
+                    {!v.active && <Chip tone="danger">Hidden from drivers</Chip>}
+                  </p>
+                  <p className="mt-1 text-[15px]">
+                    <span className="font-semibold tabular-nums">{v.capacityLitres.toLocaleString()} L</span>
+                    {largestBin && (
+                      <span className="text-ink-3">
+                        {' '}
+                        · about {Math.floor(v.capacityLitres / largestBin.litres)} {largestBin.label.toLowerCase()}s
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-ink-2">
+                    Radius {v.defaultRadiusKm} km by default, up to {v.maxRadiusKm} km
+                  </p>
+                  <p className="mt-1 text-sm text-ink-3">
+                    {v._count.drivers} {v._count.drivers === 1 ? 'driver uses' : 'drivers use'} it
+                  </p>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(v.id)
+                        setNotice('')
+                      }}
+                      className={`${BUTTON_QUIET} mt-3`}
+                    >
+                      <Pencil aria-hidden className="size-4" /> Edit
+                    </button>
                   )}
-                </p>
-                <p style={{ fontSize: 13 }}>
-                  Radius: {v.defaultRadiusKm} km by default, up to {v.maxRadiusKm} km
-                </p>
-                <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{v._count.drivers} driver(s) use this vehicle</p>
-                {canEdit && (
-                  <button
-                    onClick={() => {
-                      setEditingId(v.id)
-                      setNotice('')
-                    }}
-                    style={{ marginTop: 8, background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '4px 10px', fontSize: 12 }}
-                  >
-                    Edit
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {canEdit && (
-        <div style={{ marginTop: 20 }}>
-          {adding ? (
-            <div className="panel" style={{ maxWidth: 420 }}>
-              <h2 style={{ fontSize: 16, marginBottom: 12 }}>Add a vehicle type</h2>
-              <VehicleForm
-                initial={toForm()}
-                submitLabel="Add vehicle"
-                onSubmit={(values) => save('/api/admin/vehicle-types', 'POST', values)}
-                onCancel={() => setAdding(false)}
-              />
+                </>
+              )}
             </div>
-          ) : (
+          </li>
+        ))}
+      </ul>
+
+      {canEdit &&
+        (adding ? (
+          <section aria-labelledby="h-add-vehicle" className={`${PANEL} max-w-md`}>
+            <h2 id="h-add-vehicle" className="mb-4 text-base font-semibold tracking-tight">
+              New vehicle type
+            </h2>
+            <VehicleForm
+              initial={toForm()}
+              submitLabel="Add vehicle"
+              onSubmit={(values) => save('/api/admin/vehicle-types', 'POST', values)}
+              onCancel={() => setAdding(false)}
+            />
+          </section>
+        ) : (
+          <div>
             <button
+              type="button"
               onClick={() => {
                 setAdding(true)
                 setNotice('')
               }}
-              className="btn-primary"
+              className={BUTTON_PRIMARY}
             >
-              + Add a vehicle type
+              <Plus aria-hidden className="size-4" /> Add a vehicle type
             </button>
-          )}
-        </div>
-      )}
+          </div>
+        ))}
 
-      {!canEdit && (
-        <p style={{ fontSize: 12, color: '#999', marginTop: 16 }}>Only a Super Admin or Ops Manager can change vehicles.</p>
-      )}
+      {!canEdit && <p className="text-sm text-ink-3">Only a Super Admin or Ops Manager can change vehicles.</p>}
     </div>
   )
 }

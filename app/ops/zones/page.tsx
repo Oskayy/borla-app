@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import ZonesClient from '@/components/ZonesClient'
+import { Map as MapIcon } from 'lucide-react'
+import { BUTTON_QUIET, PageHeader } from '@/components/ui'
 
 const ZONE_EDIT_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
 const PRICE_EDIT_ROLES = ['SUPER_ADMIN', 'FINANCE']
@@ -24,19 +26,18 @@ export default async function ZonesPage() {
   })
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h1 style={{ fontSize: 26 }}>Zones</h1>
-        <Link href="/ops/zones/map" className="btn-primary" style={{ textDecoration: 'none' }}>
-          View on Map
-        </Link>
-      </div>
-
-      <ZonesClient
-        zones={zones}
-        canEditZones={ZONE_EDIT_ROLES.includes(dbUser.role)}
-        canEditPrice={PRICE_EDIT_ROLES.includes(dbUser.role)}
+    <div className="max-w-4xl">
+      <PageHeader
+        title="Zones"
+        lead="Where customers can book. A booking's pin must fall inside an active zone, and each zone's multiplier scales its prices."
+        action={
+          <Link href="/ops/zones/map" className={BUTTON_QUIET}>
+            <MapIcon aria-hidden className="size-4" /> See all on a map
+          </Link>
+        }
       />
+
+      <ZonesClient zones={zones} canEditZones={ZONE_EDIT_ROLES.includes(dbUser.role)} canEditPrice={PRICE_EDIT_ROLES.includes(dbUser.role)} />
     </div>
   )
-}
+}

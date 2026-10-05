@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Phone, RefreshCw, Send } from 'lucide-react'
+import { BUTTON_DANGER, BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import { AllClear, Chip, PANEL, Result, SectionTitle, type Tone } from '@/components/ops/kit'
+import { dateLabel, dateTimeLabel } from '@/lib/format'
 
 export interface WithdrawalRow {
   id: string
@@ -18,7 +22,6 @@ export interface WithdrawalRow {
   markedByMe: boolean // this user recorded the manual payment, so someone else must confirm it
 }
 
-const COLORS: Record<string, string> = { PAID: '#2F7A4D', FAILED: '#B3261E', REJECTED: '#B3261E', PROCESSING: '#9A6415', REQUESTED: '#9A6415', CONFIRMING: '#9A6415' }
 
 export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRow[]; recent: WithdrawalRow[] }) {
   const [active, setActive] = useState<{ id: string; action: 'mark_paid' | 'reject' | 'dispute_paid' } | null>(null)
@@ -70,114 +73,139 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
     }
   }
 
-  const btn = { background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '6px 10px', fontSize: 13, cursor: 'pointer' } as const
+  const recentState = (s: string): { text: string; tone: Tone } =>
+    s === 'PAID' ? { text: 'Paid', tone: 'ops' } : s === 'FAILED' ? { text: 'Failed', tone: 'danger' } : s === 'REJECTED' ? { text: 'Rejected', tone: 'danger' } : { text: s, tone: 'neutral' }
 
   return (
-    <div>
-      <h2 style={{ fontSize: 18, marginBottom: 10 }}>Waiting ({open.length})</h2>
-      {open.length === 0 && (
-        <div className="panel" style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 14 }}>No withdrawals waiting.</p>
-        </div>
-      )}
-      {open.map((w) => (
-        <div key={w.id} className="panel" style={{ marginBottom: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <p style={{ fontWeight: 600 }}>
-                GHS {w.amount.toFixed(2)} · {w.driverName}{' '}
-                <a href={`tel:${w.driverPhone}`} style={{ fontWeight: 400, fontSize: 13 }}>
-                  {w.driverPhone}
-                </a>
-              </p>
-              <p style={{ fontSize: 13, color: '#666' }}>
-                To {w.momo} · asked {new Date(w.requestedAt).toLocaleString()}
-                {w.totalEarned != null && ` · earned GHS ${w.totalEarned.toFixed(2)} in total`}
-              </p>
-              {w.note && w.status !== 'CONFIRMING' && <p style={{ fontSize: 12, color: '#B3261E', marginTop: 4 }}>{w.note}</p>}
-            </div>
-            {w.status === 'REQUESTED' ? (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                <button onClick={() => act(w.id, 'send')} disabled={busy === w.id} className="btn-accent">
-                  {busy === w.id ? '...' : 'Send via Paystack'}
-                </button>
-                <button style={btn} onClick={() => { setActive({ id: w.id, action: 'mark_paid' }); setNote('') }}>
-                  Mark paid
-                </button>
-                <button style={{ ...btn, color: '#B3261E', borderColor: '#B3261E' }} onClick={() => { setActive({ id: w.id, action: 'reject' }); setNote('') }}>
-                  Reject
-                </button>
-              </div>
-            ) : w.status === 'CONFIRMING' ? (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS[w.status] }}>
-                  PAID BY HAND (ref {w.note}): {w.markedByMe ? 'waiting for a colleague to confirm' : 'please check and confirm'}
-                </span>
-                {!w.markedByMe && (
-                  <>
-                    <button onClick={() => act(w.id, 'confirm_paid')} disabled={busy === w.id} className="btn-accent">
-                      {busy === w.id ? '...' : 'Payment is there: confirm'}
-                    </button>
-                    <button style={{ ...btn, color: '#B3261E', borderColor: '#B3261E' }} onClick={() => { setActive({ id: w.id, action: 'dispute_paid' }); setNote('') }}>
-                      Can&apos;t find it
-                    </button>
-                  </>
-                )}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS[w.status] }}>BEING SENT</span>
-                {w.method === 'paystack' && (
-                  <button style={btn} disabled={busy === w.id} onClick={() => act(w.id, 'check')}>
-                    {busy === w.id ? '...' : 'Check'}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          {active?.id === w.id && (
-            <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="input-field"
-                style={{ marginBottom: 0, flex: 1, minWidth: 220 }}
-                placeholder={
-                  active.action === 'mark_paid'
-                    ? 'MoMo transaction ID of your payment'
-                    : active.action === 'dispute_paid'
-                    ? 'What you found (kept in the record)'
-                    : 'Reason (the driver sees this)'
-                }
-              />
-              <button onClick={() => act(w.id, active.action)} disabled={busy === w.id || note.trim().length < 3} className="btn-primary">
-                {active.action === 'mark_paid' ? 'Record payment' : active.action === 'dispute_paid' ? 'Send back' : 'Confirm reject'}
-              </button>
-              <button style={btn} onClick={() => setActive(null)}>
-                Cancel
-              </button>
-            </div>
-          )}
-          {msg[w.id] && <p style={{ fontSize: 13, marginTop: 6, color: msg[w.id].ok ? '#2F7A4D' : '#B3261E' }}>{msg[w.id].text}</p>}
-        </div>
-      ))}
+    <div className="grid gap-10">
+      <section aria-labelledby="h-waiting">
+        <SectionTitle id="h-waiting" count={open.length}>
+          Waiting
+        </SectionTitle>
+        {open.length === 0 && <AllClear>No withdrawals waiting.</AllClear>}
+        <ul className="grid gap-3 empty:hidden">
+          {open.map((w) => (
+            <li key={w.id} className={PANEL}>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0 flex-1 basis-72">
+                  <p className="text-2xl font-bold tabular-nums tracking-tight">GHS {w.amount.toFixed(2)}</p>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px]">
+                    <span className="font-semibold">{w.driverName}</span>
+                    {w.driverPhone && (
+                      <a href={`tel:${w.driverPhone}`} className="inline-flex items-center gap-1 text-sm font-medium text-ops-deep hover:underline">
+                        <Phone aria-hidden className="size-3.5" /> {w.driverPhone}
+                      </a>
+                    )}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-2">To {w.momo}</p>
+                  <p className="mt-0.5 text-sm text-ink-3">
+                    Asked {dateTimeLabel(w.requestedAt)}
+                    {w.totalEarned != null && <span className="tabular-nums"> · earned GHS {w.totalEarned.toFixed(2)} in total</span>}
+                  </p>
+                  {w.note && w.status !== 'CONFIRMING' && <p className="mt-2 rounded-control bg-danger-wash p-2.5 text-sm text-ink">{w.note}</p>}
+                </div>
 
-      <h2 style={{ fontSize: 18, margin: '24px 0 10px' }}>Recent</h2>
-      {recent.map((w) => (
-        <div key={w.id} className="panel" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600 }}>
-              GHS {w.amount.toFixed(2)} · {w.driverName}
-            </p>
-            <p style={{ fontSize: 12, color: '#666' }}>
-              {w.momo} · {new Date(w.requestedAt).toLocaleDateString()}
-              {w.method && ` · ${w.method === 'manual' ? 'paid by hand' : 'Paystack'}`}
-              {w.note && ` · ${w.note}`}
-            </p>
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: COLORS[w.status] ?? '#666' }}>{w.status}</span>
-        </div>
-      ))}
+                {w.status === 'REQUESTED' ? (
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => act(w.id, 'send')} disabled={busy === w.id} className={BUTTON_PRIMARY}>
+                      <Send aria-hidden className="size-4" /> {busy === w.id ? 'Sending…' : 'Send via Paystack'}
+                    </button>
+                    <button type="button" className={BUTTON_QUIET} onClick={() => { setActive({ id: w.id, action: 'mark_paid' }); setNote('') }}>
+                      Mark paid
+                    </button>
+                    <button type="button" className={BUTTON_DANGER} onClick={() => { setActive({ id: w.id, action: 'reject' }); setNote('') }}>
+                      Reject
+                    </button>
+                  </div>
+                ) : w.status === 'CONFIRMING' ? (
+                  <div className="grid max-w-sm justify-items-start gap-2">
+                    <Chip tone={w.markedByMe ? 'driver' : 'danger'}>{w.markedByMe ? 'Waiting for a colleague to confirm' : 'Please check and confirm'}</Chip>
+                    <p className="text-sm text-ink-2">
+                      Paid by hand, reference <span className="font-medium text-ink">{w.note}</span>
+                    </p>
+                    {!w.markedByMe && (
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => act(w.id, 'confirm_paid')} disabled={busy === w.id} className={BUTTON_PRIMARY}>
+                          {busy === w.id ? 'Saving…' : 'Payment is there: confirm'}
+                        </button>
+                        <button type="button" className={BUTTON_DANGER} onClick={() => { setActive({ id: w.id, action: 'dispute_paid' }); setNote('') }}>
+                          Can&apos;t find it
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Chip tone="driver">Being sent</Chip>
+                    {w.method === 'paystack' && (
+                      <button type="button" className={BUTTON_QUIET} disabled={busy === w.id} onClick={() => act(w.id, 'check')}>
+                        <RefreshCw aria-hidden className="size-4" /> {busy === w.id ? 'Checking…' : 'Check with Paystack'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {active?.id === w.id && (
+                <div className="mt-4 border-t border-line pt-4">
+                  <label className="block">
+                    <span className="text-sm font-medium text-ink-2">
+                      {active.action === 'mark_paid'
+                        ? 'MoMo transaction ID of your payment'
+                        : active.action === 'dispute_paid'
+                        ? 'What you found (kept in the record)'
+                        : 'Reason (the driver sees this)'}
+                    </span>
+                    <input value={note} onChange={(e) => setNote(e.target.value)} className={`${FIELD} mt-1.5`} />
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => act(w.id, active.action)}
+                      disabled={busy === w.id || note.trim().length < 3}
+                      className={active.action === 'mark_paid' ? BUTTON_PRIMARY : BUTTON_DANGER}
+                    >
+                      {active.action === 'mark_paid' ? 'Record payment' : active.action === 'dispute_paid' ? 'Send back' : 'Confirm reject'}
+                    </button>
+                    <button type="button" className={BUTTON_QUIET} onClick={() => setActive(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              <Result msg={msg[w.id]} />
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="h-recent">
+        <SectionTitle id="h-recent">Recent</SectionTitle>
+        {recent.length === 0 ? (
+          <AllClear>No finished withdrawals yet.</AllClear>
+        ) : (
+          <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+            {recent.map((w) => {
+              const st = recentState(w.status)
+              return (
+                <li key={w.id} className="flex flex-wrap items-start justify-between gap-3 p-4 sm:px-5">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">
+                      <span className="tabular-nums">GHS {w.amount.toFixed(2)}</span> · {w.driverName}
+                    </p>
+                    <p className="mt-0.5 text-sm text-ink-3">
+                      {w.momo} · {dateLabel(w.requestedAt)}
+                      {w.method && ` · ${w.method === 'manual' ? 'paid by hand' : 'Paystack'}`}
+                      {w.note && ` · ${w.note}`}
+                    </p>
+                  </div>
+                  <Chip tone={st.tone}>{st.text}</Chip>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

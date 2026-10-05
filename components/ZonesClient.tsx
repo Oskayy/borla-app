@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import ZoneForm from './ZoneForm'
 import ZoneMultiplierEditor from './ZoneMultiplierEditor'
+import { Pencil } from 'lucide-react'
+import { BUTTON_QUIET } from '@/components/ui'
+import { AllClear, Chip, SectionTitle } from '@/components/ops/kit'
 
 interface ZoneWithCount {
   id: string
@@ -31,47 +34,45 @@ export default function ZonesClient({
   const editingZone = zones.find((z) => z.id === editingId) ?? null
 
   return (
-    <div>
-      {canEditZones && (
-        <ZoneForm
-          editingZone={editingZone}
-          onDoneEditing={() => setEditingId(null)}
-          otherZones={zones}
-        />
-      )}
+    <div className="grid gap-8">
+      {canEditZones && <ZoneForm editingZone={editingZone} onDoneEditing={() => setEditingId(null)} otherZones={zones} />}
 
-      <h2 style={{ fontSize: 16, margin: '24px 0 12px' }}>All Zones</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {zones.length === 0 && (
-          <div className="panel"><p>No zones created yet.</p></div>
+      <section aria-labelledby="h-zones">
+        <SectionTitle id="h-zones" count={zones.length}>
+          All zones
+        </SectionTitle>
+        {zones.length === 0 ? (
+          <AllClear>No zones yet.</AllClear>
+        ) : (
+          <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+            {zones.map((zone) => (
+              <li key={zone.id} className={`p-4 sm:px-5 ${zone.active ? '' : 'bg-canvas/60'}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{zone.name}</span>
+                      <span className="text-ink-3">{zone.city}</span>
+                      {!zone.active && <Chip tone="danger">Inactive</Chip>}
+                    </p>
+                    <p className="mt-0.5 text-sm text-ink-3">
+                      {zone._count.drivers} {zone._count.drivers === 1 ? 'driver' : 'drivers'} · {zone._count.customers}{' '}
+                      {zone._count.customers === 1 ? 'customer' : 'customers'} · {zone.radiusKm} km radius
+                      {zone.centerLat != null && ` · centre ${zone.centerLat.toFixed(4)}, ${zone.centerLng?.toFixed(4)}`}
+                    </p>
+                    {zone.coveredAreas.length > 0 && <p className="mt-0.5 text-sm text-ink-2">Covers {zone.coveredAreas.join(', ')}</p>}
+                  </div>
+                  {canEditZones && (
+                    <button type="button" onClick={() => setEditingId(zone.id)} className={BUTTON_QUIET}>
+                      <Pencil aria-hidden className="size-4" /> Edit
+                    </button>
+                  )}
+                </div>
+                <ZoneMultiplierEditor zoneId={zone.id} value={zone.priceMultiplier} canEdit={canEditPrice} />
+              </li>
+            ))}
+          </ul>
         )}
-        {zones.map((zone) => (
-          <div key={zone.id} className="panel" style={{ opacity: zone.active ? 1 : 0.5 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontWeight: 600 }}>{zone.name} — {zone.city}</span>
-                {!zone.active && <span style={{ fontSize: 11, color: '#B3261E', marginLeft: 8 }}>INACTIVE</span>}
-              </div>
-              {canEditZones && <button
-                onClick={() => setEditingId(zone.id)}
-                style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '4px 10px', fontSize: 12 }}
-              >
-                Edit
-              </button>}
-            </div>
-            <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
-              {zone._count.drivers} driver(s) · {zone._count.customers} customer(s) · {zone.radiusKm}km radius
-              {zone.centerLat != null && ` · Center: ${zone.centerLat.toFixed(4)}, ${zone.centerLng?.toFixed(4)}`}
-            </p>
-            <ZoneMultiplierEditor zoneId={zone.id} value={zone.priceMultiplier} canEdit={canEditPrice} />
-            {zone.coveredAreas.length > 0 && (
-              <p style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                Covers: {zone.coveredAreas.join(', ')}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
+      </section>
     </div>
   )
-}
+}

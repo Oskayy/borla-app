@@ -5,6 +5,7 @@ import { getShiftSettings } from '@/lib/settings'
 import { coversShift, describeHours, SITE_EDIT_ROLES, SITE_STATUS_ROLES } from '@/lib/disposal-sites'
 import { formatClock } from '@/lib/shift'
 import DisposalSitesClient from '@/components/DisposalSitesClient'
+import { PageHeader } from '@/components/ui'
 
 const VIEW_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE']
 
@@ -49,14 +50,13 @@ export default async function DisposalSitesPage() {
   }))
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Disposal Sites</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Where drivers unload. Each trip ends at the best open site that accepts its waste, and the disposal photo must be
-        taken inside the site&apos;s geofence to release the driver&apos;s 60%. Shift hours are{' '}
-        {formatClock(shift.shiftStartMinutes)} – {formatClock(shift.shiftEndMinutes)}, so sites need to be open at night.
-        Pins marked &quot;Placeholder&quot; are rough positions: move them to the real sites.
-      </p>
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Disposal sites"
+        lead={`Where drivers unload. Each trip ends at the best open site that accepts its waste, and the unload photo must be taken inside the site's geofence to release the driver's unload share. The shift runs ${formatClock(
+          shift.shiftStartMinutes
+        )}–${formatClock(shift.shiftEndMinutes)}, so sites need to be open at night. Pins marked "Placeholder" are rough positions: move them to the real sites.`}
+      />
       <DisposalSitesClient
         sites={rows}
         zones={zones}

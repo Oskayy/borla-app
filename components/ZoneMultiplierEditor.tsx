@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import { Result } from '@/components/ops/kit'
 
 // Shows a zone's price multiplier. Super Admin and Finance can change it; everyone else just sees it.
 export default function ZoneMultiplierEditor({
@@ -39,17 +41,18 @@ export default function ZoneMultiplierEditor({
 
   if (!editing) {
     return (
-      <p style={{ fontSize: 13, marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span>
-          Price multiplier: <strong>×{value}</strong>
+      <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-ink-2">
+          Price multiplier <strong className="font-semibold tabular-nums text-ink">×{value}</strong>
         </span>
         {canEdit && (
           <button
+            type="button"
             onClick={() => {
               setInput(String(value))
               setEditing(true)
             }}
-            style={{ background: 'none', border: 'none', color: 'var(--color-primary)', textDecoration: 'underline', fontSize: 12, padding: 0 }}
+            className="min-h-9 font-semibold text-ops-deep hover:underline"
           >
             Change
           </button>
@@ -59,33 +62,29 @@ export default function ZoneMultiplierEditor({
   }
 
   return (
-    <div style={{ marginTop: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 13 }}>Price multiplier ×</span>
-        <input
-          type="number"
-          step="0.05"
-          min="0.5"
-          max="5"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          style={{ width: 80, padding: '4px 6px', border: '1px solid var(--color-border)', borderRadius: 4 }}
-        />
-        <button onClick={save} disabled={saving} className="btn-accent" style={{ padding: '4px 12px', fontSize: 12 }}>
-          {saving ? 'Saving...' : 'Save'}
+    <div className="mt-3 rounded-control bg-canvas p-3.5">
+      <div className="flex flex-wrap items-end gap-2.5">
+        <label>
+          <span className="text-sm font-medium text-ink-2">Price multiplier (×)</span>
+          <input
+            type="number"
+            step="0.05"
+            min="0.5"
+            max="5"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className={`${FIELD} mt-1.5 w-28 tabular-nums`}
+          />
+        </label>
+        <button type="button" onClick={save} disabled={saving} className={BUTTON_PRIMARY}>
+          {saving ? 'Saving…' : 'Save'}
         </button>
-        <button
-          onClick={() => setEditing(false)}
-          disabled={saving}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '4px 10px', fontSize: 12 }}
-        >
+        <button type="button" onClick={() => setEditing(false)} disabled={saving} className={BUTTON_QUIET}>
           Cancel
         </button>
       </div>
-      <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-        Applies to new quotes only. Orders already booked keep their price. This change is logged.
-      </p>
-      {error && <p style={{ color: '#B3261E', fontSize: 12, marginTop: 4 }}>{error}</p>}
+      <p className="mt-2 text-sm text-ink-3">Applies to new quotes only; orders already booked keep their price. The change is logged.</p>
+      <Result msg={error ? { ok: false, text: error } : null} />
     </div>
   )
 }

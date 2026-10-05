@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { KeyRound, UserPlus } from 'lucide-react'
+import { BUTTON_DANGER, BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import { Chip, PANEL, Result, SELECT, SectionTitle } from '@/components/ops/kit'
+import { dateLabel } from '@/lib/format'
 
 export interface StaffRow {
   id: string
@@ -73,90 +77,115 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
     }
   }
 
-  const btn = { background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '6px 10px', fontSize: 13, cursor: 'pointer' } as const
+  // "Ops Manager (dispatch, settings, refunds)" -> "Ops Manager" for the compact role lists.
+  const short = (code: string) => (roles.find((x) => x.code === code)?.label ?? code).split(' (')[0]
 
   return (
-    <div>
+    <div className="grid gap-8">
       {secret && (
-        <div className="panel" style={{ marginBottom: 16, borderLeft: '4px solid var(--color-accent)', background: '#FFF6E5' }}>
-          <p style={{ fontWeight: 600 }}>Temporary password for {secret.who}</p>
-          <p style={{ fontFamily: 'monospace', fontSize: 18, margin: '6px 0', userSelect: 'all' }}>{secret.password}</p>
-          <p style={{ fontSize: 12, color: '#666' }}>
-            Shown only once. Pass it on in person or by phone, not by email or chat. They&apos;ll choose their own password at first
-            sign-in.
+        <div role="alert" className="rounded-card bg-driver-wash p-5 ring-1 ring-driver/40">
+          <p className="flex items-center gap-2 font-semibold">
+            <KeyRound aria-hidden className="size-4 text-driver-deep" /> Temporary password for {secret.who}
           </p>
-          <button style={{ ...btn, marginTop: 6 }} onClick={() => setSecret(null)}>
+          <p className="my-3 select-all rounded-control bg-surface px-4 py-3 font-mono text-lg tracking-wide ring-1 ring-line">{secret.password}</p>
+          <p className="text-sm text-ink-2">
+            Shown only once. Pass it on in person or by phone, not by email or chat. They choose their own password at first sign-in.
+          </p>
+          <button type="button" className={`${BUTTON_QUIET} mt-3`} onClick={() => setSecret(null)}>
             I&apos;ve passed it on
           </button>
         </div>
       )}
 
-      <div className="panel" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 8 }}>Add a staff member</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-          <input className="input-field" style={{ marginBottom: 0 }} placeholder="Full name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          <input className="input-field" style={{ marginBottom: 0 }} placeholder="Email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-          <input className="input-field" style={{ marginBottom: 0 }} placeholder="Phone" inputMode="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-          <select className="input-field" style={{ marginBottom: 0 }} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-            {roles.map((r) => (
-              <option key={r.code} value={r.code}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+      <section aria-labelledby="h-add" className={PANEL}>
+        <h2 id="h-add" className="text-base font-semibold tracking-tight">
+          Add a staff member
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-medium text-ink-2">Full name</span>
+            <input className={`${FIELD} mt-1.5`} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink-2">Email</span>
+            <input className={`${FIELD} mt-1.5`} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink-2">Phone</span>
+            <input className={`${FIELD} mt-1.5`} inputMode="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink-2">What they can do</span>
+            <select className={`${FIELD} mt-1.5`} value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
+              {roles.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-        {error && <p style={{ color: '#B3261E', fontSize: 13, marginTop: 8 }}>{error}</p>}
-        <button onClick={create} disabled={creating} className="btn-accent" style={{ marginTop: 10 }}>
-          {creating ? 'Creating...' : 'Create account'}
+        <Result msg={error ? { ok: false, text: error } : null} />
+        <button type="button" onClick={create} disabled={creating} className={`${BUTTON_PRIMARY} mt-4`}>
+          <UserPlus aria-hidden className="size-4" /> {creating ? 'Creating…' : 'Create account'}
         </button>
-      </div>
+      </section>
 
-      {rows.map((r) => (
-        <div key={r.id} className="panel" style={{ marginBottom: 8, opacity: r.active ? 1 : 0.6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <div>
-              <p style={{ fontWeight: 600 }}>
-                {r.name} {r.isMe && <span style={{ fontSize: 12, color: '#666' }}>(you)</span>}
-                {!r.active && <span style={{ fontSize: 12, color: '#B3261E' }}> · SUSPENDED</span>}
-                {r.mustChangePassword && r.active && <span style={{ fontSize: 12, color: '#9A6415' }}> · hasn&apos;t signed in yet</span>}
-              </p>
-              <p style={{ fontSize: 12, color: '#666' }}>
-                {r.email} · {r.phone} · added {new Date(r.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-            {r.isMe ? (
-              <span style={{ fontSize: 13 }}>{roles.find((x) => x.code === r.role)?.label ?? r.role}</span>
-            ) : (
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <select
-                  value={r.role}
-                  disabled={busy === r.id}
-                  onChange={(e) => update(r, { role: e.target.value })}
-                  className="input-field"
-                  style={{ marginBottom: 0, width: 'auto', fontSize: 13 }}
-                >
-                  {roles.map((x) => (
-                    <option key={x.code} value={x.code}>
-                      {x.code.replace('_', ' ')}
-                    </option>
-                  ))}
-                </select>
-                <button style={btn} disabled={busy === r.id} onClick={() => update(r, { resetPassword: true })}>
-                  New temp password
-                </button>
-                <button
-                  style={{ ...btn, color: r.active ? '#B3261E' : '#2F7A4D', borderColor: r.active ? '#B3261E' : '#2F7A4D' }}
-                  disabled={busy === r.id}
-                  onClick={() => update(r, { active: !r.active })}
-                >
-                  {r.active ? 'Suspend' : 'Reactivate'}
-                </button>
+      <section aria-labelledby="h-staff">
+        <SectionTitle id="h-staff" count={rows.length}>
+          Staff
+        </SectionTitle>
+        <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+          {rows.map((r) => (
+            <li key={r.id} className={`p-4 sm:px-5 ${r.active ? '' : 'bg-canvas/60'}`}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 flex-1 basis-64">
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">{r.name}</span>
+                    {r.isMe && <Chip>You</Chip>}
+                    {!r.active && <Chip tone="danger">Suspended</Chip>}
+                    {r.mustChangePassword && r.active && <Chip tone="driver">Hasn&apos;t signed in yet</Chip>}
+                  </p>
+                  <p className="mt-0.5 text-sm text-ink-3">
+                    {r.email} · {r.phone} · added {dateLabel(r.createdAt)}
+                  </p>
+                </div>
+                {r.isMe ? (
+                  <span className="text-sm font-medium text-ink-2">{short(r.role)}</span>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={r.role}
+                      disabled={busy === r.id}
+                      onChange={(e) => update(r, { role: e.target.value })}
+                      className={SELECT}
+                      aria-label={`What ${r.name} can do`}
+                    >
+                      {roles.map((x) => (
+                        <option key={x.code} value={x.code}>
+                          {short(x.code)}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className={BUTTON_QUIET} disabled={busy === r.id} onClick={() => update(r, { resetPassword: true })}>
+                      New temporary password
+                    </button>
+                    <button
+                      type="button"
+                      className={r.active ? BUTTON_DANGER : BUTTON_QUIET}
+                      disabled={busy === r.id}
+                      onClick={() => update(r, { active: !r.active })}
+                    >
+                      {r.active ? 'Suspend' : 'Reactivate'}
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {msg[r.id] && <p style={{ fontSize: 13, marginTop: 6, color: msg[r.id].ok ? '#2F7A4D' : '#B3261E' }}>{msg[r.id].text}</p>}
-        </div>
-      ))}
+              <Result msg={msg[r.id]} />
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   )
 }

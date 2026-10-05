@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Result } from '@/components/ops/kit'
 
 const MAX_BYTES = 2 * 1024 * 1024
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
@@ -61,24 +62,15 @@ export default function VehicleImageUpload({ vehicleId, imagePath }: { vehicleId
     }
   }
 
-  const linkButton = {
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    fontSize: 12,
-    color: 'var(--color-primary)',
-    textDecoration: 'underline',
-  } as const
-
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} style={linkButton}>
-          {busy ? 'Working...' : isUploaded ? 'Replace photo' : 'Upload photo'}
+    <div className="mt-2">
+      <div className="flex flex-wrap gap-x-4">
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className="min-h-9 text-sm font-semibold text-ops-deep hover:underline">
+          {busy ? 'Working…' : isUploaded ? 'Replace picture' : 'Upload a picture'}
         </button>
         {isUploaded && !busy && (
-          <button type="button" onClick={remove} style={{ ...linkButton, color: '#B3261E' }}>
-            Remove photo
+          <button type="button" onClick={remove} className="min-h-9 text-sm font-semibold text-danger hover:underline">
+            Remove picture
           </button>
         )}
       </div>
@@ -86,14 +78,15 @@ export default function VehicleImageUpload({ vehicleId, imagePath }: { vehicleId
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
-        style={{ display: 'none' }}
+        className="sr-only"
+        tabIndex={-1}
         onChange={(e) => {
           const file = e.target.files?.[0]
           e.target.value = '' // lets the same file be chosen again
           if (file) upload(file)
         }}
       />
-      {error && <p style={{ color: '#B3261E', fontSize: 12, marginTop: 4 }}>{error}</p>}
+      <Result msg={error ? { ok: false, text: error } : null} />
     </div>
   )
 }

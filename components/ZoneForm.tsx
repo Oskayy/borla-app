@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ZoneMap from './ZoneMap'
+import { BUTTON_DANGER, BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import { CHECK, PANEL, Result } from '@/components/ops/kit'
 
 interface ExistingZone {
   id: string
@@ -99,68 +101,82 @@ export default function ZoneForm({
     router.refresh()
   }
 
+  const label = 'text-sm font-medium text-ink-2'
   return (
-    <div>
-      <div className="panel">
-        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 16, marginBottom: 12 }}>
-          {isEditing ? `Edit "${editingZone!.name}"` : 'Add New Zone'}
+    <div className="grid gap-4">
+      <section aria-labelledby="h-zone-form" className={PANEL}>
+        <h2 id="h-zone-form" className="text-base font-semibold tracking-tight">
+          {isEditing ? `Edit ${editingZone!.name}` : 'New zone'}
         </h2>
 
-        <label style={{ fontSize: 12, color: '#666' }}>Zone name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} className="input-field" placeholder="e.g. Tema Community Belt" />
-
-        <label style={{ fontSize: 12, color: '#666' }}>City</label>
-        <input value={city} onChange={(e) => setCity(e.target.value)} className="input-field" placeholder="e.g. Tema" />
-
-        <label style={{ fontSize: 12, color: '#666' }}>Towns / communities covered (comma-separated)</label>
-        <input value={coveredAreas} onChange={(e) => setCoveredAreas(e.target.value)} className="input-field" placeholder="e.g. Tema Community 1, Tema Community 4" />
-
-        <label style={{ fontSize: 12, color: '#666' }}>Center latitude</label>
-        <input type="number" step="any" value={centerLat} onChange={(e) => setCenterLat(e.target.value)} className="input-field" placeholder="e.g. 5.6698" />
-
-        <label style={{ fontSize: 12, color: '#666' }}>Center longitude</label>
-        <input type="number" step="any" value={centerLng} onChange={(e) => setCenterLng(e.target.value)} className="input-field" placeholder="e.g. -0.0166" />
-
-        <label style={{ fontSize: 12, color: '#666' }}>Radius (km)</label>
-        <input type="number" step="0.1" value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} className="input-field" placeholder="e.g. 3" />
-
-        {isEditing && (
-          <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-            Active
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={label}>Zone name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Tema Community Belt" />
           </label>
+          <label className="block">
+            <span className={label}>City</span>
+            <input value={city} onChange={(e) => setCity(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Tema" />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={label}>Towns and communities covered (comma-separated)</span>
+            <input
+              value={coveredAreas}
+              onChange={(e) => setCoveredAreas(e.target.value)}
+              className={`${FIELD} mt-1.5`}
+              placeholder="e.g. Tema Community 1, Tema Community 4"
+            />
+          </label>
+          <label className="block">
+            <span className={label}>Centre latitude</span>
+            <input type="number" step="any" value={centerLat} onChange={(e) => setCenterLat(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} placeholder="e.g. 5.6698" />
+          </label>
+          <label className="block">
+            <span className={label}>Centre longitude</span>
+            <input type="number" step="any" value={centerLng} onChange={(e) => setCenterLng(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} placeholder="e.g. -0.0166" />
+          </label>
+          <label className="block">
+            <span className={label}>Radius (km)</span>
+            <input type="number" step="0.1" value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} placeholder="e.g. 3" />
+          </label>
+          {isEditing && (
+            <label className="flex min-h-11 items-center gap-2 self-end text-[15px] font-medium">
+              <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className={CHECK} />
+              Active (customers can book here)
+            </label>
+          )}
+        </div>
+        {!isEditing && (
+          <p className="mt-3 text-sm text-ink-3">
+            To find the centre: in Google Maps, right-click the middle of the area and click the coordinates to copy them.
+          </p>
         )}
 
-        {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={submit} disabled={loading} className="btn-accent" style={{ flex: 1 }}>
-            {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Zone'}
+        <Result msg={error ? { ok: false, text: error } : null} />
+        <div className="mt-4 flex flex-wrap gap-2.5">
+          <button type="button" onClick={submit} disabled={loading} className={BUTTON_PRIMARY}>
+            {loading ? 'Saving…' : isEditing ? 'Save changes' : 'Create zone'}
           </button>
           {isEditing && (
             <>
-              <button onClick={handleDelete} disabled={loading} style={{ background: 'none', border: '1px solid #B3261E', color: '#B3261E', borderRadius: 4, padding: '0 16px', fontSize: 14 }}>
-                Delete
-              </button>
-              <button onClick={onDoneEditing} disabled={loading} style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '0 16px', fontSize: 14 }}>
+              <button type="button" onClick={onDoneEditing} disabled={loading} className={BUTTON_QUIET}>
                 Cancel
+              </button>
+              <button type="button" onClick={handleDelete} disabled={loading} className={`${BUTTON_DANGER} sm:ml-auto`}>
+                Delete zone
               </button>
             </>
           )}
         </div>
+      </section>
 
-        {!isEditing && (
-          <p style={{ fontSize: 11, color: '#999', marginTop: 6 }}>
-            To find center coordinates: open Google Maps, right-click the middle of the area you want to cover, and click the coordinates that appear to copy them.
-          </p>
-        )}
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-          {preview ? 'Live preview — this circle updates as you edit the fields above.' : 'Enter coordinates above to see a preview.'}
+      <div>
+        <p className="mb-2 text-sm text-ink-3">
+          {preview ? 'Live preview: the circle follows the fields above.' : 'Enter a centre above to preview the zone on the map.'}
         </p>
-        <ZoneMap zones={isEditing ? otherZones.filter((z) => z.id !== editingZone!.id) : otherZones} preview={preview} />
+        <div className="overflow-hidden rounded-card ring-1 ring-line">
+          <ZoneMap zones={isEditing ? otherZones.filter((z) => z.id !== editingZone!.id) : otherZones} preview={preview} />
+        </div>
       </div>
     </div>
   )

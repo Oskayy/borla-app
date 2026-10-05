@@ -1,50 +1,48 @@
 'use client'
 
 import { useState } from 'react'
+import { BUTTON_DANGER, FIELD } from '@/components/ui'
+import { PANEL, Result } from '@/components/ops/kit'
 
 export default function MfaRecoveryForm() {
   const [email, setEmail] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function submit() {
-    setError('')
-    setSuccess('')
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setMsg(null)
     setLoading(true)
-
-    const res = await fetch('/api/admin/mfa-recovery', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetEmail: email }),
-    })
-    const data = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(data.error || 'Could not reset 2FA')
-      return
+    try {
+      const res = await fetch('/api/admin/mfa-recovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetEmail: email }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setMsg({ ok: false, text: data.error || 'Could not reset 2FA' })
+        return
+      }
+      setMsg({ ok: true, text: `2FA reset for ${email}. They set it up again at their next sign-in.` })
+      setEmail('')
+    } catch {
+      setMsg({ ok: false, text: 'Could not reach Trashit. Please try again.' })
+    } finally {
+      setLoading(false)
     }
-
-    setSuccess(`2FA reset for ${email}. They can set it up again next login.`)
-    setEmail('')
   }
 
   return (
-    <div className="panel">
-      <label style={{ fontSize: 12, color: '#666' }}>User&apos;s email</label>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="input-field"
-        placeholder="e.g. driver@example.com"
-      />
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      {success && <p style={{ color: '#2F7A4D', fontSize: 13, marginBottom: 8 }}>{success}</p>}
-      <button onClick={submit} disabled={loading || !email} className="btn-accent" style={{ width: '100%' }}>
-        {loading ? 'Resetting...' : 'Reset 2FA for this user'}
+    <form onSubmit={submit} className={PANEL}>
+      <label className="block">
+        <span className="text-sm font-medium text-ink-2">The person&apos;s email</span>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. driver@example.com" />
+      </label>
+      <Result msg={msg} />
+      <button type="submit" disabled={loading || !email} className={`${BUTTON_DANGER} mt-4 w-full sm:w-auto`}>
+        {loading ? 'Resetting…' : 'Reset 2FA for this person'}
       </button>
-    </div>
+    </form>
   )
 }

@@ -4,6 +4,7 @@ import { OPEN_WITHDRAWAL_STATUSES } from '@/lib/wallet'
 import { redirect } from 'next/navigation'
 import { PAYOUT_ROLES, getWalletSummary } from '@/lib/wallet-server'
 import WithdrawalsClient, { type WithdrawalRow } from '@/components/WithdrawalsClient'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,13 +51,11 @@ export default async function WithdrawalsPage() {
   })
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Driver Withdrawals</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Drivers ask for their earnings to be sent to their mobile money wallet. <strong>Send</strong> pays through Paystack
-        from your Paystack balance. If Paystack transfers aren&apos;t switched on for your account yet, pay from your MoMo
-        business wallet and use <strong>Mark paid</strong> with the transaction ID.
-      </p>
+    <div className="max-w-4xl">
+      <PageHeader
+        title="Withdrawals"
+        lead="Drivers ask for their earnings to be sent to their mobile money wallet. Send pays through Paystack from your Paystack balance. If Paystack transfers aren't on for your account yet, pay from your MoMo business wallet and use Mark paid with the transaction ID; a different finance user then confirms it."
+      />
       <WithdrawalsClient open={open.map(toRow)} recent={recent.map(toRow)} />
     </div>
   )

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { VEHICLE_EDIT_ROLES } from '@/lib/vehicles'
 import VehicleTypesClient from '@/components/VehicleTypesClient'
+import { PageHeader } from '@/components/ui'
 
 const VIEW_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE']
 
@@ -23,18 +24,12 @@ export default async function VehiclesPage() {
   ])
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Vehicles</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Capacity decides how many orders fit on one trip before the driver must go to a disposal site. The radius
-        decides how far from a driver orders are offered. Drivers choose their own radius up to the maximum. All
-        values here are placeholders until you measure real vehicles.
-      </p>
-      <VehicleTypesClient
-        vehicleTypes={vehicleTypes}
-        largestBin={largestBin}
-        canEdit={VEHICLE_EDIT_ROLES.includes(dbUser.role)}
+    <div className="max-w-5xl">
+      <PageHeader
+        title="Vehicles"
+        lead="Capacity decides how much fits on one trip before the driver unloads. The radius decides how far from a driver orders are offered; drivers choose their own, up to the maximum. Values are placeholders until real vehicles are measured."
       />
+      <VehicleTypesClient vehicleTypes={vehicleTypes} largestBin={largestBin} canEdit={VEHICLE_EDIT_ROLES.includes(dbUser.role)} />
     </div>
   )
 }

@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import SiteMap, { type MapZone } from './SiteMap'
+import { AlertTriangle, MapPin, Pencil, Plus } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import { AllClear, CHECK, Chip, PANEL, Result, SectionTitle, type Tone } from '@/components/ops/kit'
 
 export interface SiteRow {
   id: string
@@ -39,10 +42,10 @@ interface FormState {
 }
 
 const WASTE_LABELS: Record<string, string> = { general: 'General', recyclable: 'Recyclable', hazardous: 'Hazardous' }
-const STATUS_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
-  OPEN: { bg: '#E4F1E9', fg: '#2F7A4D', label: 'Open' },
-  FULL: { bg: '#FFF1DC', fg: '#9A6415', label: 'Full / queueing' },
-  CLOSED: { bg: '#F9E3E1', fg: '#B3261E', label: 'Closed' },
+const STATUS: Record<string, { tone: Tone; label: string }> = {
+  OPEN: { tone: 'ops', label: 'Open' },
+  FULL: { tone: 'neutral', label: 'Full or queueing' },
+  CLOSED: { tone: 'danger', label: 'Closed' },
 }
 
 const toClock = (m: number | null, fallback: string) =>
@@ -163,182 +166,206 @@ export default function DisposalSitesClient({
     }
   }
 
-  const labelStyle = { fontSize: 12, color: '#666' } as const
-  const smallButton = {
-    background: 'none',
-    border: '1px solid var(--color-border)',
-    borderRadius: 4,
-    padding: '4px 10px',
-    fontSize: 12,
-  } as const
+  const label = 'text-sm font-medium text-ink-2'
 
   return (
-    <div>
-      <SiteMap
-        zones={zones}
-        sites={sites}
-        editPin={editing ? pin : null}
-        editRadiusM={Number(form.geofenceRadiusM) || 150}
-        onPinChange={editing ? setPin : undefined}
-        onSiteClick={(id) => {
-          const site = sites.find((s) => s.id === id)
-          if (site && !editing) startEdit(site)
-        }}
-        focusKey={editing}
-      />
-      <p style={{ fontSize: 12, color: '#999', margin: '6px 0 16px' }}>
-        Green = open, amber = full or queueing, red = closed, grey = inactive. The shaded circle around each site is its
-        geofence. {editing ? 'Click the map to place this site.' : canEdit ? 'Click a site to edit it.' : ''}
-      </p>
+    <div className="grid gap-6">
+      <div>
+        <div className="overflow-hidden rounded-card ring-1 ring-line">
+          <SiteMap
+            zones={zones}
+            sites={sites}
+            editPin={editing ? pin : null}
+            editRadiusM={Number(form.geofenceRadiusM) || 150}
+            onPinChange={editing ? setPin : undefined}
+            onSiteClick={(id) => {
+              const site = sites.find((s) => s.id === id)
+              if (site && !editing) startEdit(site)
+            }}
+            focusKey={editing}
+          />
+        </div>
+        <p className="mt-2 text-sm text-ink-3">
+          Green = open, amber = full or queueing, red = closed, grey = inactive. The shaded circle around each site is its geofence.{' '}
+          {editing ? 'Click the map to place this site.' : canEdit ? 'Click a site to edit it.' : ''}
+        </p>
+      </div>
 
-      {notice && <p style={{ color: '#2F7A4D', fontSize: 13, marginBottom: 12 }}>{notice}</p>}
+      <Result msg={notice ? { ok: !/could not|reach/i.test(notice), text: notice } : null} />
 
       {editing && (
-        <div className="panel" style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{editing === 'new' ? 'Add a disposal site' : `Edit "${form.name}"`}</h2>
-
-          <p style={{ fontSize: 13, marginBottom: 12, color: pin ? '#2F7A4D' : '#B3261E' }}>
-            {pin ? `Position: ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} (click the map to move it)` : 'Click the map to place the site.'}
+        <section aria-labelledby="h-site-form" className={PANEL}>
+          <h2 id="h-site-form" className="text-base font-semibold tracking-tight">
+            {editing === 'new' ? 'New disposal site' : `Edit ${form.name}`}
+          </h2>
+          <p className={`mt-1 flex items-center gap-1.5 text-sm ${pin ? 'text-ink-2' : 'font-medium text-danger'}`}>
+            <MapPin aria-hidden className="size-4" />
+            {pin ? `Position ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} (click the map to move it)` : 'Click the map to place the site.'}
           </p>
 
-          <label style={labelStyle}>Site name</label>
-          <input value={form.name} onChange={(e) => set('name', e.target.value)} className="input-field" placeholder="e.g. Kpone Engineered Landfill" />
-
-          <label style={labelStyle}>Address or directions (optional)</label>
-          <input value={form.address} onChange={(e) => set('address', e.target.value)} className="input-field" placeholder="e.g. Off the Tema–Aflao road, after the Kpone junction" />
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Geofence radius (metres)</label>
-              <input type="number" min="30" max="1000" step="10" value={form.geofenceRadiusM} onChange={(e) => set('geofenceRadiusM', e.target.value)} className="input-field" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Average unload time (minutes)</label>
-              <input type="number" min="1" max="240" value={form.avgUnloadMinutes} onChange={(e) => set('avgUnloadMinutes', e.target.value)} className="input-field" />
-            </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className={label}>Site name</span>
+              <input value={form.name} onChange={(e) => set('name', e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Kpone Engineered Landfill" />
+            </label>
+            <label className="block">
+              <span className={label}>Address or directions (optional)</span>
+              <input value={form.address} onChange={(e) => set('address', e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Off the Tema–Aflao road" />
+            </label>
+            <label className="block">
+              <span className={label}>Geofence radius (metres)</span>
+              <input
+                type="number"
+                min="30"
+                max="1000"
+                step="10"
+                value={form.geofenceRadiusM}
+                onChange={(e) => set('geofenceRadiusM', e.target.value)}
+                className={`${FIELD} mt-1.5 tabular-nums`}
+              />
+            </label>
+            <label className="block">
+              <span className={label}>Average unload time (minutes)</span>
+              <input
+                type="number"
+                min="1"
+                max="240"
+                value={form.avgUnloadMinutes}
+                onChange={(e) => set('avgUnloadMinutes', e.target.value)}
+                className={`${FIELD} mt-1.5 tabular-nums`}
+              />
+            </label>
           </div>
 
-          <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <input type="checkbox" checked={form.open24Hours} onChange={(e) => set('open24Hours', e.target.checked)} />
+          <label className="mt-4 flex min-h-11 items-center gap-2 text-[15px] font-medium">
+            <input type="checkbox" checked={form.open24Hours} onChange={(e) => set('open24Hours', e.target.checked)} className={CHECK} />
             Open 24 hours
           </label>
           {!form.open24Hours && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Opens</label>
-                <input type="time" value={form.opensAt} onChange={(e) => set('opensAt', e.target.value)} className="input-field" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Closes (can be after midnight)</label>
-                <input type="time" value={form.closesAt} onChange={(e) => set('closesAt', e.target.value)} className="input-field" />
-              </div>
+            <div className="mt-2 grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className={label}>Opens</span>
+                <input type="time" value={form.opensAt} onChange={(e) => set('opensAt', e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} />
+              </label>
+              <label className="block">
+                <span className={label}>Closes (can be after midnight)</span>
+                <input type="time" value={form.closesAt} onChange={(e) => set('closesAt', e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} />
+              </label>
             </div>
           )}
 
-          <p style={{ ...labelStyle, marginBottom: 6 }}>Accepts</p>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
-            {Object.entries(WASTE_LABELS).map(([type, label]) => (
-              <label key={type} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="checkbox" checked={form.acceptedWaste.includes(type)} onChange={() => toggleWaste(type)} />
-                {label}
-              </label>
-            ))}
+          <fieldset className="mt-4">
+            <legend className={label}>Accepts</legend>
+            <div className="mt-1 flex flex-wrap gap-x-5">
+              {Object.entries(WASTE_LABELS).map(([type, text]) => (
+                <label key={type} className="flex min-h-11 items-center gap-2 text-[15px]">
+                  <input type="checkbox" checked={form.acceptedWaste.includes(type)} onChange={() => toggleWaste(type)} className={CHECK} />
+                  {text}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="mt-2 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className={label}>Main zone served (optional)</span>
+              <select value={form.zoneId} onChange={(e) => set('zoneId', e.target.value)} className={`${FIELD} mt-1.5`}>
+                <option value="">Any zone</option>
+                {zones.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className={label}>Notes for drivers (optional)</span>
+              <input value={form.notes} onChange={(e) => set('notes', e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Gate 2 at night; ask for the weighbridge ticket" />
+            </label>
           </div>
 
-          <label style={labelStyle}>Main zone served (optional)</label>
-          <select value={form.zoneId} onChange={(e) => set('zoneId', e.target.value)} className="input-field">
-            <option value="">Any zone</option>
-            {zones.map((z) => (
-              <option key={z.id} value={z.id}>
-                {z.name}
-              </option>
-            ))}
-          </select>
-
-          <label style={labelStyle}>Notes (optional)</label>
-          <input value={form.notes} onChange={(e) => set('notes', e.target.value)} className="input-field" placeholder="e.g. Gate 2 at night; ask for the weighbridge ticket" />
-
           {editing !== 'new' && (
-            <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <input type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} />
-              Active (untick to stop using this site; its history is kept)
+            <label className="mt-4 flex min-h-11 items-start gap-2 text-[15px]">
+              <input type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} className={`${CHECK} mt-1`} />
+              <span>
+                <span className="font-medium">Active</span>
+                <span className="block text-sm text-ink-3">Untick to stop using this site; its history is kept.</span>
+              </span>
             </label>
           )}
 
-          {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={save} disabled={saving} className="btn-accent" style={{ flex: 1 }}>
-              {saving ? 'Saving...' : editing === 'new' ? 'Add site' : 'Save changes'}
+          <Result msg={error ? { ok: false, text: error } : null} />
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            <button type="button" onClick={save} disabled={saving} className={BUTTON_PRIMARY}>
+              {saving ? 'Saving…' : editing === 'new' ? 'Add site' : 'Save changes'}
             </button>
-            <button onClick={cancel} disabled={saving} style={{ ...smallButton, fontSize: 14, padding: '0 16px' }}>
+            <button type="button" onClick={cancel} disabled={saving} className={BUTTON_QUIET}>
               Cancel
             </button>
           </div>
-        </div>
+        </section>
       )}
 
       {!editing && canEdit && (
-        <button onClick={startAdd} className="btn-primary" style={{ marginBottom: 16 }}>
-          + Add a disposal site
-        </button>
+        <div>
+          <button type="button" onClick={startAdd} className={BUTTON_PRIMARY}>
+            <Plus aria-hidden className="size-4" /> Add a disposal site
+          </button>
+        </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {sites.length === 0 && (
-          <div className="panel">
-            <p>No disposal sites yet.</p>
-          </div>
-        )}
-        {sites.map((s) => {
-          const st = STATUS_STYLE[s.status] ?? STATUS_STYLE.OPEN
-          return (
-            <div key={s.id} className="panel" style={{ opacity: s.active ? 1 : 0.55 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-                <div>
-                  <p style={{ fontWeight: 600 }}>
-                    {s.name}{' '}
-                    {s.active ? (
-                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: st.bg, color: st.fg }}>
-                        {st.label}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 11, color: '#B3261E' }}>INACTIVE</span>
-                    )}
-                  </p>
-                  <p style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-                    {s.hoursLabel} · accepts {s.acceptedWaste.map((w) => WASTE_LABELS[w] ?? w).join(', ').toLowerCase()} · geofence{' '}
-                    {s.geofenceRadiusM} m · unload ~{s.avgUnloadMinutes} min
-                  </p>
-                  {s.lat == null && <p style={{ fontSize: 12, color: '#B3261E', marginTop: 2 }}>Not on the map yet</p>}
-                  {!s.coversShift && s.active && (
-                    <p style={{ fontSize: 12, color: '#B3261E', marginTop: 2 }}>
-                      ⚠ Closes during the night shift. The planner will only send drivers here while it is open.
+      <section aria-labelledby="h-sites">
+        <SectionTitle id="h-sites" count={sites.length}>
+          Sites
+        </SectionTitle>
+        {sites.length === 0 ? (
+          <AllClear>No disposal sites yet.</AllClear>
+        ) : (
+          <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+            {sites.map((s) => {
+              const st = STATUS[s.status] ?? STATUS.OPEN
+              return (
+                <li key={s.id} className={`flex flex-wrap items-start justify-between gap-4 p-4 sm:px-5 ${s.active ? '' : 'bg-canvas/60'}`}>
+                  <div className="min-w-0 flex-1 basis-72">
+                    <p className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{s.name}</span>
+                      {s.active ? <Chip tone={st.tone}>{st.label}</Chip> : <Chip>Inactive</Chip>}
                     </p>
-                  )}
-                  {s.notes && <p style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{s.notes}</p>}
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {canSetStatus &&
-                    s.active &&
-                    Object.keys(STATUS_STYLE)
-                      .filter((code) => code !== s.status)
-                      .map((code) => (
-                        <button key={code} onClick={() => setStatus(s.id, code)} disabled={statusBusy === s.id} style={smallButton}>
-                          Mark {STATUS_STYLE[code].label.toLowerCase()}
-                        </button>
-                      ))}
-                  {canEdit && !editing && (
-                    <button onClick={() => startEdit(s)} style={smallButton}>
-                      Edit
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+                    <p className="mt-0.5 text-sm text-ink-3">
+                      {s.hoursLabel} · accepts {s.acceptedWaste.map((w) => WASTE_LABELS[w] ?? w).join(', ').toLowerCase()} · geofence {s.geofenceRadiusM} m ·
+                      unload about {s.avgUnloadMinutes} min
+                    </p>
+                    {s.lat == null && <p className="mt-1 text-sm font-medium text-danger">Not on the map yet</p>}
+                    {!s.coversShift && s.active && (
+                      <p className="mt-1 flex items-start gap-1.5 text-sm text-danger">
+                        <AlertTriangle aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+                        Closes during the night shift. The planner only sends drivers here while it&apos;s open.
+                      </p>
+                    )}
+                    {s.notes && <p className="mt-1 text-sm text-ink-2">{s.notes}</p>}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {canSetStatus &&
+                      s.active &&
+                      Object.keys(STATUS)
+                        .filter((code) => code !== s.status)
+                        .map((code) => (
+                          <button key={code} type="button" onClick={() => setStatus(s.id, code)} disabled={statusBusy === s.id} className={BUTTON_QUIET}>
+                            Mark {STATUS[code].label.toLowerCase()}
+                          </button>
+                        ))}
+                    {canEdit && !editing && (
+                      <button type="button" onClick={() => startEdit(s)} className={BUTTON_QUIET}>
+                        <Pencil aria-hidden className="size-4" /> Edit
+                      </button>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

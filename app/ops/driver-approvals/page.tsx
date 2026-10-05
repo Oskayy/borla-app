@@ -6,6 +6,7 @@ import { APPROVAL_ROLES, DOC_TYPES, DRIVER_DOCS_BUCKET } from '@/lib/driver-docs
 import DriverApprovalsClient, { type ApplicantRow } from '@/components/DriverApprovalsClient'
 import VehicleChangeReviews, { type VehicleChangeRow } from '@/components/ops/VehicleChangeReviews'
 import { VEHICLE_CHANGE_DOC } from '@/lib/vehicle-change'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,12 +91,8 @@ export default async function DriverApprovalsPage() {
   const rejected = rows.filter((r) => r.status === 'REJECTED')
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Driver Approvals</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        New drivers can&apos;t go online or receive pickups until they&apos;re approved here. Check the Ghana Card photo matches
-        the driver&apos;s photo and name, and that the vehicle looks roadworthy.
-      </p>
+    <div className="grid max-w-4xl gap-10">
+      <PageHeader title="Approvals" lead="New drivers can't go online or receive pickups until they're approved here. Approved drivers who switch vehicle wait here too." />
       <VehicleChangeReviews rows={changes} />
       <DriverApprovalsClient waiting={waiting} notSent={notSent} rejected={rejected} />
     </div>

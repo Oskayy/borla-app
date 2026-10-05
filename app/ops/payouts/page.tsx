@@ -2,6 +2,9 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import PayoutRuleForm from '@/components/PayoutRuleForm'
+import { PageHeader } from '@/components/ui'
+import { Chip, SectionTitle } from '@/components/ops/kit'
+import { dateLabel } from '@/lib/format'
 
 export default async function PayoutRulesPage() {
   const supabase = await createClient()
@@ -16,29 +19,27 @@ export default async function PayoutRulesPage() {
   const rules = await prisma.payoutRule.findMany({ orderBy: { createdAt: 'desc' } })
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Payout Rules</h1>
+    <div className="grid max-w-3xl gap-8">
+      <PageHeader title="Payout rules" lead="Drivers are paid part of each stop at pickup and the rest once the unload is verified." />
 
       <PayoutRuleForm />
 
-      <h2 style={{ fontSize: 16, margin: '24px 0 12px' }}>History</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {rules.map((rule) => (
-          <div key={rule.id} className="panel" style={{ opacity: rule.active ? 1 : 0.6 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontWeight: 600 }}>
-                {rule.pickupPercent}% pickup / {rule.disposalPercent}% disposal
+      <section aria-labelledby="h-history">
+        <SectionTitle id="h-history">History</SectionTitle>
+        <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+          {rules.map((rule) => (
+            <li key={rule.id} className="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5">
+              <span className={rule.active ? '' : 'text-ink-3'}>
+                <span className="font-semibold tabular-nums">
+                  {rule.pickupPercent}% at pickup · {rule.disposalPercent}% at unload
+                </span>
+                <span className="block text-sm text-ink-3">Created {dateLabel(rule.createdAt)}</span>
               </span>
-              {rule.active && (
-                <span style={{ fontSize: 11, color: '#2F7A4D', fontWeight: 600 }}>ACTIVE</span>
-              )}
-            </div>
-            <p style={{ fontSize: 12, color: '#999' }}>
-              Created {new Date(rule.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-        ))}
-      </div>
+              {rule.active && <Chip tone="ops">Active</Chip>}
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   )
 }
