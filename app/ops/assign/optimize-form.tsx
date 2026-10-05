@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { countDriversInRange, rankDrivers, type DispatchDriver, type DispatchOrder } from '@/lib/dispatch'
 import { errorMessage } from '@/lib/errors'
+import { AlertTriangle } from 'lucide-react'
+import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
 
 interface OrderRow {
   id: string
@@ -144,129 +146,136 @@ export default function OptimizeForm({
   }
 
   return (
-    <div>
+    <div className="grid gap-4">
       {unservedCount > 0 && (
-        <div className="panel" style={{ marginBottom: 12, borderLeft: '4px solid #B3261E' }}>
-          <p style={{ fontSize: 14 }}>
-            <strong>{unservedCount}</strong> paid order(s) have <strong>no driver in range</strong>
-            {shiftRunning ? ' among online drivers' : ''}. You can still assign them with an override, give a driver extra
-            hours on the Drivers page, or recruit drivers near these areas.
+        <div className="rounded-card bg-danger-wash p-4 sm:px-5">
+          <p className="flex items-start gap-2 text-[15px] text-ink">
+            <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-danger" />
+            <span>
+              <strong className="font-semibold">
+                {unservedCount} paid {unservedCount === 1 ? 'order has' : 'orders have'} no driver in range
+              </strong>
+              {shiftRunning ? ' among online drivers' : ''}. You can still assign with an override, give a driver extra hours on the Drivers
+              page, or recruit drivers near these areas.
+            </span>
           </p>
-          <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-            <input type="checkbox" checked={onlyUnserved} onChange={(e) => setOnlyUnserved(e.target.checked)} />
+          <label className="mt-2 flex min-h-10 items-center gap-2 text-sm font-medium">
+            <input type="checkbox" checked={onlyUnserved} onChange={(e) => setOnlyUnserved(e.target.checked)} className="size-4 accent-[var(--color-ops)]" />
             Show only these orders
           </label>
         </div>
       )}
 
-      {visibleOrders.map((order) => {
-        const count = inRangeCounts[order.id]
-        const hasCoords = order.latitude != null && order.longitude != null
-        return (
-          <label
-            key={order.id}
-            className="panel"
-            style={{ marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}
-          >
-            <input type="checkbox" checked={selected.includes(order.id)} onChange={() => toggle(order.id)} style={{ marginTop: 4 }} />
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 500 }}>
-                {order.address}
-                {order.isLate && (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#9A6415', background: '#FFF1DC', padding: '1px 6px', borderRadius: 4, marginLeft: 8 }}>
-                    LATE
+      <fieldset>
+        <legend className="text-sm font-semibold text-ink-2">1. Choose orders</legend>
+        <ul className="mt-2 divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+          {visibleOrders.map((order) => {
+            const count = inRangeCounts[order.id]
+            const hasCoords = order.latitude != null && order.longitude != null
+            const on = selected.includes(order.id)
+            return (
+              <li key={order.id}>
+                <label className={`flex cursor-pointer items-start gap-3 p-4 transition sm:px-5 ${on ? 'bg-ops-wash/60' : 'hover:bg-canvas'}`}>
+                  <input type="checkbox" checked={on} onChange={() => toggle(order.id)} className="mt-1 size-4 shrink-0 accent-[var(--color-ops)]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2 font-medium">
+                      {order.address}
+                      {order.isLate && <span className="rounded-full bg-driver-wash px-2 py-0.5 text-xs font-semibold text-driver-deep">Late booking</span>}
+                    </span>
+                    <span className="mt-0.5 block text-sm text-ink-2">
+                      {order.price != null && <span className="tabular-nums">GHS {order.price.toFixed(2)} · </span>}
+                      {order.customerName} · {order.litres} L{order.litresEstimated ? ' (estimated)' : ''}
+                      {order.zoneName && ` · ${order.zoneName}`}
+                    </span>
+                    <span className="mt-0.5 block text-sm text-ink-3">
+                      {nightLabel(order.shiftDate)} · waiting {waitingFor(order.createdAt, now)}
+                    </span>
+                    <span className={`mt-1 block text-sm font-medium ${count === 0 ? 'text-danger' : 'text-ink-2'}`}>
+                      {count === 0 ? 'No driver in range' : `${count} ${count === 1 ? 'driver' : 'drivers'} in range with room`}
+                      {!hasCoords && <span className="font-normal text-driver-deep"> · no map pin, will be assigned without routing</span>}
+                    </span>
                   </span>
-                )}
-              </p>
-              <p style={{ fontSize: 13, color: '#666' }}>
-                {order.price != null && `GHS ${order.price} · `}
-                {order.customerName} · {order.litres} L{order.litresEstimated ? ' (estimated)' : ''}
-                {order.zoneName && ` · ${order.zoneName}`}
-              </p>
-              <p style={{ fontSize: 12, color: '#999' }}>
-                {nightLabel(order.shiftDate)} · waiting {waitingFor(order.createdAt, now)}
-              </p>
-              <p style={{ fontSize: 12, marginTop: 2, color: count === 0 ? '#B3261E' : '#2F7A4D' }}>
-                {count === 0 ? '⚠ No driver in range' : `${count} driver(s) in range with room`}
-                {!hasCoords && <span style={{ color: '#E8A33D' }}> · no coordinates, will be assigned without routing</span>}
-              </p>
-            </div>
-          </label>
-        )
-      })}
+                </label>
+              </li>
+            )
+          })}
+        </ul>
+      </fieldset>
 
-      <div className="panel" style={{ marginTop: 16 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Choose a driver</p>
-        <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+      <fieldset className="rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+        <legend className="sr-only">2. Choose a driver</legend>
+        <p className="text-sm font-semibold text-ink-2" aria-hidden>
+          2. Choose a driver
+        </p>
+        <p className="mt-0.5 text-sm text-ink-3">
           {selectedOrders.length === 0
             ? 'Select orders above to see which drivers can take them.'
-            : `${selectedOrders.length} order(s), ${selectedLitres} L. Drivers who pass every check are listed first.`}
+            : `${selectedOrders.length} ${selectedOrders.length === 1 ? 'order' : 'orders'}, ${selectedLitres} L. Drivers who pass every check are listed first.`}
         </p>
 
-        {drivers.length === 0 && <p style={{ fontSize: 13, color: '#999' }}>No drivers yet.</p>}
+        {drivers.length === 0 && <p className="mt-3 text-[15px] text-ink-3">No drivers yet.</p>}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-          {ranked.map(({ driver, fit }) => (
-            <label
-              key={driver.id}
-              className="panel"
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 10,
-                margin: 0,
-                cursor: 'pointer',
-                opacity: fit.eligible ? 1 : 0.7,
-                borderColor: driverId === driver.id ? 'var(--color-accent)' : undefined,
-                borderWidth: driverId === driver.id ? 2 : undefined,
-              }}
-            >
-              <input type="radio" name="driver" checked={driverId === driver.id} onChange={() => chooseDriver(driver.id)} style={{ marginTop: 4 }} />
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 500, marginBottom: 2 }}>
-                  {driver.name}
-                  {fit.eligible ? (
-                    <span style={{ fontSize: 11, color: '#2F7A4D', fontWeight: 600, marginLeft: 8 }}>✓ CAN TAKE THESE</span>
-                  ) : (
-                    <span style={{ fontSize: 11, color: '#B3261E', fontWeight: 600, marginLeft: 8 }}>✗ {fit.reasons.join(' · ')}</span>
-                  )}
-                </p>
-                <p style={{ fontSize: 12, color: '#666' }}>
-                  {fit.maxDistanceKm != null
-                    ? `${fit.maxDistanceKm.toFixed(1)} km from ${fit.position?.source === 'live' ? 'live position' : 'home base'}`
-                    : 'Distance unknown'}
-                  {driver.radiusKm != null && ` · radius ${driver.radiusKm} km`}
-                  {fit.spareLitres != null && ` · ${fit.spareLitres} L free`}
-                  {shiftRunning && (driver.available ? ' · online' : ' · offline')}
-                </p>
-              </div>
-            </label>
-          ))}
+        <div className="mt-3 grid gap-2">
+          {ranked.map(({ driver, fit }) => {
+            const on = driverId === driver.id
+            return (
+              <label
+                key={driver.id}
+                className={`flex cursor-pointer items-start gap-3 rounded-control p-3.5 ring-1 transition ${
+                  on ? 'bg-ops-wash/60 ring-2 ring-ops' : 'ring-line hover:bg-canvas'
+                }`}
+              >
+                <input type="radio" name="driver" checked={on} onChange={() => chooseDriver(driver.id)} className="mt-1 size-4 shrink-0 accent-[var(--color-ops)]" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2 font-medium">
+                    {driver.name}
+                    {fit.eligible ? (
+                      <span className="rounded-full bg-ops-wash px-2 py-0.5 text-xs font-semibold text-ops-deep">Can take these</span>
+                    ) : (
+                      <span className="text-sm font-normal text-danger">{fit.reasons.join(' · ')}</span>
+                    )}
+                  </span>
+                  <span className="mt-0.5 block text-sm text-ink-3">
+                    {fit.maxDistanceKm != null
+                      ? `${fit.maxDistanceKm.toFixed(1)} km from ${fit.position?.source === 'live' ? 'live position' : 'home base'}`
+                      : 'Distance unknown'}
+                    {driver.radiusKm != null && ` · radius ${driver.radiusKm} km`}
+                    {fit.spareLitres != null && ` · ${fit.spareLitres} L free`}
+                    {shiftRunning && (driver.available ? ' · online' : ' · offline')}
+                  </span>
+                </span>
+              </label>
+            )
+          })}
         </div>
 
         {needsOverride && (
-          <div style={{ background: '#FFF6E5', border: '1px solid var(--color-accent)', borderRadius: 4, padding: 10, marginBottom: 12 }}>
-            <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
+          <div className="mt-4 rounded-control bg-danger-wash p-3.5">
+            <label className="flex min-h-10 items-center gap-2 text-[15px] font-medium">
+              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4 accent-[var(--color-ops)]" />
               Assign anyway (the reason is recorded on each order)
             </label>
             {override && (
-              <input
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                className="input-field"
-                placeholder="e.g. Driver agreed to go further tonight"
-                style={{ marginBottom: 0 }}
-              />
+              <label className="mt-2 block">
+                <span className="sr-only">Reason</span>
+                <input
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  className={FIELD}
+                  placeholder="e.g. Driver agreed to go further tonight"
+                />
+              </label>
             )}
           </div>
         )}
 
-        {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-        <button onClick={assign} disabled={loading || selected.length === 0 || !driverId} className="btn-primary" style={{ width: '100%' }}>
-          {loading ? 'Assigning...' : `Optimize & Assign (${selected.length} selected)`}
+        <p aria-live="polite" className="mt-3 text-sm text-danger empty:hidden">
+          {error}
+        </p>
+        <button type="button" onClick={assign} disabled={loading || selected.length === 0 || !driverId} className={`${BUTTON_PRIMARY} mt-4 w-full`}>
+          {loading ? 'Assigning…' : `Route and assign (${selected.length} selected)`}
         </button>
-      </div>
+      </fieldset>
     </div>
   )
 }

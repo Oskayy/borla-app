@@ -5,6 +5,7 @@ import { EXCEPTION_ROLES } from '@/lib/exceptions'
 import { REFUND_ROLES, LIVE_REFUND_STATUSES, refundable } from '@/lib/refunds'
 import { PICKUP_CHECK_MARKER } from '@/lib/plausibility'
 import ExceptionsClient, { type ExceptionItem, type RefundRow } from '@/components/ExceptionsClient'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -129,12 +130,13 @@ export default async function ExceptionsPage() {
   }))
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Exceptions</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Failed pickups, disputes, payment problems and GPS mismatches. Every decision needs a short note, which is kept
-        on the order&apos;s history.{canRefund ? '' : ' Refunds need a Finance, Ops Manager or Super Admin account.'}
-      </p>
+    <div className="max-w-4xl">
+      <PageHeader
+        title="Exceptions"
+        lead={`Failed pickups, disputes, payment problems and pickup checks. Every decision needs a short note, which is kept on the order's history.${
+          canRefund ? '' : ' Refunds need a Finance, Ops Manager or Super Admin account.'
+        }`}
+      />
       <ExceptionsClient items={items} refunds={refundRows} canRefund={canRefund} />
     </div>
   )

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { EVIDENCE_BUCKET } from '@/lib/storage'
 import { DISPOSAL_REVIEW_ROLES } from '@/lib/disposal-release'
 import DisposalReviewClient, { type ReviewGroup } from '@/components/DisposalReviewClient'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,14 +79,11 @@ export default async function DisposalReviewPage() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Unloads to Check</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Most unloads are confirmed automatically when the driver&apos;s photo is taken inside the disposal site&apos;s
-        geofence. These couldn&apos;t be checked automatically. Look at the photo: <strong>approve</strong> releases the
-        driver&apos;s disposal share for every order in the load; <strong>reject</strong> sends the load back to the
-        driver to confirm again.
-      </p>
+    <div className="max-w-4xl">
+      <PageHeader
+        title="Unloads to check"
+        lead="Most unloads are confirmed automatically when the driver's photo is taken inside the site's geofence. These couldn't be. Approving releases the driver's unload share for every order in the load; sending back asks the driver to confirm again."
+      />
       <DisposalReviewClient groups={Array.from(groups.values())} />
     </div>
   )

@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { proposePlan, buildDriverPlan, type PlanOrder, type PlanSite } from '@/lib/planner'
 import { assessDriver, nightCapacity, type DispatchDriver } from '@/lib/dispatch'
+import { AlertTriangle, CheckCircle2, Flag, RotateCcw, XCircle } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 export interface PlanOrderRow extends PlanOrder {
   address: string
@@ -121,7 +123,9 @@ export default function PlanBoard({
       setMessages(
         (data.results ?? []).map((r: { driverId: string; ok: boolean; stops?: number; trips?: number; message?: string }) => ({
           ok: r.ok,
-          text: `${driverById[r.driverId]?.name ?? 'Driver'}: ${r.ok ? `approved, ${r.stops} stop(s) in ${r.trips} trip(s)` : r.message}`,
+          text: `${driverById[r.driverId]?.name ?? 'Driver'}: ${
+            r.ok ? `approved, ${r.stops} ${r.stops === 1 ? 'stop' : 'stops'} in ${r.trips} ${r.trips === 1 ? 'trip' : 'trips'}` : r.message
+          }`,
         }))
       )
       router.refresh()
@@ -132,136 +136,208 @@ export default function PlanBoard({
     }
   }
 
-  const selectStyle = { fontSize: 12, padding: '3px 4px', border: '1px solid var(--color-border)', borderRadius: 4, maxWidth: 180 } as const
+  const selectCls =
+    'min-h-10 max-w-[13rem] rounded-control border border-line-strong bg-surface px-2.5 text-sm text-ink focus:border-action focus:outline-none focus:ring-3 focus:ring-action/20'
 
   function MoveSelect({ o }: { o: PlanOrderRow }) {
+    const options = driverOptions(o)
     return (
-      <select value={assignment[o.id]} onChange={(e) => move(o.id, e.target.value)} style={selectStyle} aria-label="Move this order">
+      <select value={assignment[o.id]} onChange={(e) => move(o.id, e.target.value)} className={selectCls} aria-label={`Move ${o.address}`}>
         <option value={UNASSIGNED}>Leave unassigned</option>
-        {driverOptions(o).map(({ d, ok }) => (
-          <option key={d.id} value={d.id}>
-            {ok ? '✓ ' : '✗ '}
-            {d.name}
-          </option>
-        ))}
+        <optgroup label="Can take it">
+          {options
+            .filter((x) => x.ok)
+            .map(({ d }) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+        </optgroup>
+        <optgroup label="Would break a rule">
+          {options
+            .filter((x) => !x.ok)
+            .map(({ d }) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+        </optgroup>
       </select>
     )
   }
 
+  function OrderTags({ o, driverId }: { o: PlanOrderRow; driverId?: string }) {
+    return (
+      <>
+        <span className="tabular-nums text-ink-3">
+          {o.litres} L{o.litresEstimated ? ' (estimated)' : ''}
+        </span>
+        {o.isLate && <span className="rounded-full bg-driver-wash px-2 py-0.5 text-xs font-semibold text-driver-deep">Late booking</span>}
+        {(o.rolloverCount ?? 0) > 0 && (
+          <span className="rounded-full bg-danger-wash px-2 py-0.5 text-xs font-semibold text-danger">
+            Missed {o.rolloverCount}× before
+          </span>
+        )}
+        {driverId && o.declinedBy?.includes(driverId) && (
+          <span className="rounded-full bg-danger-wash px-2 py-0.5 text-xs font-semibold text-danger">This driver declined it</span>
+        )}
+      </>
+    )
+  }
+
   return (
-    <div>
-      <div className="panel" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+    <div className="grid gap-4">
+      <div className="sticky top-14 z-10 flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface p-4 shadow-card ring-1 ring-line lg:top-4 sm:px-5">
         <div>
-          <p style={{ fontWeight: 600 }}>Suggested plan</p>
-          <p style={{ fontSize: 13, color: '#666' }}>
-            {orders.length - unassignedOrders.length} of {orders.length} order(s) planned across {plans.length} driver(s)
+          <p className="font-semibold">Suggested plan</p>
+          <p className="text-sm text-ink-3">
+            {orders.length - unassignedOrders.length} of {orders.length} planned across {plans.length} {plans.length === 1 ? 'driver' : 'drivers'}
             {unassignedOrders.length > 0 && ` · ${unassignedOrders.length} not assigned`}
             {edited && ' · edited by you'}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="flex flex-wrap gap-2">
           {edited && (
             <button
+              type="button"
               onClick={() => {
                 setAssignment(suggestedMap)
                 setMessages([])
               }}
               disabled={busy}
-              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '8px 12px', fontSize: 13 }}
+              className={BUTTON_QUIET}
             >
-              Reset to suggestion
+              <RotateCcw aria-hidden className="size-4" /> Reset to suggestion
             </button>
           )}
-          <button onClick={() => approve(cleanPlans.map((p) => p.driverId))} disabled={busy || cleanPlans.length === 0} className="btn-accent">
-            {busy ? 'Approving...' : `Approve all (${cleanPlans.length})`}
+          <button type="button" onClick={() => approve(cleanPlans.map((p) => p.driverId))} disabled={busy || cleanPlans.length === 0} className={BUTTON_PRIMARY}>
+            {busy ? 'Approving…' : `Approve all (${cleanPlans.length})`}
           </button>
         </div>
       </div>
 
       {messages.length > 0 && (
-        <div className="panel" style={{ marginBottom: 16 }}>
+        <ul aria-live="polite" className="grid gap-1.5 rounded-card bg-surface p-4 ring-1 ring-line">
           {messages.map((m, i) => (
-            <p key={i} style={{ fontSize: 13, color: m.ok ? '#2F7A4D' : '#B3261E' }}>
-              {m.ok ? '✓ ' : '✗ '}
+            <li key={i} className={`flex items-start gap-2 text-sm ${m.ok ? 'text-ink' : 'text-danger'}`}>
+              {m.ok ? <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0 text-ops" /> : <XCircle aria-hidden className="mt-0.5 size-4 shrink-0" />}
               {m.text}
-            </p>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {plans.map((p) => {
         const d = driverById[p.driverId]
         const cap = nightCapacity(d)
+        const used = p.litres + d.loadLitres
         const hasProblems = p.problems.length > 0
         return (
-          <div key={p.driverId} className="panel" style={{ marginBottom: 12, borderLeft: `4px solid ${hasProblems ? '#B3261E' : 'var(--color-success)'}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontWeight: 600 }}>{d.name}</p>
-                <p style={{ fontSize: 12, color: '#666' }}>
-                  {d.vehicleName ?? 'Vehicle'} · {p.orderIds.length} stop(s) · {p.trips.length} trip(s) · {p.litres} L
-                  {d.loadLitres > 0 && ` (+${d.loadLitres} L already assigned)`} of {cap} L tonight · ~{p.distanceKm} km
-                  {shiftRunning && (d.available ? ' · online' : ' · offline')}
+          <section key={p.driverId} aria-label={d.name} className={`rounded-card bg-surface p-5 ring-1 sm:p-6 ${hasProblems ? 'ring-danger/40' : 'ring-line'}`}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0 flex-1 basis-72">
+                <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight">
+                  {d.name}
+                  {shiftRunning && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${d.available ? 'bg-driver-wash text-driver-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
+                    >
+                      {d.available ? 'Online' : 'Offline'}
+                    </span>
+                  )}
+                </h3>
+                <p className="mt-0.5 text-sm text-ink-3">
+                  {d.vehicleName ?? 'Vehicle'} · {p.orderIds.length} {p.orderIds.length === 1 ? 'stop' : 'stops'} · {p.trips.length}{' '}
+                  {p.trips.length === 1 ? 'trip' : 'trips'} · about {p.distanceKm} km
                 </p>
-                {hasProblems && <p style={{ fontSize: 12, color: '#B3261E', marginTop: 2 }}>✗ {p.problems.join(' · ')}</p>}
+                <div className="mt-3 max-w-md">
+                  <div className="flex justify-between text-xs text-ink-3">
+                    <span>
+                      Load tonight{d.loadLitres > 0 && ` (incl. ${d.loadLitres} L already assigned)`}
+                    </span>
+                    <span className="tabular-nums">
+                      {used} / {cap} L
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-line" aria-hidden>
+                    <span
+                      className={`block h-full rounded-full ${used > cap ? 'bg-danger' : 'bg-driver'}`}
+                      style={{ width: `${Math.min(100, cap ? (used / cap) * 100 : 0)}%` }}
+                    />
+                  </div>
+                </div>
               </div>
-              <button onClick={() => approve([p.driverId])} disabled={busy || (hasProblems && (reasons[p.driverId] ?? '').trim().length < 3)} className="btn-primary">
-                Approve
+              <button
+                type="button"
+                onClick={() => approve([p.driverId])}
+                disabled={busy || (hasProblems && (reasons[p.driverId] ?? '').trim().length < 3)}
+                className={hasProblems ? BUTTON_QUIET : BUTTON_PRIMARY}
+              >
+                {hasProblems ? 'Approve anyway' : 'Approve'}
               </button>
             </div>
 
             {hasProblems && (
-              <input
-                value={reasons[p.driverId] ?? ''}
-                onChange={(e) => setReasons((r) => ({ ...r, [p.driverId]: e.target.value }))}
-                className="input-field"
-                placeholder="Reason for approving anyway (recorded on each order)"
-                style={{ marginTop: 8, marginBottom: 0 }}
-              />
+              <div className="mt-4 rounded-control bg-danger-wash p-3.5">
+                <p className="flex items-start gap-2 text-sm text-ink">
+                  <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-danger" />
+                  <span>{p.problems.join(' · ')}</span>
+                </p>
+                <label className="mt-2.5 block">
+                  <span className="text-sm font-medium text-ink-2">Reason for approving anyway (recorded on each order)</span>
+                  <input
+                    value={reasons[p.driverId] ?? ''}
+                    onChange={(e) => setReasons((r) => ({ ...r, [p.driverId]: e.target.value }))}
+                    className={`${FIELD} mt-1.5`}
+                    placeholder="e.g. Driver agreed to go further tonight"
+                  />
+                </label>
+              </div>
             )}
 
-            {p.trips.map((t) => (
-              <div key={t.tripNumber} style={{ marginTop: 10 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)' }}>
-                  Trip {t.tripNumber} · {t.litres} L
-                </p>
-                {t.orderIds.map((id, i) => {
-                  const o = orderById[id]
-                  return (
-                    <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #eee' }}>
-                      <span style={{ fontSize: 13 }}>
-                        {i + 1}. {o.address}{' '}
-                        <span style={{ color: '#999' }}>
-                          · {o.litres} L{o.litresEstimated ? '*' : ''}
-                          {o.isLate ? ' · LATE' : ''}
+            {p.trips.map((t) => {
+              const chosen = siteChoices[p.driverId]?.[String(t.tripNumber)] ?? t.siteId ?? ''
+              const chosenSite = chosen ? siteById[chosen] : null
+              const warning = chosenSite ? (chosenSite.usable ? null : 'This site is closed or full tonight') : t.siteProblem
+              return (
+                <div key={t.tripNumber} className="mt-5">
+                  <p className="text-sm font-semibold text-ink-2">
+                    Trip {t.tripNumber} <span className="font-normal tabular-nums text-ink-3">· {t.litres} L</span>
+                  </p>
+                  <ol className="mt-1.5 divide-y divide-line border-y border-line">
+                    {t.orderIds.map((id, i) => {
+                      const o = orderById[id]
+                      return (
+                        <li key={id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5">
+                          <span className="flex min-w-0 flex-1 basis-64 items-start gap-3">
+                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-driver-wash text-xs font-semibold tabular-nums text-driver-deep">
+                              {i + 1}
+                            </span>
+                            <span className="min-w-0 text-[15px]">
+                              <span className="block">{o.address}</span>
+                              <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
+                                <OrderTags o={o} driverId={p.driverId} />
+                              </span>
+                            </span>
+                          </span>
+                          <MoveSelect o={o} />
+                        </li>
+                      )
+                    })}
+                    <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5">
+                      <span className="flex min-w-0 flex-1 basis-64 items-start gap-3">
+                        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-ops-wash text-ops-deep">
+                          <Flag aria-hidden className="size-3.5" />
                         </span>
-                        {(o.rolloverCount ?? 0) > 0 && (
-                          <span style={{ color: '#B3261E', fontSize: 12, fontWeight: 600 }}> · MISSED {o.rolloverCount}× BEFORE</span>
-                        )}
-                        {o.declinedBy?.includes(p.driverId) && (
-                          <span style={{ color: '#B3261E', fontSize: 12 }}> · this driver declined it</span>
-                        )}
-                      </span>
-                      <MoveSelect o={o} />
-                    </div>
-                  )
-                })}
-                {(() => {
-                  const chosen = siteChoices[p.driverId]?.[String(t.tripNumber)] ?? t.siteId ?? ''
-                  const chosenSite = chosen ? siteById[chosen] : null
-                  const warning = chosenSite ? (chosenSite.usable ? null : 'This site is closed or full tonight') : t.siteProblem
-                  return (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '6px 0' }}>
-                      <span style={{ fontSize: 13 }}>
-                        🏁 Unload at <strong>{chosenSite?.name ?? 'no site chosen'}</strong>
-                        {warning && <span style={{ color: '#B3261E', fontSize: 12 }}> · ⚠ {warning}</span>}
+                        <span className="min-w-0 text-[15px]">
+                          Unload at <strong className="font-semibold">{chosenSite?.name ?? 'no site chosen'}</strong>
+                          {warning && <span className="mt-0.5 block text-sm text-danger">{warning}</span>}
+                        </span>
                       </span>
                       <select
                         value={chosen}
-                        onChange={(e) =>
-                          setSiteChoices((c) => ({ ...c, [p.driverId]: { ...(c[p.driverId] ?? {}), [String(t.tripNumber)]: e.target.value } }))
-                        }
-                        style={selectStyle}
+                        onChange={(e) => setSiteChoices((c) => ({ ...c, [p.driverId]: { ...(c[p.driverId] ?? {}), [String(t.tripNumber)]: e.target.value } }))}
+                        className={selectCls}
                         aria-label={`Disposal site for trip ${t.tripNumber}`}
                       >
                         <option value="">No site</option>
@@ -274,36 +350,40 @@ export default function PlanBoard({
                             </option>
                           ))}
                       </select>
-                    </div>
-                  )
-                })()}
-              </div>
-            ))}
-          </div>
+                    </li>
+                  </ol>
+                </div>
+              )
+            })}
+          </section>
         )
       })}
 
       {unassignedOrders.length > 0 && (
-        <div className="panel" style={{ marginBottom: 12, borderLeft: '4px solid #999' }}>
-          <p style={{ fontWeight: 600, marginBottom: 6 }}>Not assigned ({unassignedOrders.length})</p>
-          {unassignedOrders.map((o) => (
-            <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid #eee' }}>
-              <span style={{ fontSize: 13 }}>
-                {o.address} <span style={{ color: '#999' }}>· {o.litres} L</span>
-                <br />
-                <span style={{ fontSize: 12, color: '#B3261E' }}>
-                  {suggestedMap[o.id] === UNASSIGNED ? suggestedReason[o.id] : 'Left out by you'}
+        <section aria-labelledby="unassigned" className="rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+          <h3 id="unassigned" className="text-lg font-semibold tracking-tight">
+            Not assigned <span className="font-normal tabular-nums text-ink-3">({unassignedOrders.length})</span>
+          </h3>
+          <ul className="mt-2 divide-y divide-line">
+            {unassignedOrders.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5">
+                <span className="min-w-0 flex-1 basis-64 text-[15px]">
+                  <span className="block">{o.address}</span>
+                  <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
+                    <OrderTags o={o} />
+                  </span>
+                  <span className="mt-0.5 block text-sm text-danger">{suggestedMap[o.id] === UNASSIGNED ? suggestedReason[o.id] : 'Left out by you'}</span>
                 </span>
-              </span>
-              <MoveSelect o={o} />
-            </div>
-          ))}
-        </div>
+                <MoveSelect o={o} />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
-      <p style={{ fontSize: 11, color: '#999' }}>
-        ✓ = the driver could take that order on its own. Moving orders re-checks radius, capacity and online status; a driver
-        card turns red if their plan breaks a rule. * = size estimated from an older order.
+      <p className="text-sm text-ink-3">
+        In each “Move” list, drivers under “Can take it” could take that order on its own. Moving orders re-checks radius, capacity and
+        online status; a driver’s card turns red if their plan breaks a rule.
       </p>
     </div>
   )

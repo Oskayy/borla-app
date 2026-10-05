@@ -9,6 +9,8 @@ import PlanBoard from '@/components/PlanBoard'
 import { runScheduledJobs } from '@/lib/nightly-jobs'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
+import { AlertTriangle, CalendarClock, CheckCircle2, ChevronRight } from 'lucide-react'
+import { PageHeader } from '@/components/ui'
 
 const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
 
@@ -72,55 +74,63 @@ export default async function AssignOrdersPage() {
     lastLocationAt: d.lastLocationAt ? new Date(d.lastLocationAt).toISOString() : null,
   }))
 
-  return (
-    <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 20px' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>Assign Orders to Drivers</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        {dispatch.shiftRunning
-          ? 'The shift is running: only online drivers are offered, measured from their live position.'
-          : "The shift isn't running: you're planning ahead, so all active drivers are offered, measured from their home base."}{' '}
-        The system suggests the best driver for every order, grouped into trips that fill each vehicle to about 90%.
-        Check it, move any orders you want to change, then approve. Nothing is assigned until you approve.
-      </p>
-      {(() => {
-        const bounced = orders.filter((o) => o.declinedBy.length > 0).length
-        return bounced > 0 ? (
-          <div className="panel" style={{ marginBottom: 16, borderLeft: '4px solid #B3261E' }}>
-            <p style={{ fontSize: 14 }}>
-              <strong>{bounced}</strong> order(s) were declined or not accepted in time, and no other driver could take them
-              automatically. They are in the plan below; drivers who turned them down are skipped.
-            </p>
-          </div>
-        ) : null
-      })()}
-      {laterCount > 0 && (
-        <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-          {laterCount} paid order(s) are booked for a later night and aren&apos;t shown. They appear here on their night.
-        </p>
-      )}
-      {orders.length === 0 && (
-        <div className="panel">
-          <p>No paid orders waiting for assignment.</p>
-        </div>
-      )}
-      {orders.length > 0 && (
-        <>
-          <PlanBoard
-            orders={orders}
-            drivers={drivers}
-            sites={sites}
-            shiftRunning={dispatch.shiftRunning}
-            nowIso={dispatch.now.toISOString()}
-          />
+  const bounced = orders.filter((o) => o.declinedBy.length > 0).length
 
-          <details style={{ marginTop: 24 }}>
-            <summary style={{ cursor: 'pointer', fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-              Assign manually instead
-            </summary>
-            <OptimizeForm orders={orders} drivers={drivers} shiftRunning={dispatch.shiftRunning} nowIso={dispatch.now.toISOString()} />
-          </details>
-        </>
-      )}
+  return (
+    <div className="max-w-4xl">
+      <PageHeader
+        title="Plan & assign"
+        lead={`${
+          dispatch.shiftRunning
+            ? 'The shift is running: only online drivers are offered, measured from their live position.'
+            : "The shift isn't running: you're planning ahead, so every active driver working tonight is offered, measured from their home base."
+        } Trashit suggests a driver for every order, in trips that fill each vehicle to about 90%. Check it, move anything you want, then approve. Nothing is assigned until you approve.`}
+      />
+      <div className="grid gap-4">
+        {bounced > 0 && (
+          <p className="flex items-start gap-2 rounded-card bg-danger-wash p-4 text-[15px] text-ink sm:px-5">
+            <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-danger" />
+            <span>
+              <strong className="font-semibold">
+                {bounced} {bounced === 1 ? 'order was' : 'orders were'} declined or not accepted in time
+              </strong>
+              , and no other driver could take {bounced === 1 ? 'it' : 'them'} automatically. They&apos;re in the plan below; drivers who turned
+              them down are skipped.
+            </span>
+          </p>
+        )}
+        {laterCount > 0 && (
+          <p className="flex items-center gap-2 text-sm text-ink-3">
+            <CalendarClock aria-hidden className="size-4" />
+            {laterCount} paid {laterCount === 1 ? 'order is' : 'orders are'} booked for a later night and not shown. They appear here on their night.
+          </p>
+        )}
+        {orders.length === 0 && (
+          <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
+            <CheckCircle2 aria-hidden className="size-5 text-ops" /> No paid orders waiting for a driver.
+          </p>
+        )}
+        {orders.length > 0 && (
+          <>
+            <PlanBoard
+              orders={orders}
+              drivers={drivers}
+              sites={sites}
+              shiftRunning={dispatch.shiftRunning}
+              nowIso={dispatch.now.toISOString()}
+            />
+
+            <details className="group mt-4">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-[15px] font-semibold text-ops-deep">
+                <ChevronRight aria-hidden className="size-4 transition group-open:rotate-90" /> Assign manually instead
+              </summary>
+              <div className="mt-3">
+                <OptimizeForm orders={orders} drivers={drivers} shiftRunning={dispatch.shiftRunning} nowIso={dispatch.now.toISOString()} />
+              </div>
+            </details>
+          </>
+        )}
+      </div>
     </div>
   )
 }
