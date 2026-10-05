@@ -249,6 +249,22 @@ async function rollOver(endedShiftDate: string): Promise<number> {
 
     await prisma.$transaction(
       async (tx) => {
+        // Stops still on a driver's list at shift end count as missed for that driver (their history and analytics).
+        const missed = await tx.order.findMany({
+          where: { id: { in: ids }, status: 'ASSIGNED', driverId: { not: null } },
+          select: { id: true, driverId: true, shiftDate: true, driverAcceptedAt: true },
+        })
+        if (missed.length > 0) {
+          await tx.driverMiss.createMany({
+            data: missed.map((o: { id: string; driverId: string | null; shiftDate: Date | null; driverAcceptedAt: Date | null }) => ({
+              driverId: o.driverId!,
+              orderId: o.id,
+              kind: 'NOT_COLLECTED',
+              reason: o.driverAcceptedAt ? 'Accepted but not collected by shift end' : 'Not answered or collected by shift end',
+              shiftDate: o.shiftDate,
+            })),
+          })
+        }
         await tx.order.updateMany({
           where: { id: { in: ids }, status: { in: ['PAID', 'ASSIGNED'] } },
           data: {

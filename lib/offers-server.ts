@@ -58,6 +58,7 @@ async function doSweep(): Promise<number> {
         if (released.count !== 1) throw new Error('STATE_CHANGED')
         await tx.routeStop.deleteMany({ where: { orderId: o.id } })
         await tx.orderDecline.createMany({ data: [{ orderId: o.id, driverId, reason }], skipDuplicates: true })
+        await tx.driverMiss.create({ data: { driverId, orderId: o.id, kind: 'EXPIRED', reason, shiftDate: o.shiftDate } })
         await tx.auditLog.create({
           data: { orderId: o.id, actorId: null, fromState: 'ASSIGNED', toState: 'PAID', reason: `EXPIRED: ${reason}` },
         })

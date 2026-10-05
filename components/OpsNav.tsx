@@ -16,6 +16,7 @@ const links = [
   { href: '/ops/mfa-recovery', label: '2FA Recovery' },
   { href: '/ops/zones', label: 'Zones' },
   { href: '/ops/drivers', label: 'Drivers' },
+  { href: '/ops/ratings', label: 'Driver Ratings' },
   { href: '/ops/vehicles', label: 'Vehicles' },
     { href: '/ops/disposal-sites', label: 'Disposal Sites' },
   { href: '/ops/shift', label: 'Shift Hours' },

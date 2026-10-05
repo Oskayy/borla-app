@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ArrowLeft, Check, FileDown, Moon, Truck } from 'lucide-react'
+import { ArrowLeft, Check, FileDown, Moon, Star, Truck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
@@ -10,11 +10,18 @@ import { binsText, CUSTOMER_STAGES, customerStatus, ghs, type OrderSnapshot } fr
 import { dateLabel, dateTimeLabel } from '@/lib/format'
 import { BUTTON_QUIET, Card, CardTitle, StatusPill } from '@/components/ui'
 import CancelOrderButton from '@/components/CancelOrderButton'
+import RateOrder from '@/components/customer/RateOrder'
+import { canRate } from '@/lib/ratings'
 
 export const dynamic = 'force-dynamic'
 
 // The audit-log states that mark each customer stage, so the timeline can show when it happened.
 const STAGE_STATES: string[][] = [['PAID'], ['ASSIGNED'], ['PICKED_UP', 'PICKUP_PENDING_REVIEW'], ['DISPOSAL_VERIFIED', 'COMPLETED']]
+
+// Can the customer still rate this pickup? (Reads the clock, so it lives outside the component.)
+function rateWindowOpen(order: { status: string; driverId: string | null; ledgerEntries: { createdAt: Date }[] }): boolean {
+  return canRate(order, order.ledgerEntries[0]?.createdAt ?? null, new Date())
+}
 
 // Reads the clock, so it lives outside the component.
 function details(order: { status: string; shiftDate: Date | null }, s: ShiftSettings) {
@@ -45,6 +52,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       auditLogs: { orderBy: { createdAt: 'asc' }, select: { toState: true, createdAt: true } },
       driver: { select: { name: true, driverProfile: { select: { vehicleType: true } } } },
       payments: { where: { status: { in: ['success', 'partially_refunded', 'refunded'] } }, select: { id: true }, take: 1 },
+      rating: { select: { stars: true, comment: true } },
+      ledgerEntries: { where: { type: 'driver_payout_pickup' }, select: { createdAt: true }, take: 1 },
     },
   })
 
@@ -64,6 +73,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { cancel, collection } = details(order, await getShiftSettings())
   const stageTimes = STAGE_STATES.map((states) => order.auditLogs.find((l) => states.includes(l.toState))?.createdAt ?? null)
   const waitingForNight = ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(order.status)
+  const rateable = !order.rating && order.driver && rateWindowOpen(order)
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -121,6 +131,24 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             </ol>
           )}
         </Card>
+
+        {rateable && order.driver && (
+          <Card>
+            <RateOrder orderId={order.id} driverName={order.driver.name.split(/s+/)[0]} />
+          </Card>
+        )}
+        {order.rating && (
+          <Card>
+            <p className="text-sm text-ink-3">Your rating</p>
+            <p className="mt-1 flex items-center gap-0.5" aria-label={`${order.rating.stars} out of 5 stars`}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star key={n} aria-hidden className={`size-5 ${n <= order.rating!.stars ? 'fill-driver text-driver' : 'text-line-strong'}`} />
+              ))}
+            </p>
+            {order.rating.comment && <p className="mt-2 text-[15px] text-ink-2">&ldquo;{order.rating.comment}&rdquo;</p>}
+            <p className="mt-2 text-sm text-ink-3">Thank you. It helps drivers do a better job.</p>
+          </Card>
+        )}
 
         <Card>
           <CardTitle>Details</CardTitle>

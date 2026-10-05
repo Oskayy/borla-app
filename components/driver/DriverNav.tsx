@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Moon, Truck, User, Wallet } from 'lucide-react'
+import { BarChart3, Moon, Truck, User, Wallet } from 'lucide-react'
 
 const BASE = '/dashboard/driver'
 
 const LINKS = [
   { href: BASE, label: 'Tonight', icon: Moon, exact: true },
   { href: `${BASE}/earnings`, label: 'Earnings', icon: Wallet },
+  { href: `${BASE}/performance`, label: 'Performance', short: 'Stats', icon: BarChart3 },
   { href: `${BASE}/profile-setup`, label: 'Vehicle & area', short: 'Vehicle', icon: Truck },
   { href: `${BASE}/account`, label: 'Account', icon: User },
 ]
@@ -49,7 +50,7 @@ export function DriverBottomTabs() {
   const pathname = usePathname()
   return (
     <nav aria-label="Driver" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className="mx-auto grid max-w-md grid-cols-5">
         {LINKS.map(({ href, label, short, icon: Icon, exact }) => {
           const on = isActive(pathname, href, exact)
           return (

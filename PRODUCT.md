@@ -73,6 +73,12 @@ product decision before building, because most touch money or personal data:
   completion/acceptance analytics and missed-trip history from existing data; earnings statements as PDF and CSV
   ("for your records", not tax advice); a vehicle-type change sends the driver back for approval with new vehicle
   photos before the new capacity is used.
+- Ratings and driver analytics (built Oct 2026): a customer rates a collected pickup once (1-5 stars, optional comment),
+  within 14 days of pickup; final once sent. The driver sees stars and comments but never the customer's name; ratings of
+  2 stars or fewer wait on the ops Driver Ratings page until reviewed. Deleting an account removes its comments; stars stay.
+  Analytics (last 30 days): acceptance = accepted / (accepted + declined + not answered); completion = collected /
+  (collected + left on the list at shift end). Missed stops are recorded in DriverMiss (history of declines and
+  expiries backfilled; "not collected" counts from Oct 2026).
 - Business: enterprise / property-manager accounts.
 - Ops: financial analytics console, live fleet view, needs-attention queue.
 

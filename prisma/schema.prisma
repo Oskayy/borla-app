@@ -51,6 +51,8 @@ model User {
   ordersAsCustomer Order[] @relation("CustomerOrders")
   ordersAsDriver   Order[] @relation("DriverOrders")
   orderDeclines    OrderDecline[]
+  ratingsReceived  OrderRating[] @relation("DriverRatings")
+  driverMisses     DriverMiss[]
   notifications    Notification[]
   pushSubscriptions PushSubscription[]
   withdrawals      Withdrawal[]
@@ -244,9 +246,46 @@ model Order {
   payments       Payment[]
   declines       OrderDecline[]
   refunds        Refund[]
+  rating         OrderRating?
+  misses         DriverMiss[]
 
   @@index([shiftDate, status])
   @@index([status, driverAcceptedAt, offeredAt])
+}
+
+// A customer's 1-5 star rating of a collected pickup, with an optional comment. One per order.
+// The driver sees the stars and comment (never who wrote it); ops review low ratings.
+model OrderRating {
+  id         String    @id @default(uuid())
+  orderId    String    @unique
+  order      Order     @relation(fields: [orderId], references: [id])
+  driverId   String
+  driver     User      @relation("DriverRatings", fields: [driverId], references: [id])
+  customerId String
+  stars      Int
+  comment    String?
+  reviewedBy String?   // ops member who looked at a low rating
+  reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([driverId, createdAt])
+  @@index([stars, reviewedAt])
+}
+
+// A stop a driver didn't do: declined, let the accept time run out, or accepted but not collected by shift end.
+// Kept for the driver's own history and analytics (OrderDecline rows are cleared when an order rolls over).
+model DriverMiss {
+  id        String    @id @default(uuid())
+  driverId  String
+  driver    User      @relation(fields: [driverId], references: [id])
+  orderId   String
+  order     Order     @relation(fields: [orderId], references: [id])
+  kind      String    // DECLINED | EXPIRED | NOT_COLLECTED
+  reason    String?
+  shiftDate DateTime? @db.Date
+  createdAt DateTime  @default(now())
+
+  @@index([driverId, createdAt])
 }
 
 // A driver turned down an assigned order. The order is not offered to that driver again.

@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
 
       await tx.routeStop.deleteMany({ where: { orderId } })
       await tx.orderDecline.create({ data: { orderId, driverId: user.id, reason } })
+      const night = await tx.order.findUnique({ where: { id: orderId }, select: { shiftDate: true } })
+      await tx.driverMiss.create({ data: { driverId: user.id, orderId, kind: 'DECLINED', reason, shiftDate: night?.shiftDate ?? null } })
       await tx.auditLog.create({
         data: { orderId, actorId: user.id, fromState: 'ASSIGNED', toState: 'PAID', reason: `DECLINED by driver: ${reason}` },
       })

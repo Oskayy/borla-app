@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
             },
           })
         }
+        await tx.orderRating.updateMany({ where: { customerId: id }, data: { comment: null } }) // stars stay with the driver
         await tx.notification.deleteMany({ where: { userId: id } })
         await tx.pushSubscription.deleteMany({ where: { userId: id } })
         await tx.customerProfile.deleteMany({ where: { userId: id } })
