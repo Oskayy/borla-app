@@ -1,33 +1,29 @@
-import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { ArrowLeft, Check, FileDown, Moon, Truck } from 'lucide-react'
+import { createClient } from '@/utils/supabase/server'
+import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
-import { classifyBooking, describeCollection } from '@/lib/shift'
+import { classifyBooking, describeCollection, type ShiftSettings } from '@/lib/shift'
 import { customerCancelCheck } from '@/lib/refunds'
+import { binsText, CUSTOMER_STAGES, customerStatus, ghs, type OrderSnapshot } from '@/lib/order-status'
+import { dateLabel, dateTimeLabel } from '@/lib/format'
+import { BUTTON_QUIET, Card, CardTitle, StatusPill } from '@/components/customer/ui'
 import CancelOrderButton from '@/components/CancelOrderButton'
 
-const statusColors: Record<string, string> = {
-  DRAFT: '#999',
-  PAID: 'var(--color-accent)',
-  ASSIGNED: 'var(--color-accent)',
-  PICKED_UP: 'var(--color-accent)',
-  COMPLETED: 'var(--color-success)',
-  CANCELLED: '#B3261E',
-  FAILED_PICKUP: '#B3261E',
-  DISPUTED: '#B3261E',
-}
+export const dynamic = 'force-dynamic'
 
-const statusMessages: Record<string, string> = {
-  DRAFT: 'Your order is being set up.',
-  PAID: "Payment received — your pickup is scheduled.",
-  ASSIGNED: 'A driver has been assigned to your pickup.',
-  DISPOSAL_PENDING: 'Your waste has been picked up and taken for disposal.',
-  PICKED_UP: 'Your waste has been picked up.',
-  COMPLETED: 'This pickup is complete. Thank you!',
-  CANCELLED: 'This order was cancelled.',
-  FAILED_PICKUP: 'The driver could not complete this pickup. Support will follow up.',
-  DISPUTED: 'There is an open issue with this order. Support will follow up.',
+// The audit-log states that mark each customer stage, so the timeline can show when it happened.
+const STAGE_STATES: string[][] = [['PAID'], ['ASSIGNED'], ['PICKED_UP', 'PICKUP_PENDING_REVIEW'], ['DISPOSAL_VERIFIED', 'COMPLETED']]
+
+// Reads the clock, so it lives outside the component.
+function details(order: { status: string; shiftDate: Date | null }, s: ShiftSettings) {
+  const now = new Date()
+  const cancel = customerCancelCheck(order, now, s)
+  const collection = order.shiftDate
+    ? describeCollection(order.shiftDate.toISOString().slice(0, 10), classifyBooking(now, s).localDate, s)
+    : null
+  return { cancel, collection }
 }
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -46,96 +42,155 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         orderBy: { createdAt: 'desc' },
         select: { id: true, amount: true, status: true, createdAt: true },
       },
+      auditLogs: { orderBy: { createdAt: 'asc' }, select: { toState: true, createdAt: true } },
+      driver: { select: { name: true, driverProfile: { select: { vehicleType: true } } } },
+      payments: { where: { status: { in: ['success', 'partially_refunded', 'refunded'] } }, select: { id: true }, take: 1 },
     },
   })
 
   if (!order || order.customerId !== user.id) {
     return (
-      <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
-        <p>Order not found.</p>
-        <Link href="/dashboard/customer/orders">Back to my orders</Link>
-      </div>
+      <Card className="text-center">
+        <p className="font-semibold">Order not found</p>
+        <Link href="/dashboard/customer/orders" className="mt-3 inline-block text-sm font-semibold text-customer-deep hover:underline">
+          Back to my orders
+        </Link>
+      </Card>
     )
   }
 
-  const quote = order.quoteSnapshot as {
-    price: number
-    address?: string
-    zoneName?: string
-    lines?: { code: string; label: string; count: number }[]
-  }
-
-  // Once paid, the order has a collection night. Show it in plain words.
-  let collection: string | null = null
-  const settings = await getShiftSettings()
-  const cancelCheck = customerCancelCheck(order, new Date(), settings)
-  if (order.shiftDate) {
-    const today = classifyBooking(new Date(), settings).localDate
-    collection = describeCollection(order.shiftDate.toISOString().slice(0, 10), today, settings)
-  }
-  const binsText = quote?.lines?.map((l) => `${l.count} × ${l.label}`).join(', ')
+  const quote = order.quoteSnapshot as OrderSnapshot | null
+  const status = customerStatus(order.status)
+  const { cancel, collection } = details(order, await getShiftSettings())
+  const stageTimes = STAGE_STATES.map((states) => order.auditLogs.find((l) => states.includes(l.toState))?.createdAt ?? null)
+  const waitingForNight = ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(order.status)
 
   return (
-    <div style={{ maxWidth: 440, margin: '40px auto', padding: '0 20px' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 20 }}>Order Status</h1>
+    <div className="mx-auto max-w-3xl">
+      <Link href="/dashboard/customer/orders" className="mb-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink">
+        <ArrowLeft aria-hidden className="size-4" /> My orders
+      </Link>
 
-      <div className="panel">
-        <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Pickup address</p>
-        <p style={{ marginBottom: 16 }}>{quote?.address || 'N/A'}</p>
-
-        {binsText && (
-          <>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Bins</p>
-            <p style={{ marginBottom: 16 }}>{binsText}</p>
-          </>
-        )}
-
-        {collection && ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(order.status) && (
-          <div style={{ background: '#EEF4F4', borderRadius: 4, padding: 10, marginBottom: 16, fontSize: 13 }}>
-            <strong>Collection: {collection}.</strong>
-            <br />
-            Please put your bins out before the collection starts.
-          </div>
-        )}
-
-        <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Amount</p>
-        <p style={{ fontSize: 20, fontFamily: 'var(--font-heading)', fontWeight: 600, marginBottom: 16 }}>
-          GHS {quote?.price?.toFixed(2)}
-        </p>
-
-        <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Status</p>
-        <p style={{ marginBottom: 8 }}>
-          <span className="status-dot" style={{ background: statusColors[order.status] ?? '#999' }} />
-          {order.status}
-        </p>
-        <p style={{ fontSize: 13, color: '#666' }}>{statusMessages[order.status] ?? ''}</p>
-
-        {order.refunds.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Refunds</p>
-            {order.refunds.map((r: { id: string; amount: number; status: string; createdAt: Date }) => (
-              <p key={r.id} style={{ fontSize: 14 }}>
-                GHS {r.amount.toFixed(2)} ·{' '}
-                {r.status === 'PROCESSED'
-                  ? 'sent back to your account'
-                  : r.status === 'FAILED'
-                  ? 'could not be sent; Trashit support will contact you'
-                  : 'on its way (usually a few working days)'}
-              </p>
-            ))}
-          </div>
-        )}
-
-        {cancelCheck.ok && (
-          <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
-            <CancelOrderButton orderId={order.id} amount={quote?.price ?? 0} />
-          </div>
-        )}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[clamp(1.5rem,3vw,1.9rem)] font-bold leading-tight tracking-[-0.025em]">{binsText(quote) || 'Pickup'}</h1>
+          <p className="mt-1 text-[15px] text-ink-2">
+            Booked {dateLabel(order.createdAt)} · <span className="tabular-nums">{ghs(quote?.price)}</span>
+          </p>
+        </div>
+        <StatusPill status={status} />
       </div>
 
-      <Link href="/dashboard/customer/orders" style={{ display: 'inline-block', marginTop: 16, fontSize: 14 }}>
-        ← Back to my orders
-      </Link>
+      <div className="grid gap-6">
+        <Card>
+          <p className="text-lg font-semibold tracking-tight">{status.message}</p>
+          {collection && waitingForNight && (
+            <p className="mt-3 flex items-start gap-2.5 rounded-control bg-ops-wash p-3.5 text-sm text-ink">
+              <Moon aria-hidden className="mt-0.5 size-4 shrink-0 text-ops" />
+              <span>
+                <strong className="font-semibold">Collection: {collection}.</strong> Please put your bins out before the collection starts.
+              </span>
+            </p>
+          )}
+
+          {status.stage >= 0 && (
+            <ol className="mt-6 grid gap-0" aria-label="Pickup timeline">
+              {CUSTOMER_STAGES.map((label, i) => {
+                const done = i <= status.stage
+                const t = stageTimes[i]
+                return (
+                  <li key={label} className="relative flex gap-4 pb-6 last:pb-0">
+                    {i < CUSTOMER_STAGES.length - 1 && (
+                      <span aria-hidden className={`absolute left-[13px] top-7 h-[calc(100%-1.75rem)] w-0.5 ${i < status.stage ? 'bg-customer' : 'bg-line'}`} />
+                    )}
+                    <span
+                      className={`relative grid size-7 shrink-0 place-items-center rounded-full ${
+                        done ? 'bg-customer text-white' : 'bg-surface text-ink-3 ring-2 ring-line'
+                      }`}
+                    >
+                      {done ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <span className="text-xs font-semibold">{i + 1}</span>}
+                    </span>
+                    <span className="pt-0.5">
+                      <span className={`block font-semibold ${done ? 'text-ink' : 'text-ink-3'}`}>{label}</span>
+                      {done && t && <span className="block text-sm text-ink-3">{dateTimeLabel(t)}</span>}
+                      <span className="sr-only">{done ? '(done)' : '(not yet)'}</span>
+                    </span>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+        </Card>
+
+        <Card>
+          <CardTitle>Details</CardTitle>
+          <dl className="grid gap-4 text-[15px] sm:grid-cols-2">
+            <div>
+              <dt className="text-sm text-ink-3">Pickup address</dt>
+              <dd className="mt-0.5 font-medium">{quote?.address || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-ink-3">Area</dt>
+              <dd className="mt-0.5 font-medium">{quote?.zoneName || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-ink-3">Bins</dt>
+              <dd className="mt-0.5 font-medium">{binsText(quote) || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-ink-3">Amount</dt>
+              <dd className="mt-0.5 text-lg font-bold tabular-nums">{ghs(quote?.price)}</dd>
+            </div>
+            {order.driver && (
+              <div className="sm:col-span-2">
+                <dt className="text-sm text-ink-3">Driver</dt>
+                <dd className="mt-1 flex items-center gap-2.5 font-medium">
+                  <span className="grid size-8 place-items-center rounded-full bg-driver text-night">
+                    <Truck aria-hidden className="size-4" />
+                  </span>
+                  {order.driver.name.split(/\s+/)[0]}
+                  {order.driver.driverProfile?.vehicleType && <span className="font-normal text-ink-3">· {order.driver.driverProfile.vehicleType}</span>}
+                </dd>
+              </div>
+            )}
+          </dl>
+
+          {order.payments.length > 0 && (
+            <div className="mt-6">
+              <a href={`/api/orders/${order.id}/receipt`} download className={BUTTON_QUIET}>
+                <FileDown aria-hidden className="size-4" /> Download receipt (PDF)
+              </a>
+            </div>
+          )}
+
+          {order.refunds.length > 0 && (
+            <div className="mt-6 border-t border-line pt-5">
+              <h3 className="text-sm font-semibold">Refunds</h3>
+              <ul className="mt-2 grid gap-1.5 text-[15px]">
+                {order.refunds.map((r) => (
+                  <li key={r.id}>
+                    <span className="font-semibold tabular-nums">{ghs(r.amount)}</span>{' '}
+                    <span className="text-ink-2">
+                      {r.status === 'PROCESSED'
+                        ? 'sent back to your account'
+                        : r.status === 'FAILED'
+                          ? 'could not be sent; Trashit support will contact you'
+                          : 'on its way (usually a few working days)'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {cancel.ok && (
+            <div className="mt-6 border-t border-line pt-5">
+              <CancelOrderButton orderId={order.id} amount={quote?.price ?? 0} />
+              <p className="mt-2 text-sm text-ink-3">You can cancel for a full refund until your collection night starts.</p>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   )
-}
+}

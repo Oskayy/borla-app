@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { BellRing } from 'lucide-react'
 import { useClientValue } from '@/lib/use-client-value'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -83,26 +84,37 @@ export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = fals
   if (compact && (state === 'unsupported' || state === 'blocked')) return null
   if (state === 'unsupported') {
     return (
-      <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-        This browser can&apos;t show alerts when Trashit is closed. Keep Trashit open during your shift. (On iPhone, add Trashit to
-        your home screen first.)
+      <p className="text-sm text-ink-3">
+        This browser can&apos;t show alerts when Trashit is closed. Keep Trashit open during your shift. (On iPhone, add Trashit to your home
+        screen first.)
       </p>
     )
   }
   if (state === 'blocked') {
     return (
-      <p style={{ fontSize: 12, color: '#B3261E', marginBottom: 12 }}>
-        Alerts are blocked for Trashit. Allow notifications in your browser settings so you don&apos;t miss new stops.
+      <p className="text-sm text-danger">
+        Alerts are blocked for Trashit. Allow notifications in your browser settings so you don&apos;t miss an update.
       </p>
     )
   }
   return (
-    <div className="panel" style={{ marginBottom: 16, borderLeft: '4px solid var(--color-accent)' }}>
-      <p style={{ fontSize: 14, marginBottom: 8 }}>{message}</p>
-      <button onClick={turnOn} disabled={state === 'working'} className="btn-accent" style={{ width: compact ? 'auto' : '100%' }}>
-        {state === 'working' ? 'Turning on...' : '🔔 Turn on alerts'}
+    <div className="flex flex-wrap items-center gap-3 rounded-card bg-surface p-4 ring-1 ring-line">
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-customer-wash text-customer-deep">
+        <BellRing aria-hidden className="size-5" />
+      </span>
+      <p className="min-w-[12rem] flex-1 text-[15px] text-ink-2">{message}</p>
+      <button
+        onClick={turnOn}
+        disabled={state === 'working'}
+        className="inline-flex min-h-11 items-center gap-2 rounded-control bg-customer px-4 text-[15px] font-semibold text-white transition hover:bg-customer-deep disabled:opacity-60"
+      >
+        {state === 'working' ? 'Turning on…' : 'Turn on alerts'}
       </button>
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginTop: 6 }}>{error}</p>}
+      {error && (
+        <p role="alert" className="w-full text-sm text-danger">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

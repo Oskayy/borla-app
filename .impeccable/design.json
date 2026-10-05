@@ -1,0 +1,497 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-05T00:02:13.062Z",
+  "title": "Design System: Trashit",
+  "extensions": {
+    "colorMeta": {
+      "night": {
+        "role": "neutral",
+        "displayName": "Night Navy",
+        "canonical": "oklch(20.4% 0.033 260)",
+        "tonalRamp": [
+          "#070b12",
+          "#22272f",
+          "#3b4557",
+          "#5b6779",
+          "#7e8a9e",
+          "#a2afc3",
+          "#c5d2e7",
+          "#e8effa"
+        ]
+      },
+      "night-2": {
+        "role": "neutral",
+        "displayName": "Night 2 (raised)"
+      },
+      "night-3": {
+        "role": "neutral",
+        "displayName": "Night 3 (raised, hover)"
+      },
+      "night-line": {
+        "role": "neutral",
+        "displayName": "Night Line"
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Night Ink"
+      },
+      "night-muted": {
+        "role": "neutral",
+        "displayName": "Night Muted"
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Daylight Canvas",
+        "canonical": "oklch(97.1% 0.002 165)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262726",
+          "#444545",
+          "#656666",
+          "#888a89",
+          "#acaead",
+          "#cfd1d0",
+          "#eeefee"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Paper White"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(21.6% 0.027 258)",
+        "tonalRamp": [
+          "#080b11",
+          "#22272d",
+          "#3c4654",
+          "#5d6776",
+          "#7f8a9a",
+          "#a4afbf",
+          "#c7d2e3",
+          "#e9eff8"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3 (lightest text on white)"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(92.3% 0.008 253)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#252728",
+          "#424549",
+          "#63666b",
+          "#86898e",
+          "#aaaeb3",
+          "#cdd1d6",
+          "#edeff1"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Hairline Strong"
+      },
+      "customer": {
+        "role": "primary",
+        "displayName": "Gate Green",
+        "canonical": "oklch(53.8% 0.113 162)",
+        "tonalRamp": [
+          "#001205",
+          "#032f1e",
+          "#005632",
+          "#007952",
+          "#3b9e74",
+          "#64c498",
+          "#88e8bb",
+          "#cefbe3"
+        ]
+      },
+      "customer-deep": {
+        "role": "primary",
+        "displayName": "Deep Gate Green"
+      },
+      "customer-wash": {
+        "role": "primary",
+        "displayName": "Gate Green Wash"
+      },
+      "customer-glow": {
+        "role": "primary",
+        "displayName": "Gate Green Glow (on night)"
+      },
+      "driver": {
+        "role": "secondary",
+        "displayName": "Lamp Amber",
+        "canonical": "oklch(77.6% 0.146 70)",
+        "tonalRamp": [
+          "#1d0300",
+          "#3c1e00",
+          "#732f00",
+          "#985200",
+          "#bf7700",
+          "#e79c2f",
+          "#ffbf59",
+          "#ffe7b9"
+        ]
+      },
+      "driver-deep": {
+        "role": "secondary",
+        "displayName": "Burnt Amber"
+      },
+      "driver-wash": {
+        "role": "secondary",
+        "displayName": "Amber Wash"
+      },
+      "ops": {
+        "role": "tertiary",
+        "displayName": "Ledger Indigo",
+        "canonical": "oklch(49.5% 0.231 276)",
+        "tonalRamp": [
+          "#09003a",
+          "#1c1a5d",
+          "#3610bc",
+          "#4f46e5",
+          "#6c6fff",
+          "#8d97ff",
+          "#aebcff",
+          "#dae8ff"
+        ]
+      },
+      "ops-deep": {
+        "role": "tertiary",
+        "displayName": "Deep Indigo"
+      },
+      "ops-wash": {
+        "role": "tertiary",
+        "displayName": "Indigo Wash"
+      },
+      "danger": {
+        "role": "error",
+        "displayName": "Alarm Red",
+        "canonical": "oklch(50.0% 0.182 29)",
+        "tonalRamp": [
+          "#260000",
+          "#490d08",
+          "#8e0000",
+          "#b7271c",
+          "#e25242",
+          "#ff7966",
+          "#ff9e88",
+          "#ffd8cb"
+        ]
+      },
+      "danger-wash": {
+        "role": "error",
+        "displayName": "Alarm Wash"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The single hero headline per page."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and step headings."
+      },
+      "body-lead": {
+        "displayName": "Body lead",
+        "purpose": "Subline under a headline."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Card and list copy, 30-65ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Nav links, form labels, small buttons, footer columns."
+      },
+      "numeric": {
+        "displayName": "Numeric",
+        "purpose": "Times, amounts (GHS 50.00), counts and codes; tabular figures."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-card",
+        "value": "0 1px 2px rgb(18 26 38 / 0.04), 0 8px 24px -12px rgb(18 26 38 / 0.12)",
+        "purpose": "Primary buttons, active segment, small raised elements."
+      },
+      {
+        "name": "shadow-lift",
+        "value": "0 2px 4px rgb(18 26 38 / 0.06), 0 18px 40px -18px rgb(18 26 38 / 0.28)",
+        "purpose": "Floating panels: hero night panel and its order card, desktop sign-in shell."
+      }
+    ],
+    "focus": [
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid var(--color-ops); outline-offset: 2px; border-radius: 4px",
+        "purpose": "Global :focus-visible on every surface."
+      },
+      {
+        "name": "input-focus",
+        "value": "border-color: var(--color-ops); box-shadow: 0 0 0 3px rgb(75 64 224 / 0.15)",
+        "purpose": "Text fields."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The easing for authored moments."
+      },
+      {
+        "name": "route-draw",
+        "value": "stroke-dashoffset, 2.4s ease-out-expo, 0.3s delay",
+        "purpose": "Landing hero: the driver route draws once on load. Reduced motion: shown complete."
+      },
+      {
+        "name": "marker-in",
+        "value": "opacity 0 to 1 and scale 0.6 to 1, 0.6s ease-out-expo, staggered 0.1s / 1.3s / 2.4s",
+        "purpose": "Hero route markers appear as the route reaches them. Reduced motion: shown."
+      },
+      {
+        "name": "step-light",
+        "value": "scroll-driven view() timeline: opacity 0.3 to 1, translateY 10px to 0, range offset by --i x 9%",
+        "purpose": "Night timeline steps light up in order; only with scroll-timeline support and motion allowed, otherwise shown."
+      },
+      {
+        "name": "state-transition",
+        "value": "150ms colour and background transitions; 300ms disclosure chevron rotation",
+        "purpose": "Hover and disclosure feedback; not an authored moment."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ],
+    "deprecated": {
+      "classes": [
+        ".btn-primary",
+        ".btn-accent",
+        ".panel",
+        ".input-field"
+      ],
+      "variables": [
+        "--color-bg",
+        "--color-primary",
+        "--color-accent",
+        "--color-success",
+        "--color-border",
+        "--font-heading",
+        "--font-body"
+      ],
+      "note": "Kept in app/globals.css only so screens not yet rebuilt keep working; never use on new or rebuilt screens."
+    },
+    "roles": {
+      "customer": {
+        "ground": "light: surface on canvas",
+        "lead": "customer",
+        "textOnLead": "surface",
+        "textOnLight": "customer-deep",
+        "quietFill": "customer-wash",
+        "onNight": "customer-glow",
+        "device": "mobile-first",
+        "status": "to be rebuilt on these tokens"
+      },
+      "driver": {
+        "ground": "night: night, raised night-2 / night-3, lines night-line",
+        "lead": "driver",
+        "textOnLead": "night",
+        "textOnLight": "driver-deep",
+        "quietFill": "night-2 on night; driver-wash on light",
+        "device": "mobile-first, one-handed, outdoors at night",
+        "status": "to be rebuilt on these tokens"
+      },
+      "ops": {
+        "ground": "light: surface on canvas",
+        "lead": "ops",
+        "textOnLead": "surface",
+        "textOnLight": "ops-deep",
+        "quietFill": "ops-wash",
+        "device": "desktop, must work on a phone",
+        "status": "to be rebuilt on these tokens"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Customer Primary Button",
+      "kind": "button",
+      "refersTo": "button-customer",
+      "description": "The main public call to action and the customer app lead action.",
+      "html": "<button class=\"ds-btn-customer\">Book tonight's pickup <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-customer { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 24px; border: none; border-radius: var(--radius-control, 10px); background: var(--color-customer, #12825a); color: #fff; font-size: 16px; font-weight: 600; box-shadow: var(--shadow-card); cursor: pointer; transition: background-color .15s; } .ds-btn-customer:hover { background: var(--color-customer-deep, #0b6646); } .ds-btn-customer:focus-visible { outline: 2px solid var(--color-ops, #4b40e0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary action beside a primary; a role icon may sit beside the words.",
+      "html": "<button class=\"ds-btn-quiet\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#9a5b06\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2\"/><path d=\"M15 18H9\"/><path d=\"M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14\"/><circle cx=\"17\" cy=\"18\" r=\"2\"/><circle cx=\"7\" cy=\"18\" r=\"2\"/></svg> Become a driver</button>",
+      "css": ".ds-btn-quiet { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px; border: none; border-radius: var(--radius-control, 10px); background: var(--color-surface, #fff); color: var(--color-ink, #121a26); box-shadow: inset 0 0 0 1px var(--color-line-strong, #c9d0d8); font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color .15s; } .ds-btn-quiet:hover { background: var(--color-canvas, #f4f6f5); } .ds-btn-quiet:focus-visible { outline: 2px solid var(--color-ops, #4b40e0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Night Button",
+      "kind": "button",
+      "refersTo": "button-night",
+      "description": "Neutral primary on surfaces shared by all three roles (sign-in).",
+      "html": "<button class=\"ds-btn-night\">Sign in</button>",
+      "css": ".ds-btn-night { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: inline-flex; align-items: center; justify-content: center; min-height: 48px; width: 280px; border: none; border-radius: var(--radius-control, 10px); background: var(--color-night, #0e1726); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color .15s; } .ds-btn-night:hover { background: var(--color-night-3, #1f2f4a); } .ds-btn-night:focus-visible { outline: 2px solid var(--color-ops, #4b40e0); outline-offset: 2px; } .ds-btn-night:disabled { opacity: .6; cursor: not-allowed; }"
+    },
+    {
+      "name": "Driver Button on Night",
+      "kind": "button",
+      "refersTo": "button-driver",
+      "description": "Driver lead action; only on night grounds, always with night text.",
+      "html": "<div class=\"ds-night-ground\"><button class=\"ds-btn-driver\">Start driver sign-up</button></div>",
+      "css": ".ds-night-ground { background: var(--color-night, #0e1726); padding: 24px; border-radius: 22px; } .ds-btn-driver { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); min-height: 48px; padding: 0 24px; border: none; border-radius: var(--radius-control, 10px); background: var(--color-driver, #f0a43a); color: var(--color-night, #0e1726); font-size: 16px; font-weight: 600; cursor: pointer; transition: filter .15s; } .ds-btn-driver:hover { filter: brightness(1.05); } .ds-btn-driver:focus-visible { outline: 2px solid var(--color-ops, #4b40e0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Labelled input with indigo focus and customer caret.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Email</span><input class=\"ds-input\" type=\"email\" placeholder=\"you@example.com\"></label>",
+      "css": ".ds-field { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: grid; gap: 6px; width: 320px; } .ds-field-label { font-size: 14px; font-weight: 500; color: var(--color-ink-2, #3f4a5a); } .ds-input { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); padding: 12px 14px; font-size: 15px; color: var(--color-ink, #121a26); background: var(--color-surface, #fff); border: 1px solid var(--color-line-strong, #c9d0d8); border-radius: var(--radius-control, 10px); caret-color: var(--color-customer, #12825a); transition: border-color .15s, box-shadow .15s; } .ds-input::placeholder { color: var(--color-ink-3, #5f6b7a); } .ds-input:focus { outline: none; border-color: var(--color-ops, #4b40e0); box-shadow: 0 0 0 3px rgb(75 64 224 / .15); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Sign in / Create account switch.",
+      "html": "<nav class=\"ds-seg\"><span class=\"ds-seg-on\" aria-current=\"page\">Sign in</span><a class=\"ds-seg-off\" href=\"#\">Create account</a></nav>",
+      "css": ".ds-seg { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: flex; width: 320px; padding: 4px; border-radius: var(--radius-control, 10px); background: var(--color-canvas, #f4f6f5); font-size: 14px; font-weight: 600; } .ds-seg-on, .ds-seg-off { flex: 1; padding: 8px 0; text-align: center; border-radius: 8px; text-decoration: none; } .ds-seg-on { background: var(--color-surface, #fff); color: var(--color-ink, #121a26); box-shadow: var(--shadow-card); } .ds-seg-off { color: var(--color-ink-3, #5f6b7a); } .ds-seg-off:hover { color: var(--color-ink, #121a26); } .ds-seg-off:focus-visible { outline: 2px solid var(--color-ops, #4b40e0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Day chip (providers), status pill, night zone chip with a role dot.",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-chip\">MTN MoMo</span><span class=\"ds-pill\">Example</span><span class=\"ds-chip-night\"><i class=\"ds-dot\"></i>East Legon <span class=\"ds-muted\">· Accra</span></span></div>",
+      "css": ".ds-chips { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: linear-gradient(90deg, #fff 50%, var(--color-night, #0e1726) 50%); padding: 16px; border-radius: 14px; } .ds-chip { padding: 4px 10px; border-radius: 9999px; background: var(--color-canvas, #f4f6f5); color: var(--color-ink-2, #3f4a5a); box-shadow: inset 0 0 0 1px var(--color-line, #e2e6eb); font-size: 12px; font-weight: 600; } .ds-pill { padding: 2px 8px; border-radius: 9999px; background: var(--color-customer-wash, #e6f4ed); color: var(--color-customer-deep, #0b6646); font-size: 11px; font-weight: 600; } .ds-chip-night { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 9999px; background: var(--color-night-2, #16233a); color: var(--color-night-ink, #e8edf5); box-shadow: inset 0 0 0 1px var(--color-night-line, #2a3b58); font-size: 14px; font-weight: 500; } .ds-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--color-customer-glow, #3fd99a); } .ds-muted { color: var(--color-night-muted, #a3b0c4); }"
+    },
+    {
+      "name": "Proof Card Grid",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Peer cards joined by 1px hairline gaps inside one 14px ring; icon in its role colour.",
+      "html": "<div class=\"ds-grid\"><article class=\"ds-card\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#4b40e0\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z\"/><path d=\"m9 12 2 2 4-4\"/></svg><h3>Proof you can check</h3><p>A photo at pickup, the driver's GPS, and a check-in at the disposal site.</p></article><article class=\"ds-card\"><h3>Pay the way you already do</h3><p>MoMo or card, through Paystack. You see GHS 50.00 before you pay.</p></article></div>",
+      "css": ".ds-grid { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; border-radius: var(--radius-card, 14px); background: var(--color-line, #e2e6eb); box-shadow: 0 0 0 1px var(--color-line, #e2e6eb); max-width: 640px; } .ds-card { background: var(--color-surface, #fff); padding: 28px; } .ds-card h3 { margin: 20px 0 0; font-size: 20px; font-weight: 600; letter-spacing: -0.025em; color: var(--color-ink, #121a26); } .ds-card p { margin: 8px 0 0; font-size: 15px; line-height: 1.625; color: var(--color-ink-2, #3f4a5a); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Role Legend",
+      "kind": "custom",
+      "refersTo": "role-legend",
+      "description": "The three roles side by side on night; used where all roles meet.",
+      "html": "<ul class=\"ds-legend\"><li><span class=\"ds-tile ds-c\">C</span><span><b>Customer</b><small>Book, pay and track your pickups</small></span></li><li><span class=\"ds-tile ds-d\">D</span><span><b>Driver</b><small>Your night's stops and earnings</small></span></li><li><span class=\"ds-tile ds-o\">O</span><span><b>Operations</b><small>Plan routes, check unloads, pay out</small></span></li></ul>",
+      "css": ".ds-legend { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); list-style: none; margin: 0; padding: 24px; display: grid; gap: 12px; width: 360px; background: var(--color-night, #0e1726); border-radius: 22px; color: var(--color-night-ink, #e8edf5); } .ds-legend li { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: var(--radius-card, 14px); background: var(--color-night-2, #16233a); box-shadow: inset 0 0 0 1px var(--color-night-line, #2a3b58); } .ds-legend b { display: block; font-weight: 600; } .ds-legend small { display: block; font-size: 14px; color: var(--color-night-muted, #a3b0c4); } .ds-tile { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; font-weight: 700; } .ds-c { background: var(--color-customer, #12825a); color: #fff; } .ds-d { background: var(--color-driver, #f0a43a); color: var(--color-night, #0e1726); } .ds-o { background: var(--color-ops, #4b40e0); color: #fff; }"
+    },
+    {
+      "name": "Night Timeline",
+      "kind": "custom",
+      "refersTo": "night-timeline",
+      "description": "Steps on a customer-to-driver-to-ops bar; role wash tile with deep icon colour, tabular time.",
+      "html": "<ol class=\"ds-tl\"><li><span class=\"ds-ti ds-tc\">1</span><p class=\"ds-time\">Before 6pm</p><h3>Pin your gate and pay</h3></li><li><span class=\"ds-ti ds-to\">2</span><p class=\"ds-time\">6pm</p><h3>Tonight's route is planned</h3></li><li><span class=\"ds-ti ds-td\">3</span><p class=\"ds-time\">8pm – 6am</p><h3>Collected at your gate</h3></li></ol>",
+      "css": ".ds-tl { font-family: var(--font-sans, Geist, ui-sans-serif, system-ui, sans-serif); position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 180px); gap: 24px; } .ds-tl::before { content: \"\"; position: absolute; left: 0; right: 0; top: 21px; height: 3px; border-radius: 9999px; background: linear-gradient(90deg, var(--color-customer, #12825a), var(--color-driver, #f0a43a), var(--color-ops, #4b40e0)); } .ds-ti { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 9999px; box-shadow: 0 0 0 4px #fff; font-weight: 700; } .ds-tc { background: var(--color-customer-wash, #e6f4ed); color: var(--color-customer-deep, #0b6646); } .ds-td { background: var(--color-driver-wash, #fdf2df); color: var(--color-driver-deep, #9a5b06); } .ds-to { background: var(--color-ops-wash, #ecebfd); color: var(--color-ops-deep, #3a30c2); } .ds-time { margin: 24px 0 0; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--color-ink-3, #5f6b7a); } .ds-tl h3 { margin: 4px 0 0; font-size: 18px; font-weight: 600; letter-spacing: -0.025em; color: var(--color-ink, #121a26); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "One Night, Three Hands",
+    "overview": "Trashit is a single bin's night told in three colours. A customer pins a gate in green, a driver carries the load in amber across a night-navy city, and ops verifies the unload in indigo. Everything else is quiet: Geist set bold and tight for headlines, regular for reading, cool-grey daylight panels with hairline borders, and night navy for the shift itself. The colours are a legend, not a palette; wherever one appears, it says whose hand is on the job.\n\nThe system was built first on the public landing page (`/`) and sign-in (`/login`), which are the only surfaces where all three role colours meet. The customer, driver and ops apps will be rebuilt on these same tokens next. Each app takes one role colour as its lead and keeps the shared type, spacing, shapes and components; only the lead colour and the ground (light or night) change. Component specs for those apps that do not exist yet are marked *to be built* below, not invented.\n\nDensity is calm and generous on public surfaces (80 to 96px section rhythm, 6xl container) and is expected to tighten on ops desktop screens. Depth is mostly tonal (night against daylight, canvas against surface) with two soft shadows reserved for raised things. Motion is spent once per surface, on a single authored moment, and always has a reduced-motion fallback.",
+    "keyCharacteristics": [
+      "Three role colours (customer green, driver amber, ops indigo) that carry meaning, never decoration.",
+      "Night navy grounds for the shift, the driver app and dark bands; white and cool-grey daylight for reading.",
+      "One typeface, Geist, bold and tightly tracked for headlines, regular for body.",
+      "Hairline rings and borders, softly rounded controls (10px) and cards (14px), large rounded panels (22px).",
+      "Tabular numerals for every time and amount; amounts always written `GHS 50.00`.",
+      "One authored motion moment per surface, shown complete under reduced motion.",
+      "WCAG 2.2 AA: secondary text never lighter than ink-3 on white."
+    ],
+    "rules": [
+      {
+        "name": "The Legend Rule",
+        "body": "Each role colour means its role and nothing else. Never use green, amber or indigo to decorate, to differentiate cards, or to add variety. If a colour cannot be read as \"the customer\", \"the driver\" or \"ops / verification\", it must be a neutral.",
+        "section": "colors"
+      },
+      {
+        "name": "The Deep-on-Day Rule",
+        "body": "On light grounds, role-coloured text and small icons use the `-deep` shade (or base customer/ops for icons only). Base amber is never text on a light ground.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink-3 Floor",
+        "body": "No text on white is lighter than ink-3. Grey placeholders like `#999` are banned.",
+        "section": "colors"
+      },
+      {
+        "name": "The Neutral Door Rule",
+        "body": "A surface shared by all three roles (sign-in, account choice) uses night as its primary button, not a role colour, and shows the three roles side by side as a legend.",
+        "section": "colors"
+      },
+      {
+        "name": "The Geist-Only Rule",
+        "body": "Geist is the only typeface across the public site and all three apps. No display face, no mono, no system-font fallback styling.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Money Rule",
+        "body": "Every time, amount and count uses tabular numerals. Amounts are written `GHS 50.00`: currency code, a space, two decimals.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Kicker Rule",
+        "body": "Headings stand on their own. No eyebrow or kicker labels above headings (small uppercase category words). A short factual line under the heading is fine.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ring-First Rule",
+        "body": "Cards and lists are defined by a hairline ring on a tonal ground. A shadow is added only when something floats over other content.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** let each app lead with its own role colour: customer green on light, driver amber on night navy, ops indigo on light.",
+      "**Do** use the `-deep` shade for role-coloured text on light grounds and the `-wash` shade for quiet fills.",
+      "**Do** put night text on amber fills.",
+      "**Do** keep text at ink-3 (#5f6b7a) or darker on white, and use 44 to 48px tap targets.",
+      "**Do** show status with an icon and words, never colour alone.",
+      "**Do** use tabular numerals for times and money, and write amounts as `GHS 50.00`.",
+      "**Do** spend motion on one authored moment per surface, eased with the expo-out curve, and show it complete under `prefers-reduced-motion`.",
+      "**Do** keep the global 2px indigo focus ring visible on every interactive element."
+    ],
+    "donts": [
+      "**Don't** use a role colour for decoration or variety; if it does not mean its role, use a neutral.",
+      "**Don't** put base amber text on a light ground or white text on amber.",
+      "**Don't** add eyebrow or kicker labels above headings.",
+      "**Don't** introduce a second typeface.",
+      "**Don't** use `#999`-style greys for text.",
+      "**Don't** build new screens with the legacy classes `.btn-primary`, `.btn-accent`, `.panel`, `.input-field` or the legacy variables `--color-bg`, `--color-primary`, `--color-accent`, `--color-success`, `--color-border`, `--font-heading`, `--font-body`. They are deprecated, kept only so unrebuilt screens keep working, and are removed screen by screen as each app is rebuilt.",
+      "**Don't** use the old teal `#0F3D3E` / amber `#E8A33D` palette outside the logo.",
+      "**Don't** show invented figures, quotes or logos; proof slots stay hidden until real data exists."
+    ]
+  }
+}

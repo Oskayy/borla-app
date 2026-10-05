@@ -1,6 +1,15 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
+// Pages that draw their own footer (the landing page, sign-in, and the redesigned customer app).
+const OWN_FOOTER = ['/', '/login', '/signup']
+const OWN_FOOTER_SECTIONS = ['/dashboard/customer']
 
 export default function Footer() {
+  const pathname = usePathname()
+  if (OWN_FOOTER.includes(pathname) || OWN_FOOTER_SECTIONS.some((s) => pathname.startsWith(s))) return null
   return (
     <footer
       style={{

@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowRight, CheckCircle2, Lock } from 'lucide-react'
 import PasswordInput from '@/components/PasswordInput'
+import AuthShell, { AUTH_BUTTON, AUTH_FIELD, AuthTabs, ErrorLine } from '@/components/auth/AuthShell'
 import { useClientValue } from '@/lib/use-client-value'
 
 const LINK_ERRORS: Record<string, string> = {
@@ -106,16 +108,21 @@ export default function LoginPage() {
     }
   }
 
-  if (mfaStep) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-          <h1 style={{ fontSize: 24, marginBottom: 4 }}>Enter your 2FA code</h1>
-          <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
-            Open your authenticator app and enter the 6-digit code.
-          </p>
-          <form onSubmit={handleVerifyCode}>
+  const field = AUTH_FIELD
+  const shownError = error || linkError
+
+  return (
+    <AuthShell agreeVerb="signing in">
+      {mfaStep ? (
+        <>
+          <h1 className="text-2xl font-bold tracking-tight">Enter your 2FA code</h1>
+          <p className="mt-2 text-[15px] text-ink-2">Open your authenticator app and enter the 6-digit code for Trashit.</p>
+          <form onSubmit={handleVerifyCode} className="mt-7">
+            <label htmlFor="mfa-code" className="text-sm font-medium text-ink-2">
+              6-digit code
+            </label>
             <input
+              id="mfa-code"
               placeholder="000000"
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -123,62 +130,90 @@ export default function LoginPage() {
               maxLength={6}
               inputMode="numeric"
               autoComplete="one-time-code"
-              className="input-field"
-              style={{ letterSpacing: 4, fontSize: 20, textAlign: 'center' }}
+              className={`${field} mt-1.5 text-center text-2xl tracking-[0.4em] tabular-nums`}
             />
-            {(error || linkError) && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error || linkError}</p>}
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-              {loading ? 'Verifying...' : 'Verify'}
+            <ErrorLine text={shownError} />
+            <button
+              type="submit"
+              disabled={loading}
+              className={`mt-5 ${AUTH_BUTTON}`}
+            >
+              {loading ? 'Checking…' : 'Verify and continue'}
             </button>
           </form>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Log in to Trashit</h1>
-        <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Pickups, on schedule.</p>
-        {notice && <p style={{ color: '#2F7A4D', fontSize: 13, marginBottom: 12 }}>{notice}</p>}
-        <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            className="input-field"
-          />
-          <PasswordInput
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-            className="input-field"
-          />
-          {(error || linkError) && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error || linkError}</p>}
-          {notConfirmed && (
-            <p style={{ fontSize: 13, marginBottom: 12 }}>
-              {resent ? (
-                <span style={{ color: '#2F7A4D' }}>If that email needs confirming, a new link is on its way.</span>
-              ) : (
-                <button type="button" onClick={resendConfirmation} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--color-primary)', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>
-                  Send the confirmation email again
-                </button>
-              )}
+        </>
+      ) : (
+        <>
+          <AuthTabs current="signin" />
+          <h1 className="mt-7 text-2xl font-bold tracking-tight">Welcome back</h1>
+          <p className="mt-2 text-[15px] text-ink-2">Sign in to your pickups, your night&apos;s stops, or the ops console.</p>
+          {notice && (
+            <p role="status" className="mt-5 flex items-start gap-2 rounded-control bg-customer-wash px-3.5 py-3 text-sm text-customer-deep">
+              <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0" /> {notice}
             </p>
           )}
-          <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-            {loading ? 'Logging in...' : 'Log in'}
-          </button>
-        </form>
-        <Link href="/forgot-password" style={{ display: 'block', textAlign: 'center', marginTop: 16, fontSize: 13, color: '#666' }}>
-          Forgot your password?
-        </Link>
-      </div>
-    </div>
+          <form onSubmit={handleLogin} className="mt-6 grid gap-4">
+            <div>
+              <label htmlFor="email" className="text-sm font-medium text-ink-2">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className={`${field} mt-1.5`}
+              />
+            </div>
+            <div>
+              <div className="flex items-baseline justify-between">
+                <label htmlFor="password" className="text-sm font-medium text-ink-2">
+                  Password
+                </label>
+                <Link href="/forgot-password" className="text-sm font-medium text-ops-deep hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="mt-1.5">
+                <PasswordInput
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className={field}
+                />
+              </div>
+            </div>
+            <ErrorLine text={shownError} />
+            {notConfirmed && (
+              <p className="-mt-2 text-sm" aria-live="polite">
+                {resent ? (
+                  <span className="text-customer-deep">If that email needs confirming, a new link is on its way.</span>
+                ) : (
+                  <button type="button" onClick={resendConfirmation} className="font-medium text-ops-deep underline underline-offset-2">
+                    Send the confirmation email again
+                  </button>
+                )}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className={AUTH_BUTTON}
+            >
+              {loading ? 'Signing in…' : 'Sign in'} {!loading && <ArrowRight aria-hidden className="size-4" />}
+            </button>
+          </form>
+          <p className="mt-6 flex items-center gap-2 text-xs text-ink-3">
+            <Lock aria-hidden className="size-3.5" /> Staff accounts also need a 2FA code from an authenticator app.
+          </p>
+        </>
+      )}
+    </AuthShell>
   )
-}
+}
+

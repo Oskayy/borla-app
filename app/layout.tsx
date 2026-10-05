@@ -1,18 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, IBM_Plex_Sans } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import Footer from "@/components/Footer";
 
-const heading = Space_Grotesk({
+// One typeface across the customer, driver and ops apps and the public site.
+const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-heading",
-});
-
-const body = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-body",
+  variable: "--font-geist",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0F3D3E",
+  themeColor: "#0e1726",
 };
 
 export default function RootLayout({
@@ -39,7 +34,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${heading.variable} ${body.variable}`}>
+      <body className={geist.variable}>
         {children}
         <Footer />
         <CookieConsentBanner />

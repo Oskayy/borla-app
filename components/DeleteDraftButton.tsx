@@ -2,52 +2,52 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Trash2 } from 'lucide-react'
 
+// Deletes an unpaid booking (it was never scheduled, so nothing else changes).
 export default function DeleteDraftButton({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
 
   async function handleDelete() {
-    if (!confirm('Delete this draft order? This cannot be undone.')) return
-
+    if (!confirm('Delete this unpaid booking? This cannot be undone.')) return
     setError('')
     setLoading(true)
-
-    const res = await fetch('/api/orders/delete-draft', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId }),
-    })
-    const data = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(data.error || 'Failed to delete order')
-      return
+    try {
+      const res = await fetch('/api/orders/delete-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Could not delete it')
+        return
+      }
+      router.refresh()
+    } catch {
+      setError('Could not reach Trashit')
+    } finally {
+      setLoading(false)
     }
-
-    router.refresh()
   }
 
   return (
-    <div>
-      {error && <p style={{ color: '#B3261E', fontSize: 12, marginTop: 4 }}>{error}</p>}
+    <div className="flex shrink-0 flex-col items-end">
       <button
         onClick={handleDelete}
         disabled={loading}
-        style={{
-          background: 'none',
-          border: '1px solid #B3261E',
-          color: '#B3261E',
-          borderRadius: 4,
-          padding: '4px 10px',
-          fontSize: 12,
-          marginTop: 8,
-        }}
+        aria-label="Delete this unpaid booking"
+        className="grid size-11 place-items-center rounded-full text-ink-3 transition hover:bg-danger-wash hover:text-danger disabled:opacity-50"
       >
-        {loading ? 'Deleting...' : 'Delete Draft'}
+        <Trash2 aria-hidden className="size-[18px]" />
       </button>
+      {error && (
+        <p role="alert" className="max-w-40 text-right text-xs text-danger">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

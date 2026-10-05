@@ -2,7 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowRight, Check, Circle, Home, MailCheck, Truck } from 'lucide-react'
 import PasswordInput from '@/components/PasswordInput'
+import AuthShell, { AUTH_BUTTON, AUTH_FIELD, AuthTabs, ErrorLine } from '@/components/auth/AuthShell'
+import { useClientValue } from '@/lib/use-client-value'
 
 function checkStrength(password: string) {
   return [
@@ -14,12 +18,38 @@ function checkStrength(password: string) {
   ]
 }
 
+// The two account types anyone can create; staff accounts are made by a Super Admin.
+const SIGNUP_CHOICES = [
+  {
+    value: 'CUSTOMER',
+    title: 'I need pickups',
+    text: 'Book and pay for collection at my gate',
+    icon: Home,
+    on: 'border-customer bg-customer-wash ring-3 ring-customer/15',
+    chip: 'bg-customer text-white',
+  },
+  {
+    value: 'DRIVER',
+    title: 'I want to drive',
+    text: 'Collect at night and get paid to MoMo',
+    icon: Truck,
+    on: 'border-driver bg-driver-wash ring-3 ring-driver/20',
+    chip: 'bg-driver text-night',
+  },
+]
+
 export default function SignupPage() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('CUSTOMER')
+  // "Become a driver" links arrive with ?role=driver; the person can still change it.
+  const roleFromLink = useClientValue(
+    () => (new URLSearchParams(window.location.search).get('role') === 'driver' ? 'DRIVER' : 'CUSTOMER'),
+    'CUSTOMER'
+  )
+  const [chosenRole, setRole] = useState<string | null>(null)
+  const role = chosenRole ?? roleFromLink
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
@@ -33,105 +63,186 @@ export default function SignupPage() {
     setError('')
 
     if (!allPass) {
-      setError('Please meet all password requirements below before continuing')
+      setError('Please meet all the password rules below before continuing')
       return
     }
 
     setLoading(true)
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, email, password, role }),
-    })
-    const data = await res.json()
-    setLoading(false)
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, email, password, role }),
+      })
+      const data = await res.json().catch(() => ({}))
+      setLoading(false)
 
-    if (!res.ok) {
-      setError(data.error || 'Signup failed')
-      return
-    }
+      if (!res.ok) {
+        setError(data.error || 'We could not create your account. Please try again.')
+        return
+      }
 
-    if (data.confirmEmail) {
-      setCheckEmail(true)
-      return
+      if (data.confirmEmail) {
+        setCheckEmail(true)
+        return
+      }
+      router.push('/login')
+    } catch {
+      setLoading(false)
+      setError('Could not reach Trashit. Please check your connection and try again.')
     }
-    router.push('/login')
   }
 
   if (checkEmail) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-          <h1 style={{ fontSize: 24, marginBottom: 8 }}>Check your email</h1>
-          <p style={{ fontSize: 14, color: '#444', marginBottom: 12 }}>
-            We sent a link to <strong>{email}</strong>. Tap it to confirm your address, then you can start using Trashit.
-          </p>
-          <p style={{ fontSize: 13, color: '#666' }}>
-            Nothing after a few minutes? Check your spam folder, or go to the login page and ask for the email again.
-          </p>
-        </div>
-      </div>
+      <AuthShell agreeVerb="creating an account">
+        <span className="grid size-12 place-items-center rounded-card bg-customer-wash text-customer-deep">
+          <MailCheck aria-hidden className="size-6" />
+        </span>
+        <h1 className="mt-6 text-2xl font-bold tracking-tight">Check your email</h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
+          We sent a link to <strong className="font-semibold text-ink">{email}</strong>. Tap it to confirm your address,
+          then sign in to start using Trashit.
+        </p>
+        <p className="mt-4 text-sm leading-relaxed text-ink-3">
+          Nothing after a few minutes? Check your spam folder, or go to sign in and ask for the email again.
+        </p>
+        <Link href="/login" className={`mt-8 ${AUTH_BUTTON}`}>
+          Go to sign in <ArrowRight aria-hidden className="size-4" />
+        </Link>
+      </AuthShell>
     )
   }
 
+  const field = AUTH_FIELD
+  const label = 'text-sm font-medium text-ink-2'
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Create your Trashit account</h1>
-        <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Takes under a minute.</p>
-        <form onSubmit={handleSignup}>
+    <AuthShell agreeVerb="creating an account">
+      <AuthTabs current="signup" />
+      <h1 className="mt-7 text-2xl font-bold tracking-tight">Create your account</h1>
+      <p className="mt-2 text-[15px] text-ink-2">It takes about a minute.</p>
+
+      <form onSubmit={handleSignup} className="mt-6 grid gap-4">
+        <fieldset>
+          <legend className={label}>What do you want to do?</legend>
+          <div className="mt-1.5 grid grid-cols-2 gap-2.5">
+            {SIGNUP_CHOICES.map(({ value, title, text, icon: Icon, on, chip }) => {
+              const selected = role === value
+              return (
+                <label
+                  key={value}
+                  className={`relative flex cursor-pointer flex-col gap-2 rounded-card border p-3.5 transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ops ${
+                    selected ? on : 'border-line-strong bg-surface hover:border-ink-3'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={value}
+                    checked={selected}
+                    onChange={() => setRole(value)}
+                    className="sr-only"
+                  />
+                  <span className={`grid size-9 place-items-center rounded-[10px] ${chip}`}>
+                    <Icon aria-hidden className="size-[18px]" />
+                  </span>
+                  <span className="text-[15px] font-semibold leading-tight text-ink">{title}</span>
+                  <span className="text-xs leading-snug text-ink-3">{text}</span>
+                  {selected && (
+                    <Check aria-hidden className="absolute right-3 top-3 size-4 text-ink" strokeWidth={2.5} />
+                  )}
+                </label>
+              )
+            })}
+          </div>
+        </fieldset>
+
+        <div>
+          <label htmlFor="name" className={label}>
+            Full name
+          </label>
           <input
-            placeholder="Full name"
+            id="name"
+            placeholder="e.g. Akosua Mensah"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
-            className="input-field"
+            className={`${field} mt-1.5`}
           />
+        </div>
+        <div>
+          <label htmlFor="phone" className={label}>
+            Phone number
+          </label>
           <input
-            placeholder="Phone number"
+            id="phone"
+            type="tel"
+            inputMode="tel"
+            placeholder="024 412 3456"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             required
             autoComplete="tel"
-            className="input-field"
+            aria-describedby="phone-hint"
+            className={`${field} mt-1.5`}
           />
+          <p id="phone-hint" className="mt-1.5 text-xs text-ink-3">
+            {role === 'DRIVER' ? 'Dispatch and customers can reach you on this number.' : 'Your driver can call you on this number if needed.'}
+          </p>
+        </div>
+        <div>
+          <label htmlFor="email" className={label}>
+            Email
+          </label>
           <input
+            id="email"
             type="email"
-            placeholder="Email"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="input-field"
+            className={`${field} mt-1.5`}
           />
-          <PasswordInput
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="new-password"
-            className="input-field"
-          />
-
-          <div style={{ marginBottom: 16, marginTop: -8 }}>
-            {strengthChecks.map((c) => (
-              <p key={c.label} style={{ fontSize: 12, color: c.pass ? '#2F7A4D' : '#999', margin: '2px 0' }}>
-                {c.pass ? '✓' : '○'} {c.label}
-              </p>
-            ))}
+        </div>
+        <div>
+          <label htmlFor="password" className={label}>
+            Password
+          </label>
+          <div className="mt-1.5">
+            <PasswordInput
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+              className={field}
+            />
           </div>
+          <ul className="-mt-1 grid gap-1 text-xs" aria-label="Password rules">
+            {strengthChecks.map((c) => (
+              <li key={c.label} className={`flex items-center gap-1.5 ${c.pass ? 'text-customer-deep' : 'text-ink-3'}`}>
+                {c.pass ? <Check aria-hidden className="size-3.5" strokeWidth={2.5} /> : <Circle aria-hidden className="size-3" />}
+                {c.label}
+                <span className="sr-only">{c.pass ? '(done)' : '(not yet)'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="input-field">
-            <option value="CUSTOMER">I&apos;m a customer</option>
-            <option value="DRIVER">I&apos;m a driver</option>
-          </select>
-
-          {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
-          <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-            {loading ? 'Creating account...' : 'Sign up'}
-          </button>
-        </form>
-      </div>
-    </div>
+        <ErrorLine text={error} />
+        <button type="submit" disabled={loading} className={AUTH_BUTTON}>
+          {loading ? 'Creating your account…' : 'Create account'} {!loading && <ArrowRight aria-hidden className="size-4" />}
+        </button>
+      </form>
+      <p className="mt-6 text-sm text-ink-2">
+        Already have an account?{' '}
+        <Link href="/login" className="font-semibold text-ops-deep hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthShell>
   )
-}
+}

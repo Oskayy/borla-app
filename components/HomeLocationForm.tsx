@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, Search } from 'lucide-react'
 import PinPicker from './PinPicker'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/customer/ui'
 
 interface Zone {
   id: string
@@ -110,43 +112,53 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
   }
 
   return (
-    <div>
-      <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>
-        Home address, with a landmark
-      </label>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <input
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          className="input-field"
-          placeholder="e.g. House 12, near Chemu SHS, Tema Community 4"
-          style={{ marginBottom: 0, flex: 1 }}
-        />
-        <button type="button" onClick={findOnMap} disabled={finding} className="btn-primary" style={{ whiteSpace: 'nowrap' }}>
-          {finding ? 'Finding...' : 'Find on map'}
-        </button>
+    <div className="grid gap-4">
+      <div>
+        <label htmlFor="home-address" className="text-sm font-semibold text-ink">
+          Home address, with a landmark
+        </label>
+        <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="home-address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={`${FIELD} sm:flex-1`}
+            placeholder="e.g. House 12, near Chemu SHS, Tema Community 4"
+          />
+          <button type="button" onClick={findOnMap} disabled={finding} className={BUTTON_QUIET}>
+            <Search aria-hidden className="size-4" /> {finding ? 'Finding…' : 'Find on map'}
+          </button>
+        </div>
       </div>
 
-      <p style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-        Drivers go exactly to this pin at night, so put it on your house or gate. At home? Use your location.
-        Otherwise zoom in on the map until you see your roof and tap it.
+      <p className="text-sm text-ink-2">
+        Drivers go exactly to this pin at night, so put it on your house or gate. At home? Use your location. Otherwise zoom in until you
+        see your roof and tap it.
       </p>
-      <div style={{ marginBottom: 12 }}>
+      <div className="overflow-hidden rounded-card ring-1 ring-line">
         <PinPicker pin={pin} onPinChange={handlePinChange} />
       </div>
 
       {pin && (
-        <label style={{ fontSize: 14, display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 12 }}>
-          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} style={{ marginTop: 3 }} />
+        <label className="flex cursor-pointer items-start gap-3 rounded-control bg-canvas p-3.5 text-[15px]">
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-1 size-4 accent-customer" />
           <span>I zoomed in and the pin is on my house or gate</span>
         </label>
       )}
 
-      {info && <p style={{ fontSize: 13, color: '#2F7A4D', marginBottom: 12 }}>{info}</p>}
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
+      {info && (
+        <p role="status" className="text-sm text-customer-deep">
+          {info}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+          <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+        </p>
+      )}
 
-      <button onClick={save} disabled={saving} className="btn-accent" style={{ width: '100%' }}>
-        {saving ? 'Saving...' : 'Save my home location'}
+      <button onClick={save} disabled={saving} className={`w-full ${BUTTON_PRIMARY}`}>
+        {saving ? 'Saving…' : 'Save my home pin'}
       </button>
     </div>
   )

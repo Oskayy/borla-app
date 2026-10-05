@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Share, X } from 'lucide-react'
 import { useClientValue } from '@/lib/use-client-value'
 
 // Chrome's install event (not in the standard DOM types).
@@ -61,27 +62,30 @@ export default function InstallPrompt() {
 
   if (mode === 'hidden') return null
   return (
-    <div className="panel" style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+    <div className="flex items-start gap-3.5 rounded-card bg-surface p-4 ring-1 ring-line">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/icon-192.png" alt="" width={40} height={40} style={{ borderRadius: 8 }} />
-      <div style={{ flex: 1 }}>
-        <p style={{ fontWeight: 600, fontSize: 14 }}>Install Trashit on your phone</p>
+      <img src="/icons/icon-192.png" alt="" width={40} height={40} className="size-10 rounded-[10px]" />
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">Install Trashit on your phone</p>
         {mode === 'android' ? (
           <>
-            <p style={{ fontSize: 13, color: '#444', marginBottom: 8 }}>Opens straight from your home screen, full screen, with alerts.</p>
-            <button onClick={install} className="btn-accent">
+            <p className="mt-0.5 text-sm text-ink-2">Opens straight from your home screen, full screen, with alerts.</p>
+            <button
+              onClick={install}
+              className="mt-3 inline-flex min-h-11 items-center rounded-control bg-customer px-4 text-[15px] font-semibold text-white transition hover:bg-customer-deep"
+            >
               Install
             </button>
           </>
         ) : (
-          <p style={{ fontSize: 13, color: '#444' }}>
-            Tap the Share button <span aria-hidden>⬆️</span> in Safari, then <strong>Add to Home Screen</strong>. Open Trashit from the new
-            icon to turn on alerts.
+          <p className="mt-0.5 text-sm text-ink-2">
+            Tap the Share button <Share aria-label="Share" className="inline size-4 align-text-bottom" /> in Safari, then{' '}
+            <strong className="font-semibold text-ink">Add to Home Screen</strong>. Open Trashit from the new icon to turn on alerts.
           </p>
         )}
       </div>
-      <button onClick={dismiss} aria-label="Dismiss" style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666' }}>
-        ×
+      <button onClick={dismiss} aria-label="Dismiss" className="grid size-11 shrink-0 place-items-center rounded-full text-ink-3 hover:bg-canvas">
+        <X aria-hidden className="size-4" />
       </button>
     </div>
   )

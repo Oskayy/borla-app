@@ -1,7 +1,8 @@
-import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import HomeLocationForm from '@/components/HomeLocationForm'
+import { Card, PageHeader } from '@/components/customer/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,15 +19,14 @@ export default async function HomeLocationPage() {
   const initial = profile ? { address: profile.address, lat: profile.homeLat, lng: profile.homeLng } : null
 
   return (
-    <div style={{ maxWidth: 560, margin: '40px auto', padding: '0 20px' }}>
-      <h1 style={{ fontSize: 26, marginBottom: 8 }}>My Home Location</h1>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-        Set this once and we&apos;ll use it for every pickup. You can still choose a different address for a single order.
-        The shaded circles show the areas we collect from.
-      </p>
-      <div className="panel">
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title="Home pin"
+        lead="Set this once and every pickup uses it. You can still choose a different place for a single order. The shaded circles show where we collect."
+      />
+      <Card>
         <HomeLocationForm zones={zones} initial={initial} />
-      </div>
+      </Card>
     </div>
   )
 }

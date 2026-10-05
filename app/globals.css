@@ -1,25 +1,98 @@
 @import "tailwindcss";
 
+/* Trashit design system: one type and component language, three role colours.
+   Customer = green, driver = amber (on night navy), ops = indigo. The landing page uses all three. */
+@theme {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+
+  /* Night: the shift, the driver app, the footer. */
+  --color-night: #0e1726;
+  --color-night-2: #16233a;
+  --color-night-3: #1f2f4a;
+  --color-night-line: #2a3b58;
+  --color-night-ink: #e8edf5;
+  --color-night-muted: #a3b0c4;
+
+  /* Day: reading surfaces. */
+  --color-canvas: #f4f6f5;
+  --color-surface: #ffffff;
+  --color-ink: #121a26;
+  --color-ink-2: #3f4a5a;
+  --color-ink-3: #5f6b7a;
+  --color-line: #e2e6eb;
+  --color-line-strong: #c9d0d8;
+
+  /* Role colours. `-deep` is the text-safe shade on light grounds; `-wash` the quiet tint. */
+  --color-customer: #12825a;
+  --color-customer-deep: #0b6646;
+  --color-customer-wash: #e6f4ed;
+  --color-customer-glow: #3fd99a; /* the customer colour on night grounds */
+  --color-driver: #f0a43a;
+  --color-driver-deep: #9a5b06;
+  --color-driver-wash: #fdf2df;
+  --color-ops: #4b40e0;
+  --color-ops-deep: #3a30c2;
+  --color-ops-wash: #ecebfd;
+
+  --color-danger: #b42318;
+  --color-danger-wash: #fdecea;
+
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  --shadow-card: 0 1px 2px rgb(18 26 38 / 0.04), 0 8px 24px -12px rgb(18 26 38 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(18 26 38 / 0.06), 0 18px 40px -18px rgb(18 26 38 / 0.28);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Legacy names, still used by app screens that have not been rebuilt yet. */
 :root {
-  --color-bg: #F7F5F1;
-  --color-ink: #1B2321;
-  --color-primary: #0F3D3E;
-  --color-accent: #E8A33D;
-  --color-success: #2F7A4D;
-  --color-border: #D8D3C7;
+  --color-bg: #f7f5f1;
+  --color-primary: #0f3d3e;
+  --color-accent: #e8a33d;
+  --color-success: #2f7a4d;
+  --color-border: #d8d3c7;
+  --font-heading: var(--font-geist);
+  --font-body: var(--font-geist);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-ink);
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3 {
-  font-family: var(--font-heading), sans-serif;
+  font-family: var(--font-sans);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
+
+p { text-wrap: pretty; }
+
+body:has([data-surface="new"]) { background: var(--color-surface); }
+
+html { scrollbar-color: var(--color-line-strong) transparent; }
+
+::selection { background: var(--color-customer-wash); color: var(--color-customer-deep); }
+
+:focus-visible {
+  outline: 2px solid var(--color-ops);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input, textarea, select { caret-color: var(--color-customer); }
+
+/* ---- Legacy component classes (pre-redesign screens) ---- */
 
 .btn-primary {
   background: var(--color-primary);
@@ -59,7 +132,7 @@ h1, h2, h3 {
   margin-bottom: 12px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
 }
 
@@ -69,4 +142,35 @@ h1, h2, h3 {
   height: 8px;
   border-radius: 50%;
   margin-right: 6px;
+}
+
+/* Landing: the night timeline steps light up as they scroll into view (browsers with scroll timelines).
+   Elsewhere, and with reduced motion, they are simply shown. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes step-light {
+      from { opacity: 0.3; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    .night-step {
+      animation: step-light linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--i, 0) * 9%) cover calc(28% + var(--i, 0) * 9%);
+    }
+  }
+}
+
+/* ---- Landing: the "how it works" hero flow ---- */
+@keyframes flow-signal { to { stroke-dashoffset: -28; } }
+.flow-signal { animation: flow-signal 0.7s linear infinite; }
+@keyframes flow-flash {
+  0%, 52% { opacity: 0; transform: scale(0.4); }
+  60% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+.flow-flash { transform-box: fill-box; transform-origin: center; animation: flow-flash 3.4s ease-out both; }
+@keyframes flow-screen { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.flow-screen { animation: flow-screen 0.45s var(--ease-out-expo) both; }
+@media (prefers-reduced-motion: reduce) {
+  .flow-signal, .flow-flash, .flow-screen { animation: none; }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
+import { LocateFixed } from 'lucide-react'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 interface Pin {
@@ -105,12 +106,22 @@ export default function PinPicker({
 
   return (
     <div>
-      <button type="button" onClick={useMyLocation} disabled={locating} className="btn-primary" style={{ width: '100%', marginBottom: 8 }}>
-        {locating ? 'Finding you...' : "📍 I'm at the pickup spot: use my location"}
+      <button
+        type="button"
+        onClick={useMyLocation}
+        disabled={locating}
+        className="flex min-h-11 w-full items-center justify-center gap-2 bg-canvas px-4 text-[15px] font-semibold text-ink transition hover:bg-line disabled:opacity-60"
+      >
+        <LocateFixed aria-hidden className="size-4 text-customer" />
+        {locating ? 'Finding you…' : "I'm at the pickup spot: use my location"}
       </button>
-      {gpsNote && <p style={{ fontSize: 12, color: '#444', marginBottom: 8 }}>{gpsNote}</p>}
-      <div ref={container} style={{ width: '100%', height, borderRadius: 8 }} />
-      <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>Tap the map or drag the pin. Zoom in until you can see your roof.</p>
+      {gpsNote && (
+        <p role="status" className="bg-canvas px-4 pb-2 text-sm text-ink-2">
+          {gpsNote}
+        </p>
+      )}
+      <div ref={container} style={{ width: '100%', height }} />
+      <p className="bg-canvas px-4 py-2 text-xs text-ink-3">Tap the map or drag the pin. Zoom in until you can see your roof.</p>
     </div>
   )
 }

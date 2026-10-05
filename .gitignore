@@ -41,3 +41,12 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Local test account credentials (never commit)
+tests/.test-accounts.local.json
+
+# Impeccable: local review captures and live-mode session state
+.impeccable/review/
+.impeccable/live/sessions/
+.impeccable/live/annotations/
+.impeccable/live/roots.json

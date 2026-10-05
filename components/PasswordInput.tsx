@@ -9,6 +9,7 @@ interface PasswordInputProps {
   required?: boolean
   autoComplete?: string
   className?: string
+  id?: string
 }
 
 export default function PasswordInput({
@@ -18,12 +19,14 @@ export default function PasswordInput({
   required,
   autoComplete,
   className,
+  id,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false)
 
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 12 }}>
       <input
+        id={id}
         type={visible ? 'text' : 'password'}
         placeholder={placeholder}
         value={value}
@@ -36,12 +39,15 @@ export default function PasswordInput({
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
         style={{
           position: 'absolute',
           right: 10,
           background: 'none',
           border: 'none',
-          color: '#666',
+          color: '#5f6b7a',
+          minHeight: 32,
           fontSize: 12,
           cursor: 'pointer',
           padding: 4,

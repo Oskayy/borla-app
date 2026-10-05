@@ -6,9 +6,10 @@ import { compressImage } from "@/lib/compress-image";
 interface PhotoCaptureProps {
   onCapture: (file: File, gpsLat: number | null, gpsLng: number | null, gpsAccuracyM?: number | null) => void;
   label?: string;
+  buttonClassName?: string; // redesigned screens pass their own button style
 }
 
-export default function PhotoCapture({ onCapture, label = "Take Photo" }: PhotoCaptureProps) {
+export default function PhotoCapture({ onCapture, label = "Take Photo", buttonClassName = "btn-primary" }: PhotoCaptureProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export default function PhotoCapture({ onCapture, label = "Take Photo" }: PhotoC
     <div>
       <button
         type="button"
-        className="btn-primary"
+        className={buttonClassName}
         onClick={() => inputRef.current?.click()}
         disabled={gettingLocation}
       >
@@ -63,7 +64,7 @@ export default function PhotoCapture({ onCapture, label = "Take Photo" }: PhotoC
         style={{ display: "none" }}
       />
       {error && (
-        <p style={{ color: "#b91c1c", fontSize: "0.85rem", marginTop: 4 }}>{error}</p>
+        <p role="status" style={{ color: "#b42318", fontSize: "0.85rem", marginTop: 6 }}>{error}</p>
       )}
     </div>
   );

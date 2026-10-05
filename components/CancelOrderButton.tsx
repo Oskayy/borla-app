@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle } from 'lucide-react'
 
 // Cancels a paid order before its collection night and refunds it in full.
 export default function CancelOrderButton({ orderId, amount }: { orderId: string; amount: number }) {
@@ -37,7 +38,7 @@ export default function CancelOrderButton({ orderId, amount }: { orderId: string
     return (
       <button
         onClick={() => setConfirming(true)}
-        style={{ background: 'none', border: '1px solid #B3261E', color: '#B3261E', borderRadius: 4, padding: '8px 14px', fontSize: 14, cursor: 'pointer' }}
+        className="inline-flex min-h-11 items-center rounded-control px-4 text-[15px] font-semibold text-danger ring-1 ring-danger/40 transition hover:bg-danger-wash"
       >
         Cancel this pickup
       </button>
@@ -45,29 +46,39 @@ export default function CancelOrderButton({ orderId, amount }: { orderId: string
   }
 
   return (
-    <div>
-      <p style={{ fontSize: 14, marginBottom: 8 }}>
-        Cancel this pickup? You&apos;ll get a full refund of <strong>GHS {amount.toFixed(2)}</strong> to the account you paid with.
-        It usually arrives within a few working days.
+    <div className="rounded-card bg-danger-wash p-4">
+      <p className="text-[15px] text-ink">
+        Cancel this pickup? You&apos;ll get a full refund of <strong className="tabular-nums">GHS {amount.toFixed(2)}</strong> to
+        the account you paid with. It usually arrives within a few working days.
       </p>
+      <label htmlFor="cancel-reason" className="mt-3 block text-sm font-medium text-ink-2">
+        Reason (optional)
+      </label>
       <input
+        id="cancel-reason"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        className="input-field"
-        placeholder="Reason (optional)"
-        style={{ marginBottom: 8 }}
+        className="mt-1.5 block w-full rounded-control border border-line-strong bg-surface px-3.5 py-2.5 text-[15px] focus:border-danger focus:outline-none"
       />
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={cancel} disabled={busy} style={{ background: '#B3261E', color: 'white', border: 'none', borderRadius: 4, padding: '8px 14px', fontSize: 14 }}>
-          {busy ? 'Cancelling...' : 'Yes, cancel and refund'}
+      {error && (
+        <p role="alert" className="mt-2 flex items-center gap-1.5 text-sm text-danger">
+          <AlertCircle aria-hidden className="size-4" /> {error}
+        </p>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          onClick={cancel}
+          disabled={busy}
+          className="inline-flex min-h-11 items-center rounded-control bg-danger px-4 text-[15px] font-semibold text-white disabled:opacity-60"
+        >
+          {busy ? 'Cancelling…' : 'Yes, cancel and refund'}
         </button>
         <button
           onClick={() => setConfirming(false)}
           disabled={busy}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: '8px 14px', fontSize: 14 }}
+          className="inline-flex min-h-11 items-center rounded-control bg-surface px-4 text-[15px] font-semibold text-ink ring-1 ring-line-strong"
         >
-          Keep it
+          Keep my pickup
         </button>
       </div>
     </div>
