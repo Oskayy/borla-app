@@ -46,6 +46,7 @@ export default async function DriverEarningsPage() {
   ])
   const hasOpen = withdrawals.some((w: { status: string }) => OPEN_WITHDRAWAL_STATUSES.includes(w.status))
   const holdUntil = holdEndsLabel(profile.momoChangedAt)
+  const walletInitial = { momoNumber: profile.momoNumber ?? '', momoProvider: profile.momoProvider ?? 'MTN', momoName: profile.momoName ?? '' }
   const providerName = MOMO_PROVIDERS.find((p) => p.code === profile.momoProvider)?.name ?? profile.momoProvider
 
   return (
@@ -75,39 +76,55 @@ export default async function DriverEarningsPage() {
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
+        {/* One card: withdraw, and the wallet the money goes to. */}
         <Card>
           <CardTitle>Withdraw to mobile money</CardTitle>
-          {profile.approvalStatus !== 'APPROVED' ? (
-            <p className="text-[15px] text-ink-2">You can withdraw once your account is approved.</p>
-          ) : !profile.momoNumber ? (
-            <p className="text-[15px] text-ink-2">Add your MoMo wallet below first.</p>
-          ) : hasOpen ? (
-            <p className="flex items-start gap-2 text-[15px] text-ink-2">
-              <Clock aria-hidden className="mt-0.5 size-4 shrink-0 text-action" /> You have a withdrawal in progress. You can ask for another once it&apos;s finished.
-            </p>
-          ) : holdUntil ? (
-            <p className="rounded-control bg-driver-wash p-3.5 text-[15px] text-ink">
-              Your wallet was changed recently, so withdrawals are paused until <strong>{holdUntil}</strong> for your safety. If you didn&apos;t
-              make this change, contact Trashit straight away.
-            </p>
-          ) : wallet.available < MIN_WITHDRAWAL_GHS ? (
-            <p className="text-[15px] text-ink-2">The smallest withdrawal is GHS {MIN_WITHDRAWAL_GHS}. Keep collecting!</p>
+          {!profile.momoNumber ? (
+            <>
+              <p className="mb-4 text-[15px] text-ink-2">First, add the wallet your earnings go to.</p>
+              <PayoutAccountForm initial={walletInitial} providers={MOMO_PROVIDERS} locked={hasOpen} />
+            </>
           ) : (
-            <WithdrawForm available={wallet.available} walletLabel={`${providerName} ${profile.momoNumber}`} />
+            <>
+              {profile.approvalStatus !== 'APPROVED' ? (
+                <p className="text-[15px] text-ink-2">You can withdraw once your account is approved.</p>
+              ) : hasOpen ? (
+                <p className="flex items-start gap-2 text-[15px] text-ink-2">
+                  <Clock aria-hidden className="mt-0.5 size-4 shrink-0 text-action" /> You have a withdrawal in progress. You can ask for another once it&apos;s
+                  finished.
+                </p>
+              ) : holdUntil ? (
+                <p className="rounded-control bg-driver-wash p-3.5 text-[15px] text-ink">
+                  Your wallet was changed recently, so withdrawals are paused until <strong>{holdUntil}</strong> for your safety. If you didn&apos;t make
+                  this change, contact Trashit straight away.
+                </p>
+              ) : wallet.available < MIN_WITHDRAWAL_GHS ? (
+                <p className="text-[15px] text-ink-2">The smallest withdrawal is GHS {MIN_WITHDRAWAL_GHS}. Keep collecting!</p>
+              ) : (
+                <WithdrawForm available={wallet.available} walletLabel={`${providerName} ${profile.momoNumber}`} />
+              )}
+
+              <details className="group mt-5 border-t border-line pt-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0">
+                    <span className="block text-sm text-ink-3">Paid to</span>
+                    <span className="block truncate font-semibold">
+                      {providerName} {profile.momoNumber}
+                      {profile.momoName && <span className="font-normal text-ink-3"> · {profile.momoName}</span>}
+                    </span>
+                  </span>
+                  <span className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-control px-3 text-sm font-semibold text-action-deep ring-1 ring-action/50 group-open:hidden">
+                    Change
+                  </span>
+                  <span className="hidden min-h-11 shrink-0 items-center rounded-control px-3 text-sm font-semibold text-ink-3 group-open:inline-flex">Close</span>
+                </summary>
+                <div className="mt-4">
+                  <PayoutAccountForm initial={walletInitial} providers={MOMO_PROVIDERS} locked={hasOpen} />
+                </div>
+              </details>
+            </>
           )}
-        </Card>
-
-      </div>
-
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
-        <Card>
-          <CardTitle>My MoMo wallet</CardTitle>
-          <PayoutAccountForm
-            initial={{ momoNumber: profile.momoNumber ?? '', momoProvider: profile.momoProvider ?? 'MTN', momoName: profile.momoName ?? '' }}
-            providers={MOMO_PROVIDERS}
-            locked={hasOpen}
-          />
         </Card>
 
         <Card>
