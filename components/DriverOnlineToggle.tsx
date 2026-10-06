@@ -89,7 +89,7 @@ export default function DriverOnlineToggle({
   const disabled = busy || (!online && !canGoOnline)
 
   return (
-    <section className={`rounded-card p-4 ring-1 sm:p-5 ${online ? 'bg-action-wash ring-action/40' : 'bg-surface ring-line'}`}>
+    <section className={`h-full rounded-card p-4 ring-1 sm:p-5 ${online ? 'bg-action-wash ring-action/40' : 'bg-surface ring-line'}`}>
       <div className="flex items-center gap-4">
         <span className={`relative grid size-12 shrink-0 place-items-center rounded-full ${online ? 'bg-action text-on-action' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}>
           <Power aria-hidden className="size-5" strokeWidth={2.5} />
@@ -116,7 +116,7 @@ export default function DriverOnlineToggle({
         </button>
       </div>
 
-      {!online && !canGoOnline && <p className="mt-3 text-sm text-ink-3">You can go online when the shift starts. Collections only happen during shift hours.</p>}
+      {!online && !canGoOnline && <p className="mt-3 text-sm text-ink-3">You can go online when the shift starts.</p>}
       {online && gps === 'on' && (
         <p className="mt-3 flex items-center gap-1.5 text-sm text-ink-2">
           <LocateFixed aria-hidden className="size-4 text-action" /> Sharing your location while you are online

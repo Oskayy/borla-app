@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, Flag, MapPin, Phone, Power } from 'lucide-react'
+import { AlertTriangle, Flag, MapPin, Phone } from 'lucide-react'
 import NavigateButtons from '@/components/NavigateButtons'
 import { AcceptAllButton, AcceptCountdown } from '@/components/StopResponse'
 import { useLivePosition } from '@/lib/use-live-position'
@@ -41,16 +41,8 @@ export default function NextStopCard({
     )
   }
 
-  if (!online) {
-    return (
-      <section className={`${card} bg-surface ring-line`}>
-        <p className="flex items-center gap-3 text-[15px] text-ink-2">
-          <Power aria-hidden className="size-5 shrink-0 text-ink-3" />
-          Go online to start your route. Directions to your first stop will appear here.
-        </p>
-      </section>
-    )
-  }
+  // Offline: the online switch already says what to do, so nothing more here.
+  if (!online) return null
 
   const startNote = position
     ? `Directions start from where you are now (GPS within ${Math.round(position.accuracyM)} m).`
