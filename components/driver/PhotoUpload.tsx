@@ -5,19 +5,24 @@ import { useRouter } from 'next/navigation'
 import { Camera, Truck } from 'lucide-react'
 import { compressImage } from '@/lib/compress-image'
 
-// Tap the picture to take or choose a new one. `round` for the profile picture, square for the vehicle.
+// Tap the picture (or the button) to take or choose a new one. `round` for the profile picture, square for the vehicle.
+// `size` sets the round picture's size; `withButton` adds a labelled button beside it.
 export default function PhotoUpload({
   type,
   url,
   fallback,
   round = false,
   label,
+  size = 'size-20',
+  withButton = false,
 }: {
   type: string // driver document type: 'avatar' | 'vehicle_photo'
   url: string | null
   fallback?: string // initials for a profile picture
   round?: boolean
   label: string
+  size?: string
+  withButton?: boolean
 }) {
   const router = useRouter()
   const input = useRef<HTMLInputElement | null>(null)
@@ -47,35 +52,72 @@ export default function PhotoUpload({
     }
   }
 
+  const pick = () => input.current?.click()
   const shown = preview ?? url
-  const shape = round ? 'size-20 rounded-full' : 'aspect-[4/3] w-full rounded-card'
-  return (
-    <div className={round ? 'shrink-0' : ''}>
+
+  const picture = round ? (
+    // The camera badge sits on the edge, outside the clipped circle, so it's always fully visible.
+    <div className={`relative shrink-0 ${size}`}>
       <button
         type="button"
-        onClick={() => input.current?.click()}
+        onClick={pick}
         disabled={busy}
         aria-label={label}
-        className={`press group relative grid place-items-center overflow-hidden bg-canvas ring-1 ring-line ${shape} ${busy ? 'opacity-70' : ''}`}
+        className={`press grid size-full place-items-center overflow-hidden rounded-full bg-canvas ring-2 ring-line ${busy ? 'opacity-70' : ''}`}
       >
         {shown ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={shown} alt="" className="size-full object-cover" />
-        ) : round ? (
-          <span className="grid size-full place-items-center bg-action text-xl font-semibold text-on-action">{fallback}</span>
         ) : (
-          <span className="flex flex-col items-center gap-1.5 text-sm text-ink-3">
-            <Truck aria-hidden className="size-7" /> Add a photo of your vehicle
-          </span>
+          <span className="grid size-full place-items-center bg-action text-xl font-semibold text-on-action">{fallback}</span>
         )}
-        <span
-          className={`absolute grid place-items-center rounded-full bg-action text-on-action shadow-card ring-2 ring-surface ${
-            round ? 'bottom-0 right-0 size-7' : 'bottom-3 right-3 size-10'
-          }`}
-        >
-          <Camera aria-hidden className={round ? 'size-3.5' : 'size-5'} />
-        </span>
       </button>
+      <button
+        type="button"
+        onClick={pick}
+        disabled={busy}
+        tabIndex={-1}
+        aria-hidden
+        className="absolute -bottom-1 -right-1 grid size-9 place-items-center rounded-full bg-action text-on-action shadow-lift ring-4 ring-surface transition hover:brightness-95"
+      >
+        <Camera className="size-[18px]" strokeWidth={2.4} />
+      </button>
+    </div>
+  ) : (
+    <button
+      type="button"
+      onClick={pick}
+      disabled={busy}
+      aria-label={label}
+      className={`press relative grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-card bg-canvas ring-1 ring-line ${busy ? 'opacity-70' : ''}`}
+    >
+      {shown ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={shown} alt="" className="size-full object-cover" />
+      ) : (
+        <span className="flex flex-col items-center gap-1.5 text-sm text-ink-3">
+          <Truck aria-hidden className="size-7" /> Add a photo of your vehicle
+        </span>
+      )}
+      <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-action px-3.5 py-2 text-sm font-semibold text-on-action shadow-lift">
+        <Camera aria-hidden className="size-4" /> {shown ? 'Change photo' : 'Add photo'}
+      </span>
+    </button>
+  )
+
+  return (
+    <div className={withButton ? 'flex items-center gap-4' : round ? 'shrink-0' : ''}>
+      {picture}
+      {withButton && (
+        <button
+          type="button"
+          onClick={pick}
+          disabled={busy}
+          className="press inline-flex min-h-11 items-center gap-2 rounded-control px-4 text-[15px] font-semibold text-action-deep ring-1 ring-action/50 hover:bg-action-wash disabled:opacity-60"
+        >
+          <Camera aria-hidden className="size-4" /> {busy ? 'Uploading…' : shown ? 'Change photo' : 'Add a photo'}
+        </button>
+      )}
       <input
         ref={input}
         type="file"
@@ -88,7 +130,7 @@ export default function PhotoUpload({
           if (f) upload(f)
         }}
       />
-      {busy && <p className="mt-1.5 text-xs text-ink-3">Uploading…</p>}
+      {!withButton && busy && <p className="mt-1.5 text-xs text-ink-3">Uploading…</p>}
       <p aria-live="polite" className="mt-1.5 text-xs text-danger empty:hidden">
         {error}
       </p>
