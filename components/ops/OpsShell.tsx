@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -154,14 +154,20 @@ function ShiftCard({ shift }: { shift: ShellShift }) {
 
 function UserMenu({ name, role }: { name: string; role: string }) {
   const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!open) return
-    const close = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    window.addEventListener('keydown', close)
-    return () => window.removeEventListener('keydown', close)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const onDown = (e: PointerEvent) => box.current && !box.current.contains(e.target as Node) && setOpen(false)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pointerdown', onDown)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pointerdown', onDown)
+    }
   }, [open])
   return (
-    <div className="relative">
+    <div ref={box} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="press flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 hover:bg-canvas">
         <span className="grid size-9 place-items-center rounded-full bg-ops text-sm font-semibold text-white">{initials(name)}</span>
         <span className="hidden text-left leading-tight sm:block">
@@ -187,14 +193,20 @@ function UserMenu({ name, role }: { name: string; role: string }) {
 
 function HealthMenu({ health, bad }: { health: ShellHealth[]; bad: number }) {
   const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!open) return
-    const close = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    window.addEventListener('keydown', close)
-    return () => window.removeEventListener('keydown', close)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const onDown = (e: PointerEvent) => box.current && !box.current.contains(e.target as Node) && setOpen(false)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pointerdown', onDown)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pointerdown', onDown)
+    }
   }, [open])
   return (
-    <div className="relative">
+    <div ref={box} className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

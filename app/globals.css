@@ -65,6 +65,8 @@
 }
 
 html {
+  /* With body below: phones can't pan or zoom the page sideways, so fixed bars (bottom tabs) stay put. */
+  overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
 }
@@ -74,6 +76,14 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* Nothing may push the page sideways on a phone (clip, not hidden: sticky bars keep working). */
+  overflow-x: clip;
+}
+
+/* A grid with no column template gets one column that can shrink, so long text (addresses, order lines)
+   truncates instead of stretching the page past the screen. In the base layer: grid-cols-* utilities still win. */
+@layer base {
+  .grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 h1, h2, h3 {

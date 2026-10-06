@@ -59,7 +59,7 @@ export default function AlertBell({
         <div
           role="dialog"
           aria-label={label}
-          className="absolute right-0 top-full z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-card bg-surface shadow-lift ring-1 ring-line"
+          className="fixed inset-x-3 top-[4.5rem] z-40 overflow-hidden sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[22rem] rounded-card bg-surface shadow-lift ring-1 ring-line"
         >
           <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-2.5">
             <p className="text-sm font-semibold">{label}</p>
