@@ -12,6 +12,7 @@ import { getWalletSummary } from '@/lib/wallet-server'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import { describeHours } from '@/lib/disposal-sites'
+import { driverPoolFromSnapshot } from '@/lib/pricing-core'
 import { planningShiftDate } from '@/lib/schedule'
 import { worksNight } from '@/lib/availability'
 
@@ -60,7 +61,18 @@ export default async function DriverDashboard() {
     orderBy: [{ routeStop: { route: { createdAt: 'asc' } } }, { routeStop: { sequence: 'asc' } }],
   })
 
-  const wallet = await getWalletSummary(user.id)
+  const [wallet, payoutRule] = await Promise.all([
+    getWalletSummary(user.id),
+    prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true, disposalPercent: true } }),
+  ])
+  // The driver's pay for a stop: the same sums the pickup and unload payouts use (driver pool x the active rule).
+  const payFor = (snapshot: unknown) => {
+    const pool = driverPoolFromSnapshot(snapshot)
+    if (pool === null || !payoutRule) return null
+    const pickup = Math.round(pool * payoutRule.pickupPercent) / 100
+    const unload = Math.round(pool * payoutRule.disposalPercent) / 100
+    return { total: Math.round((pickup + unload) * 100) / 100, pickup, unload }
+  }
 
   // Group the night's orders into trips: the stops, then where to unload.
   const groups: TripGroup[] = []
@@ -90,7 +102,7 @@ export default async function DriverDashboard() {
       status: order.status,
       sequence: stop?.sequence ?? null,
       address: quote?.address ?? 'Address not available',
-      price: quote?.price ?? null,
+      pay: payFor(order.quoteSnapshot),
       bins: quote?.lines?.map((l) => `${l.count} × ${l.label}`).join(', ') ?? null,
       lat: order.latitude,
       lng: order.longitude,

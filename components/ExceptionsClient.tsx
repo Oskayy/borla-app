@@ -61,12 +61,12 @@ function refundState(r: RefundRow): { text: string; cls: string } {
       return { text: 'Refunded', cls: 'bg-ops-wash text-ops-deep' }
     case 'PENDING':
     case 'PROCESSING':
-      return { text: 'Being sent', cls: 'bg-driver-wash text-driver-deep' }
+      return { text: 'Being sent', cls: 'bg-canvas text-ink-2 ring-1 ring-line' }
     case 'NEEDS_ATTENTION':
       return { text: 'Check Paystack', cls: 'bg-danger-wash text-danger' }
     case 'AWAITING_APPROVAL':
       return r.requestedByMe
-        ? { text: 'Waiting for a colleague', cls: 'bg-driver-wash text-driver-deep' }
+        ? { text: 'Waiting for a colleague', cls: 'bg-canvas text-ink-2 ring-1 ring-line' }
         : { text: 'Needs your approval', cls: 'bg-danger-wash text-danger' }
     case 'FAILED':
       return { text: 'Failed', cls: 'bg-danger-wash text-danger' }
@@ -75,9 +75,11 @@ function refundState(r: RefundRow): { text: string; cls: string } {
   }
 }
 
+// Payment statuses in plain words ('success' just means paid, so it isn't repeated).
+const PAYMENT_STATE: Record<string, string> = { success: '', partially_refunded: 'part refunded', refunded: 'refunded', failed: 'failed', pending: 'not finished' }
 const ERROR_LINE = 'mt-2 text-sm text-danger empty:hidden'
 
-function ApproveRefund({ id }: { id: string }) {
+function ApproveRefund({ id, amount }: { id: string; amount: number }) {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -103,8 +105,13 @@ function ApproveRefund({ id }: { id: string }) {
   return (
     <div className="mt-4 border-t border-line pt-4">
       <div className="flex flex-wrap items-end gap-2.5">
-        <button type="button" className={BUTTON_PRIMARY} disabled={busy} onClick={() => decide('approve')}>
-          {busy ? 'Saving…' : 'Approve and send refund'}
+        <button
+          type="button"
+          className={BUTTON_PRIMARY}
+          disabled={busy}
+          onClick={() => confirm(`Approve and send a refund of GHS ${amount.toFixed(2)} through Paystack?`) && decide('approve')}
+        >
+          {busy ? 'Saving…' : `Approve and send GHS ${amount.toFixed(2)}`}
         </button>
         <label className="min-w-56 flex-1">
           <span className="sr-only">Reason, to decline</span>
@@ -312,7 +319,7 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                         <p className="mt-2.5 rounded-control bg-canvas p-3 text-sm text-ink">{item.reason}</p>
                         {item.payments.length > 0 && (
                           <p className="mt-2 text-sm text-ink-3">
-                            {item.payments.map((p) => `Paid GHS ${p.amount.toFixed(2)} (${p.status}), GHS ${p.refundable.toFixed(2)} refundable`).join(' · ')}
+                            {item.payments.map((p) => `Paid GHS ${p.amount.toFixed(2)}${PAYMENT_STATE[p.status] ? ` (${PAYMENT_STATE[p.status]})` : ''}, GHS ${p.refundable.toFixed(2)} refundable`).join(' · ')}
                           </p>
                         )}
                       </div>
@@ -356,7 +363,7 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                                 <select value={paymentId} onChange={(e) => setPaymentId(e.target.value)} className={`${FIELD} mt-1.5 w-auto`}>
                                   {item.payments.map((p) => (
                                     <option key={p.id} value={p.id}>
-                                      GHS {p.amount.toFixed(2)} ({p.status})
+                                      GHS {p.amount.toFixed(2)} ({PAYMENT_STATE[p.status] ?? p.status})
                                     </option>
                                   ))}
                                 </select>
@@ -389,8 +396,18 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                           />
                         </label>
                         <div className="mt-3 flex flex-wrap gap-2.5">
-                          <button type="button" onClick={() => submit(item)} disabled={busy || note.trim().length < 3} className={BUTTON_PRIMARY}>
-                            {busy ? 'Saving…' : 'Confirm'}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              mode !== 'refund' ||
+                              confirm(`Refund GHS ${Number(amount || 0).toFixed(2)} to the customer${cancelToo ? ' and cancel the order' : ''}?`)
+                                ? submit(item)
+                                : undefined
+                            }
+                            disabled={busy || note.trim().length < 3}
+                            className={mode === 'refund' ? BUTTON_DANGER : BUTTON_PRIMARY}
+                          >
+                            {busy ? 'Saving…' : mode === 'refund' ? `Refund GHS ${Number(amount || 0).toFixed(2)}` : 'Confirm'}
                           </button>
                           <button type="button" onClick={() => setOpen(null)} disabled={busy} className={BUTTON_QUIET}>
                             Cancel
@@ -435,7 +452,7 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                     <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${state.cls}`}>{state.text}</span>
                   </div>
                   {canRefund && r.status === 'NEEDS_ATTENTION' && <SettleRefund id={r.id} />}
-                  {canRefund && r.status === 'AWAITING_APPROVAL' && !r.requestedByMe && <ApproveRefund id={r.id} />}
+                  {canRefund && r.status === 'AWAITING_APPROVAL' && !r.requestedByMe && <ApproveRefund id={r.id} amount={r.amount} />}
                 </li>
               )
             })}

@@ -17,7 +17,7 @@ const WITHDRAWAL_LABELS: Record<string, { text: string; cls: string }> = {
   REQUESTED: { text: 'Waiting for approval', cls: 'text-action-deep' },
   PROCESSING: { text: 'Being sent', cls: 'text-action-deep' },
   CONFIRMING: { text: 'Being sent', cls: 'text-action-deep' },
-  PAID: { text: 'Sent', cls: 'text-customer-deep' },
+  PAID: { text: 'Sent', cls: 'text-ops-deep' },
   FAILED: { text: 'Failed, money back in your balance', cls: 'text-danger' },
   REJECTED: { text: 'Not approved, money back in your balance', cls: 'text-danger' },
 }
@@ -170,7 +170,7 @@ export default async function DriverEarningsPage() {
                     {e.type === 'driver_payout_pickup' ? 'Pickup share' : 'Unload share'} · {dateTimeLabel(e.createdAt)}
                   </span>
                 </span>
-                <span className="shrink-0 font-semibold tabular-nums text-customer-deep">+ GHS {e.amount.toFixed(2)}</span>
+                <span className="shrink-0 font-semibold tabular-nums text-action-deep">+ GHS {e.amount.toFixed(2)}</span>
               </li>
             ))}
           </ul>

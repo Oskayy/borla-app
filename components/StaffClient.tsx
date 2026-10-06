@@ -83,9 +83,9 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
   return (
     <div className="grid gap-8">
       {secret && (
-        <div role="alert" className="rounded-card bg-driver-wash p-5 ring-1 ring-driver/40">
+        <div role="alert" className="rounded-card bg-ops-wash p-5 ring-1 ring-ops/30">
           <p className="flex items-center gap-2 font-semibold">
-            <KeyRound aria-hidden className="size-4 text-driver-deep" /> Temporary password for {secret.who}
+            <KeyRound aria-hidden className="size-4 text-ops-deep" /> Temporary password for {secret.who}
           </p>
           <p className="my-3 select-all rounded-control bg-surface px-4 py-3 font-mono text-lg tracking-wide ring-1 ring-line">{secret.password}</p>
           <p className="text-sm text-ink-2">
@@ -144,7 +144,7 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
                     <span className="font-semibold">{r.name}</span>
                     {r.isMe && <Chip>You</Chip>}
                     {!r.active && <Chip tone="danger">Suspended</Chip>}
-                    {r.mustChangePassword && r.active && <Chip tone="driver">Hasn&apos;t signed in yet</Chip>}
+                    {r.mustChangePassword && r.active && <Chip>Hasn&apos;t signed in yet</Chip>}
                   </p>
                   <p className="mt-0.5 text-sm text-ink-3">
                     {r.email} · {r.phone} · added {dateLabel(r.createdAt)}

@@ -3,19 +3,21 @@ import { ChevronRight, type LucideIcon } from 'lucide-react'
 import InfoTip from '@/components/InfoTip'
 
 // One row in an Account list: icon, title, an optional value on the right, and an "i" only where a hint is needed.
+// The "i" sits beside the link, not inside it (a button inside a link is invalid and confuses screen readers);
+// the whole row still looks and taps like one item.
 export function AccountRow({ href, icon: Icon, title, value, info }: { href: string; icon: LucideIcon; title: string; value?: string; info?: string }) {
   return (
-    <li>
-      <Link href={href} className="press flex min-h-14 items-center gap-3 rounded-control px-2 hover:bg-canvas">
+    <li className="flex min-h-14 items-center gap-1.5 rounded-control px-2 hover:bg-canvas">
+      <Link href={href} className="press flex min-h-14 min-w-0 items-center gap-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-canvas text-ink-2 ring-1 ring-line">
           <Icon aria-hidden className="size-[18px]" />
         </span>
-        <span className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className="truncate text-[15px] font-medium">{title}</span>
-          {info && <InfoTip text={info} label={`About ${title}`} />}
-        </span>
-        {value && <span className="max-w-[45%] shrink-0 truncate text-sm text-ink-3">{value}</span>}
-        <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-3" />
+        <span className="truncate text-[15px] font-medium">{title}</span>
+      </Link>
+      {info && <InfoTip text={info} label={`About ${title}`} />}
+      <Link href={href} tabIndex={-1} aria-hidden className="flex min-h-14 min-w-0 flex-1 items-center justify-end gap-2">
+        {value && <span className="truncate text-sm text-ink-3">{value}</span>}
+        <ChevronRight className="size-4 shrink-0 text-ink-3" />
       </Link>
     </li>
   )

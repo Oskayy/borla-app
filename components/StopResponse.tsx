@@ -6,13 +6,8 @@ import { AlertCircle, Check, Timer, X } from 'lucide-react'
 import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
 import { useNow } from '@/lib/use-now'
 
-const REASONS = [
-  'Too far from my area',
-  'My vehicle is full',
-  'Vehicle problem',
-  'Not safe to go there tonight',
-  'Personal emergency',
-]
+// Four common reasons (plus "Other"), few enough to choose one-handed.
+const REASONS = ['Too far from my area', 'My vehicle is full', 'Vehicle problem or emergency', 'Not safe to go there tonight']
 
 async function accept(orderIds: string[]): Promise<string> {
   try {

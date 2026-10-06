@@ -42,7 +42,7 @@ export default async function DriverAccountPage() {
     prisma.user.findUnique({ where: { id: user.id }, select: { name: true, phone: true, email: true, createdAt: true } }),
     prisma.driverProfile.findUnique({
       where: { userId: user.id },
-      select: { workNights: true, vehiclePlate: true, zone: { select: { name: true } }, vehicleTypeRef: { select: { name: true } } },
+      select: { approvalStatus: true, workNights: true, vehiclePlate: true, zone: { select: { name: true } }, vehicleTypeRef: { select: { name: true } } },
     }),
     driverPhotoUrls(user.id, [AVATAR_DOC]),
   ])
@@ -63,7 +63,9 @@ export default async function DriverAccountPage() {
           <p className="truncate text-lg font-bold tracking-tight">{me.name}</p>
           <p className="truncate text-sm text-ink-3">{me.phone}</p>
           <p className="truncate text-sm text-ink-3">{me.email}</p>
-          <p className="text-xs text-ink-3">Driving with Trashit since {dateLabel(me.createdAt)}</p>
+          <p className="text-xs text-ink-3">
+            {profile?.approvalStatus === 'APPROVED' ? 'Driving with Trashit since' : 'Signed up'} {dateLabel(me.createdAt)}
+          </p>
         </div>
         <Link href="/dashboard/driver/account/profile" className={BUTTON_QUIET}>
           <Pencil aria-hidden className="size-4" /> Edit

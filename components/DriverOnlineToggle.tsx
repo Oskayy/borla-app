@@ -105,7 +105,7 @@ export default function DriverOnlineToggle({
           type="button"
           role="switch"
           aria-checked={online}
-          aria-label={online ? 'Go offline' : 'Go online'}
+          aria-label="Online"
           onClick={toggle}
           disabled={disabled}
           className={`min-h-12 shrink-0 rounded-full px-5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${

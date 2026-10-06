@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
 import { AlertCircle, Check, Flag } from 'lucide-react'
+import { flash } from '@/components/driver/Flash'
 import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
 
 // One photo at the disposal site confirms the whole trip.
@@ -41,7 +42,8 @@ export default function ConfirmTripUnload({
     const filePath = `${photoOrderId}/disposal-trip-${Date.now()}.jpg`
     const { error: uploadError } = await supabase.storage.from('pickup-evidence').upload(filePath, file)
     if (uploadError) {
-      setError('Photo upload failed: ' + uploadError.message)
+      console.error('[unload] photo upload failed', uploadError)
+      setError("The photo didn't upload. Check your connection and try again.")
       setLoading(false)
       return
     }
@@ -57,11 +59,13 @@ export default function ConfirmTripUnload({
         setError(data.error || 'Could not confirm unloading')
         return
       }
-      setResult(
-        data.verified
-          ? `Unload confirmed for ${data.orders} order(s). GHS ${Number(data.paid ?? 0).toFixed(2)} added to your earnings.`
-          : `Received. Ops will check your photo because ${data.why}. You'll be paid once it's approved.`
-      )
+      const n = Number(data.orders ?? 0)
+      const message = data.verified
+        ? `Unload confirmed for ${n} ${n === 1 ? 'order' : 'orders'}. GHS ${Number(data.paid ?? 0).toFixed(2)} added to your earnings.`
+        : `Received. Ops will check your photo because ${data.why}. You'll be paid once it's approved.`
+      setResult(message)
+      // The trip card folds away on refresh, so keep the message on the page above it.
+      flash(message, data.verified ? 'ok' : 'warn')
       setFile(null)
       router.refresh()
     } catch {

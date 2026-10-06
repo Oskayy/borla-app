@@ -15,7 +15,6 @@ export default function DriverCommunicationPage() {
           <InstallPrompt />
         </div>
       </Card>
-      <p className="mt-4 px-1 text-sm text-ink-3">Text messages go to the phone number in your details.</p>
     </div>
   )
 }

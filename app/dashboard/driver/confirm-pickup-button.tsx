@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
 import { errorMessage } from '@/lib/errors'
 import { AlertCircle, Camera, Check } from 'lucide-react'
+import { flash } from '@/components/driver/Flash'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
@@ -51,11 +52,11 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
       setLoading(false)
       if (res.ok) {
         if (data.flagged) {
-          setWarning(
-            `Location check: this photo was taken about ${Math.round(
-              data.distanceMeters
-            )}m from the pickup address. Pickup was still confirmed, but this has been flagged for ops review.`
-          )
+          const text = `Pickup confirmed, but the photo was taken about ${Math.round(data.distanceMeters)} m from the pin, so ops will check it.`
+          setWarning(text)
+          flash(text, 'warn') // this card goes away on refresh; keep the warning on the page
+        } else {
+          flash('Pickup confirmed.')
         }
         router.refresh()
       } else {

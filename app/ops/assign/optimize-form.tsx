@@ -180,7 +180,7 @@ export default function OptimizeForm({
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2 font-medium">
                       {order.address}
-                      {order.isLate && <span className="rounded-full bg-driver-wash px-2 py-0.5 text-xs font-semibold text-driver-deep">Late booking</span>}
+                      {order.isLate && <span className="rounded-full bg-canvas px-2 py-0.5 text-xs font-semibold text-ink-2 ring-1 ring-line">Late booking</span>}
                     </span>
                     <span className="mt-0.5 block text-sm text-ink-2">
                       {order.price != null && <span className="tabular-nums">GHS {order.price.toFixed(2)} · </span>}
@@ -192,7 +192,7 @@ export default function OptimizeForm({
                     </span>
                     <span className={`mt-1 block text-sm font-medium ${count === 0 ? 'text-danger' : 'text-ink-2'}`}>
                       {count === 0 ? 'No driver in range' : `${count} ${count === 1 ? 'driver' : 'drivers'} in range with room`}
-                      {!hasCoords && <span className="font-normal text-driver-deep"> · no map pin, will be assigned without routing</span>}
+                      {!hasCoords && <span className="font-normal text-ink-3"> · no map pin, will be assigned without routing</span>}
                     </span>
                   </span>
                 </label>

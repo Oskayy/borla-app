@@ -1,7 +1,8 @@
 import { CheckCircle2 } from 'lucide-react'
 
 // Small pieces the ops pages share, on the design tokens. Tones follow the Legend Rule:
-// ops (indigo) = verified / done by ops, driver (amber) = with a driver or in progress, danger = needs a person.
+// ops (indigo) = verified / done by ops, driver (amber) = held by a driver (online, on board) and nothing else,
+// neutral = waiting or in progress, danger = needs a person.
 
 export type Tone = 'neutral' | 'ops' | 'driver' | 'danger'
 

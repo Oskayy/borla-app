@@ -33,7 +33,7 @@ export default function InfoTip({ text, label = 'More information' }: { text: st
           e.stopPropagation()
           setOpen((o) => !o)
         }}
-        className="-m-2 grid size-8 place-items-center rounded-full text-ink-3 transition hover:text-ink"
+        className="-m-3 grid size-11 place-items-center rounded-full text-ink-3 transition hover:text-ink"
       >
         <Info aria-hidden className="size-4" />
       </button>

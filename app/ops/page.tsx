@@ -4,7 +4,7 @@ import { AlertTriangle, BadgeCheck, CheckCircle2, ChevronRight, Flag, Moon, Rout
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
-import { isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
+import { isDriverAvailable, isWithinShift, localParts, windowLabel } from '@/lib/shift'
 import { dbDate, planningShiftDate } from '@/lib/schedule'
 import { worksNight } from '@/lib/availability'
 import { REFUND_ROLES } from '@/lib/refunds'
@@ -34,6 +34,18 @@ const QUEUE_ROWS: (Omit<Attention, 'count'> & { queue: QueueKey })[] = [
 ]
 
 // Reads the clock: outside the component so the render stays pure.
+const span = (mins: number) => (mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`)
+
+// Reads the clock: outside the component.
+function urgency(settings: Awaited<ReturnType<typeof getShiftSettings>>, oldest: Date | null): string | null {
+  const now = new Date()
+  const toCutoff = (settings.hardCutoffMinutes - localParts(now, settings.timezone).minutes + 1440) % 1440
+  const parts = [] as string[]
+  if (oldest) parts.push(`oldest waiting ${span(Math.max(0, Math.round((now.getTime() - oldest.getTime()) / 60000)))}`)
+  if (toCutoff <= 6 * 60) parts.push(`late-order cutoff in ${span(toCutoff)}`)
+  return parts.length ? parts.join(' · ') : null
+}
+
 function tonightInfo(settings: Awaited<ReturnType<typeof getShiftSettings>>) {
   const now = new Date()
   const night = planningShiftDate(now, settings)
@@ -101,6 +113,12 @@ export default async function OpsOverview() {
       icon: Wallet,
     })
   }
+  if (counts.needsDriver > 0) {
+    const oldest = await prisma.order.findFirst({ where: { status: 'PAID', driverId: null }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } })
+    const when = urgency(settings, oldest?.createdAt ?? null)
+    const row = attention.find((a) => a.key === 'needsDriver')
+    if (row && when) row.hint = `${when.charAt(0).toUpperCase()}${when.slice(1)}.`
+  }
   const waiting = attention.filter((a) => a.count > 0)
 
   const stageCounts = STAGES.map((s) => ({
@@ -138,7 +156,11 @@ export default async function OpsOverview() {
               {waiting.map((a) => (
                 <li key={a.key}>
                   <Link href={a.href} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-canvas sm:px-6">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ops-wash text-ops-deep">
+                    <span
+                      className={`grid size-10 shrink-0 place-items-center rounded-full ${
+                        a.key === 'needsDriver' || a.key === 'exceptions' ? 'bg-danger-wash text-danger' : 'bg-ops-wash text-ops-deep'
+                      }`}
+                    >
                       <a.icon aria-hidden className="size-[18px]" />
                     </span>
                     <span className="min-w-0 flex-1">

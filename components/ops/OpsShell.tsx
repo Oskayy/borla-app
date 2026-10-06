@@ -70,7 +70,8 @@ export interface ShellShift {
   online: number
 }
 
-const DOT: Record<ShellHealth['state'], string> = { ok: 'bg-[#22a06b]', warn: 'bg-driver', off: 'bg-ink-3' }
+// Health: indigo = checked and fine (ops / verification), red = needs a person, grey = switched off.
+const DOT: Record<ShellHealth['state'], string> = { ok: 'bg-ops', warn: 'bg-danger', off: 'bg-ink-3' }
 
 function isActive(pathname: string, href: string) {
   return href === '/ops' ? pathname === '/ops' : pathname === href || pathname.startsWith(`${href}/`)
@@ -90,7 +91,7 @@ function Nav({ sections, onNavigate }: { sections: ShellSection[]; onNavigate?: 
     <nav aria-label="Ops" className="grid gap-5">
       {sections.map((s) => (
         <div key={s.title}>
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-night-muted">{s.title}</p>
+          <p className="px-3 text-xs font-semibold text-night-muted">{s.title}</p>
           <ul className="mt-1.5 grid gap-0.5">
             {s.links.map((l) => {
               const on = isActive(pathname, l.href)
@@ -132,12 +133,12 @@ function ShiftCard({ shift }: { shift: ShellShift }) {
   return (
     <div className="rounded-card bg-white/5 p-3.5 ring-1 ring-white/10">
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-night-muted">
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-night-muted">
           <Moon aria-hidden className="size-3.5" /> Night shift
         </p>
         {shift.running ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#22a06b]/20 px-2 py-0.5 text-[11px] font-bold text-[#5fd39a]">
-            <span className="size-1.5 animate-pulse rounded-full bg-[#5fd39a]" aria-hidden /> Live
+          <span className="inline-flex items-center gap-1 rounded-full bg-ops/30 px-2 py-0.5 text-[11px] font-bold text-[#c9c5ff]">
+            <span className="size-1.5 animate-pulse rounded-full bg-[#c9c5ff]" aria-hidden /> Live
           </span>
         ) : (
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-night-muted">Not running</span>
@@ -199,10 +200,10 @@ function HealthMenu({ health, bad }: { health: ShellHealth[]; bad: number }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className={`press flex min-h-10 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 transition hover:bg-canvas ${
-          bad ? 'text-driver-deep ring-driver/40' : 'text-ink-2 ring-line'
+          bad ? 'text-danger ring-danger/40' : 'text-ink-2 ring-line'
         }`}
       >
-        <span className={`size-2 rounded-full ${bad ? 'bg-driver' : 'bg-[#22a06b]'}`} aria-hidden />
+        <span className={`size-2 rounded-full ${bad ? 'bg-danger' : 'bg-ops'}`} aria-hidden />
         {bad ? `${bad} system ${bad === 1 ? 'warning' : 'warnings'}` : 'All systems working'}
         <ChevronDown aria-hidden className="size-4" />
       </button>
@@ -213,7 +214,7 @@ function HealthMenu({ health, bad }: { health: ShellHealth[]; bad: number }) {
               <span className="flex items-center gap-2 font-medium">
                 <span className={`size-2 rounded-full ${DOT[h.state]}`} aria-hidden /> {h.label}
               </span>
-              <span className={h.state === 'warn' ? 'font-medium text-driver-deep' : 'text-ink-3'}>{h.text}</span>
+              <span className={h.state === 'warn' ? 'font-medium text-danger' : 'text-ink-3'}>{h.text}</span>
             </li>
           ))}
         </ul>
@@ -253,7 +254,7 @@ export default function OpsShell({
     <div className="flex h-full flex-col">
       <Link href="/ops" onClick={onNavigate} aria-label="Trashit operations home" className="flex shrink-0 items-center gap-2.5 px-6 pb-5 pt-5">
         <Logo onDark height={24} />
-        <span className="border-l border-white/15 pl-2.5 text-[11px] font-semibold uppercase leading-tight tracking-[0.08em] text-night-muted">
+        <span className="border-l border-white/15 pl-2.5 text-xs font-semibold leading-tight text-night-muted">
           Operations
           <br />
           console
@@ -309,12 +310,12 @@ export default function OpsShell({
             {/* System health: real signals only (lib/system-health.ts). The full strip only where it fits;
                 otherwise a compact button that opens the list. */}
             <div className="hidden min-w-0 items-center gap-5 overflow-hidden 2xl:flex">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">System</span>
+              <span className="text-xs font-semibold text-ink-3">System</span>
               {health.map((h) => (
                 <span key={h.label} className="flex items-center gap-1.5 whitespace-nowrap text-sm" title={`${h.label}: ${h.text}`}>
                   <span className={`size-2 rounded-full ${DOT[h.state]}`} aria-hidden />
                   <span className="font-medium">{h.label}</span>
-                  <span className={h.state === 'warn' ? 'font-medium text-driver-deep' : 'text-ink-3'}>{h.text}</span>
+                  <span className={h.state === 'warn' ? 'font-medium text-danger' : 'text-ink-3'}>{h.text}</span>
                 </span>
               ))}
             </div>

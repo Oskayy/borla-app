@@ -11,6 +11,7 @@ import StopResponse from '@/components/StopResponse'
 import DriverLiveUpdates from '@/components/DriverLiveUpdates'
 import EnableAlerts from '@/components/EnableAlerts'
 import type { NextPoint } from '@/lib/driver-next'
+import FlashHost from '@/components/driver/Flash'
 
 // The driver's Tonight screen: online switch and balance side by side, the next thing to do, then the night's
 // trips (one card each: stops, then where to unload) beside the map.
@@ -26,7 +27,7 @@ export interface TripGroup {
     status: string
     sequence: number | null
     address: string
-    price: number | null
+    pay: { total: number; pickup: number; unload: number } | null // the driver's pay for the stop (not the customer's price)
     bins: string | null
     lat: number | null
     lng: number | null
@@ -69,7 +70,7 @@ function stopState(o: Stop): { text: string; cls: string } {
 // A trip is done once nothing is left to collect or unload.
 const tripDone = (g: TripGroup) => g.orders.every((o) => o.status === 'DISPOSAL_PENDING')
 
-function TripCard({ g, firstStopNo, current }: { g: TripGroup; firstStopNo: number; current: boolean }) {
+function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; firstStopNo: number; current: boolean; currentStopId: string | null }) {
   const done = tripDone(g)
   const collected = g.orders.filter((o) => o.status === 'PICKED_UP')
   const toCollect = g.orders.filter((o) => o.status === 'ASSIGNED').length
@@ -108,12 +109,19 @@ function TripCard({ g, firstStopNo, current }: { g: TripGroup; firstStopNo: numb
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-customer text-sm font-bold tabular-nums text-white">{firstStopNo + i}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[17px] font-semibold leading-snug">{order.address}</p>
+                    <p className="text-lg font-semibold leading-snug">{order.address}</p>
                     <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${st.cls}`}>{st.text}</span>
                   </div>
-                  <p className="mt-0.5 text-sm text-ink-3">
-                    {[order.bins, order.price != null ? `GHS ${order.price.toFixed(2)}` : null].filter(Boolean).join(' · ')}
-                  </p>
+                  {order.bins && <p className="mt-0.5 text-sm text-ink-3">{order.bins}</p>}
+                  {order.pay && (
+                    <p className="mt-1 text-sm tabular-nums">
+                      <span className="font-semibold text-action-deep">Your pay GHS {order.pay.total.toFixed(2)}</span>
+                      <span className="text-ink-3">
+                        {' '}
+                        · {order.pay.pickup.toFixed(2)} at pickup, {order.pay.unload.toFixed(2)} after unload
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -134,7 +142,18 @@ function TripCard({ g, firstStopNo, current }: { g: TripGroup; firstStopNo: numb
               <div className="mt-3 grid gap-2.5 pl-11 empty:hidden">
                 {order.status === 'ASSIGNED' && !order.accepted && <StopResponse orderId={order.id} deadline={order.deadline} />}
                 {order.status === 'ASSIGNED' && order.accepted && order.lat != null && order.lng != null && <NavigateButtons lat={order.lat} lng={order.lng} quiet />}
-                {order.status === 'ASSIGNED' && order.accepted && <ConfirmPickupButton orderId={order.id} />}
+                {order.status === 'ASSIGNED' && order.accepted && (order.id === currentStopId || currentStopId === null ? (
+                  <ConfirmPickupButton orderId={order.id} />
+                ) : (
+                  <details className="group/act">
+                    <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden">
+                      <ChevronDown aria-hidden className="size-4 transition group-open/act:rotate-180" /> Pickup actions
+                    </summary>
+                    <div className="mt-2">
+                      <ConfirmPickupButton orderId={order.id} />
+                    </div>
+                  </details>
+                ))}
                 {order.status === 'PICKED_UP' && !g.routeId && <ConfirmDisposalButton orderId={order.id} />}
               </div>
             </li>
@@ -151,8 +170,8 @@ function TripCard({ g, firstStopNo, current }: { g: TripGroup; firstStopNo: numb
                 <Flag aria-hidden className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold uppercase tracking-wide text-ops-deep">Then unload at</p>
-                <p className="text-[17px] font-semibold leading-snug">{g.site.name}</p>
+                <p className="text-sm font-semibold text-ops-deep">Then unload at</p>
+                <p className="text-lg font-semibold leading-snug">{g.site.name}</p>
                 <p className="mt-0.5 text-sm text-ink-3">
                   {g.site.hours}
                   {g.site.status !== 'OPEN' && <span className="font-medium text-danger"> · {g.site.status.toLowerCase()} now: call ops</span>}
@@ -237,6 +256,11 @@ export default function TonightView({
         </p>
       )}
 
+      <FlashHost />
+      {next?.kind === 'accept' && (
+        <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
+      )}
+
       {/* Status and money, side by side at the same height. */}
       <div className="grid items-stretch gap-4 sm:grid-cols-2">
         <DriverOnlineToggle initialOnline={online} canGoOnline={canGoOnline} shiftLabel={shiftLabel} overrideUntil={overrideUntil} />
@@ -245,7 +269,7 @@ export default function TonightView({
           className="press flex h-full items-center justify-between gap-4 rounded-card bg-surface p-4 ring-1 ring-line transition hover:ring-action/50 sm:p-5"
         >
           <span>
-            <span className="block text-sm text-ink-3">Balance to withdraw</span>
+            <span className="block text-sm text-ink-3">Available to withdraw</span>
             <span className="block text-2xl font-bold tabular-nums tracking-tight">GHS {wallet.available.toFixed(2)}</span>
           </span>
           <span className="inline-flex items-center gap-1 text-sm font-semibold text-action-deep">
@@ -254,14 +278,22 @@ export default function TonightView({
         </Link>
       </div>
 
-      <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
+      {next?.kind !== 'accept' && (
+        <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
+      )}
       <EnableAlerts compact message="Turn on alerts so your phone rings when stops are added, even with Trashit closed." />
 
       {groups.length > 0 && (
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <section aria-label="Tonight's trips" className="grid gap-4">
             {groups.map((g, i) => (
-              <TripCard key={g.key} g={g} firstStopNo={firstStop[i]} current={g.key === currentKey} />
+              <TripCard
+                key={g.key}
+                g={g}
+                firstStopNo={firstStop[i]}
+                current={g.key === currentKey}
+                currentStopId={next?.kind === 'stop' ? next.orderId : null}
+              />
             ))}
           </section>
 

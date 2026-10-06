@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
@@ -27,7 +27,7 @@ function esc(t: string) {
 
 // Tonight's plan on a map: each driver's route from where they are, through their numbered pickups, to the
 // disposal site that ends each trip. The selected driver's route is drawn in amber; the others recede.
-export default function AssignMap({
+function MapView({
   routes,
   unassigned,
   selected,
@@ -97,7 +97,11 @@ export default function AssignMap({
       setReady(true)
     })
     map.current = m
+    // Keep the canvas sized to its box (it may start hidden, e.g. behind the phone List/Map switch).
+    const ro = new ResizeObserver(() => m.resize())
+    if (box.current) ro.observe(box.current)
     return () => {
+      ro.disconnect()
       m.remove()
       map.current = null
     }
@@ -218,4 +222,15 @@ export default function AssignMap({
       )}
     </div>
   )
+}
+
+// Redraw the map in the matching style when light/dark mode changes.
+function subscribeTheme(cb: () => void) {
+  const obs = new MutationObserver(cb)
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  return () => obs.disconnect()
+}
+export default function AssignMap(props: Parameters<typeof MapView>[0]) {
+  const theme = useSyncExternalStore(subscribeTheme, () => document.documentElement.dataset.theme ?? 'light', () => 'light')
+  return <MapView key={theme} {...props} />
 }

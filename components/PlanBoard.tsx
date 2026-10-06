@@ -6,7 +6,7 @@ import { proposePlan, buildDriverPlan, type PlanOrder, type PlanSite } from '@/l
 import dynamic from 'next/dynamic'
 import { assessDriver, driverPosition, nightCapacity, type DispatchDriver } from '@/lib/dispatch'
 import type { MapRoute } from '@/components/ops/AssignMap'
-import { AlertTriangle, CheckCircle2, Flag, RotateCcw, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Flag, Map as MapIcon, RotateCcw, XCircle } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 // The map only loads in the browser, after the rest of the board (it's the heaviest part of the page).
@@ -81,6 +81,8 @@ export default function PlanBoard({
   const siteById = useMemo(() => Object.fromEntries(sites.map((st) => [st.id, st])), [sites])
   const [busy, setBusy] = useState(false)
   const [selected, setSelected] = useState<string | null>(null) // driver whose route the map highlights
+  const [allDriversFor, setAllDriversFor] = useState<Set<string>>(new Set()) // orders whose Move list shows every driver
+  const [phoneView, setPhoneView] = useState<'list' | 'map'>('list') // phones show one at a time
   const [messages, setMessages] = useState<{ ok: boolean; text: string }[]>([])
 
   const orderById = useMemo(() => Object.fromEntries(orders.map((o) => [o.id, o])), [orders])
@@ -106,8 +108,11 @@ export default function PlanBoard({
   // Drivers offered in the "move to" menu for an order: ones who could take it on its own come first.
   function driverOptions(o: PlanOrderRow) {
     return drivers
-      .map((d) => ({ d, ok: assessDriver(d, [o], shiftRunning, now).eligible }))
-      .sort((a, b) => Number(b.ok) - Number(a.ok) || a.d.name.localeCompare(b.d.name))
+      .map((d) => {
+        const fit = assessDriver(d, [o], shiftRunning, now)
+        return { d, ok: fit.eligible, km: fit.maxDistanceKm ?? Infinity, why: fit.reasons[0] ?? '' }
+      })
+      .sort((a, b) => Number(b.ok) - Number(a.ok) || a.km - b.km || a.d.name.localeCompare(b.d.name))
   }
 
   function move(orderId: string, driverId: string) {
@@ -159,27 +164,44 @@ export default function PlanBoard({
 
   function MoveSelect({ o }: { o: PlanOrderRow }) {
     const options = driverOptions(o)
+    const all = allDriversFor.has(o.id)
+    const current = assignment[o.id]
+    const good = options.filter((x) => x.ok)
+    const shownGood = all ? good : good.filter((x, i) => i < 3 || x.d.id === current)
+    const shownBad = all ? options.filter((x) => !x.ok) : options.filter((x) => !x.ok && x.d.id === current)
+    const hidden = options.length - shownGood.length - shownBad.length
     return (
-      <select value={assignment[o.id]} onChange={(e) => move(o.id, e.target.value)} className={selectCls} aria-label={`Move ${o.address}`}>
+      <select
+        value={current}
+        onChange={(e) => {
+          if (e.target.value === '__all__') setAllDriversFor((s) => new Set(s).add(o.id))
+          else move(o.id, e.target.value)
+        }}
+        className={selectCls}
+        aria-label={`Move ${o.address}`}
+      >
         <option value={UNASSIGNED}>Leave unassigned</option>
-        <optgroup label="Can take it">
-          {options
-            .filter((x) => x.ok)
-            .map(({ d }) => (
+        {shownGood.length > 0 && (
+          <optgroup label={all ? 'Can take it' : 'Nearest who can take it'}>
+            {shownGood.map(({ d, km }) => (
               <option key={d.id} value={d.id}>
                 {d.name}
+                {Number.isFinite(km) ? ` · ${km.toFixed(1)} km` : ''}
               </option>
             ))}
-        </optgroup>
-        <optgroup label="Would break a rule">
-          {options
-            .filter((x) => !x.ok)
-            .map(({ d }) => (
+          </optgroup>
+        )}
+        {shownBad.length > 0 && (
+          <optgroup label="Would break a rule">
+            {shownBad.map(({ d, why }) => (
               <option key={d.id} value={d.id}>
                 {d.name}
+                {why ? ` (${why})` : ''}
               </option>
             ))}
-        </optgroup>
+          </optgroup>
+        )}
+        {!all && hidden > 0 && <option value="__all__">Show all drivers ({hidden} more)…</option>}
       </select>
     )
   }
@@ -190,7 +212,7 @@ export default function PlanBoard({
         <span className="tabular-nums text-ink-3">
           {o.litres} L{o.litresEstimated ? ' (estimated)' : ''}
         </span>
-        {o.isLate && <span className="rounded-full bg-driver-wash px-2 py-0.5 text-xs font-semibold text-driver-deep">Late booking</span>}
+        {o.isLate && <span className="rounded-full bg-canvas px-2 py-0.5 text-xs font-semibold text-ink-2 ring-1 ring-line">Late booking</span>}
         {(o.rolloverCount ?? 0) > 0 && (
           <span className="rounded-full bg-danger-wash px-2 py-0.5 text-xs font-semibold text-danger">
             Missed {o.rolloverCount}× before
@@ -232,7 +254,7 @@ export default function PlanBoard({
     { label: 'Unassigned orders', value: String(unassignedOrders.length), tone: unassignedOrders.length ? 'text-danger' : '' },
     { label: 'Suggested trips', value: String(tripCount), tone: '' },
     { label: 'Free capacity tonight', value: `${Math.max(0, freeLitres - plannedLitres).toLocaleString()} L`, tone: '' },
-    { label: 'Rule conflicts', value: String(conflicts), tone: conflicts ? 'text-driver-deep' : '' },
+    { label: 'Rule conflicts', value: String(conflicts), tone: conflicts ? 'text-danger' : '' },
   ]
 
   return (
@@ -285,8 +307,22 @@ export default function PlanBoard({
         </ul>
       )}
 
+      <div role="tablist" aria-label="View" className="grid grid-cols-2 gap-1 rounded-control bg-canvas p-1 ring-1 ring-line lg:hidden">
+        {(['list', 'map'] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={phoneView === v}
+            onClick={() => setPhoneView(v)}
+            className={`min-h-10 rounded-[8px] text-sm font-semibold transition ${phoneView === v ? 'bg-surface text-ink shadow-card' : 'text-ink-3'}`}
+          >
+            {v === 'list' ? 'Drivers and stops' : 'Map'}
+          </button>
+        ))}
+      </div>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-      <div className="grid gap-4">
+      <div className={`grid gap-4 ${phoneView === 'map' ? 'hidden lg:grid' : ''}`}>
       {plans.map((p) => {
         const d = driverById[p.driverId]
         const cap = nightCapacity(d)
@@ -296,8 +332,7 @@ export default function PlanBoard({
           <section
             key={p.driverId}
             aria-label={d.name}
-            onClick={() => setSelected(p.driverId)}
-            className={`cursor-pointer rounded-card bg-surface p-5 transition sm:p-6 ${
+            className={`rounded-card bg-surface p-5 transition sm:p-6 ${
               selected === p.driverId ? 'ring-2 ring-driver' : hasProblems ? 'ring-1 ring-danger/40' : 'ring-1 ring-line hover:ring-line-strong'
             }`}
           >
@@ -305,6 +340,19 @@ export default function PlanBoard({
               <div className="min-w-0 flex-1 basis-72">
                 <h3 className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight">
                   {d.name}
+                  <button
+                    type="button"
+                    aria-pressed={selected === p.driverId}
+                    onClick={() => {
+                      setSelected(selected === p.driverId ? null : p.driverId)
+                      setPhoneView('map')
+                    }}
+                    className={`press inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold ring-1 transition ${
+                      selected === p.driverId ? 'bg-driver text-night ring-driver' : 'text-ink-2 ring-line-strong hover:bg-canvas'
+                    }`}
+                  >
+                    <MapIcon aria-hidden className="size-3.5" /> {selected === p.driverId ? 'On the map' : 'Show on map'}
+                  </button>
                   {shiftRunning && (
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-semibold ${d.available ? 'bg-driver-wash text-driver-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
@@ -377,7 +425,7 @@ export default function PlanBoard({
                       return (
                         <li key={id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5">
                           <span className="flex min-w-0 flex-1 basis-64 items-start gap-3">
-                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-driver-wash text-xs font-semibold tabular-nums text-driver-deep">
+                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-customer text-xs font-semibold tabular-nums text-white">
                               {i + 1}
                             </span>
                             <span className="min-w-0 text-[15px]">
@@ -449,7 +497,7 @@ export default function PlanBoard({
       )}
 
       </div>
-      <div className="h-[60vh] lg:sticky lg:top-24 lg:h-[calc(100dvh-8rem)]">
+      <div className={`h-[70vh] lg:sticky lg:top-24 lg:block lg:h-[calc(100dvh-8rem)] ${phoneView === 'list' ? 'hidden' : ''}`}>
         <AssignMap routes={[...assigned, ...mapRoutes]} unassigned={mapUnassigned} selected={selected} onSelect={setSelected} />
       </div>
       </div>

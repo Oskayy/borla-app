@@ -107,8 +107,13 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
 
                 {w.status === 'REQUESTED' ? (
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => act(w.id, 'send')} disabled={busy === w.id} className={BUTTON_PRIMARY}>
-                      <Send aria-hidden className="size-4" /> {busy === w.id ? 'Sending…' : 'Send via Paystack'}
+                    <button
+                      type="button"
+                      onClick={() => confirm(`Send GHS ${w.amount.toFixed(2)} to ${w.driverName} on ${w.momo} through Paystack? This can't be undone.`) && act(w.id, 'send')}
+                      disabled={busy === w.id}
+                      className={BUTTON_PRIMARY}
+                    >
+                      <Send aria-hidden className="size-4" /> {busy === w.id ? 'Sending…' : `Send GHS ${w.amount.toFixed(2)}`}
                     </button>
                     <button type="button" className={BUTTON_QUIET} onClick={() => { setActive({ id: w.id, action: 'mark_paid' }); setNote('') }}>
                       Mark paid
@@ -125,8 +130,13 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                     </p>
                     {!w.markedByMe && (
                       <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => act(w.id, 'confirm_paid')} disabled={busy === w.id} className={BUTTON_PRIMARY}>
-                          {busy === w.id ? 'Saving…' : 'Payment is there: confirm'}
+                        <button
+                          type="button"
+                          onClick={() => confirm(`You checked and GHS ${w.amount.toFixed(2)} reached ${w.momo}? This marks the withdrawal paid.`) && act(w.id, 'confirm_paid')}
+                          disabled={busy === w.id}
+                          className={BUTTON_PRIMARY}
+                        >
+                          {busy === w.id ? 'Saving…' : `GHS ${w.amount.toFixed(2)} is there: confirm`}
                         </button>
                         <button type="button" className={BUTTON_DANGER} onClick={() => { setActive({ id: w.id, action: 'dispute_paid' }); setNote('') }}>
                           Can&apos;t find it
@@ -136,7 +146,7 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                   </div>
                 ) : (
                   <div className="flex flex-wrap items-center gap-2">
-                    <Chip tone="driver">Being sent</Chip>
+                    <Chip>Being sent</Chip>
                     {w.method === 'paystack' && (
                       <button type="button" className={BUTTON_QUIET} disabled={busy === w.id} onClick={() => act(w.id, 'check')}>
                         <RefreshCw aria-hidden className="size-4" /> {busy === w.id ? 'Checking…' : 'Check with Paystack'}
@@ -161,11 +171,15 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                   <div className="mt-3 flex flex-wrap gap-2.5">
                     <button
                       type="button"
-                      onClick={() => act(w.id, active.action)}
+                      onClick={() =>
+                        active.action === 'mark_paid'
+                          ? confirm(`Record that you paid GHS ${w.amount.toFixed(2)} to ${w.momo} by hand? A colleague then confirms it.`) && act(w.id, active.action)
+                          : act(w.id, active.action)
+                      }
                       disabled={busy === w.id || note.trim().length < 3}
                       className={active.action === 'mark_paid' ? BUTTON_PRIMARY : BUTTON_DANGER}
                     >
-                      {active.action === 'mark_paid' ? 'Record payment' : active.action === 'dispute_paid' ? 'Send back' : 'Confirm reject'}
+                      {active.action === 'mark_paid' ? `Record GHS ${w.amount.toFixed(2)} paid` : active.action === 'dispute_paid' ? 'Send back' : 'Confirm reject'}
                     </button>
                     <button type="button" className={BUTTON_QUIET} onClick={() => setActive(null)}>
                       Cancel

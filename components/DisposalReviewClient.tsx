@@ -116,8 +116,16 @@ export default function DisposalReviewClient({ groups }: { groups: ReviewGroup[]
                 />
               </label>
               <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                <button type="button" onClick={() => decide(g, 'approve')} disabled={busy === g.key} className={BUTTON_PRIMARY}>
-                  Approve and pay the driver
+                <button
+                  type="button"
+                  onClick={() =>
+                    confirm(`Approve this unload and pay ${g.driverName} the unload share for ${g.orders.length} ${g.orders.length === 1 ? 'order' : 'orders'}?`) &&
+                    decide(g, 'approve')
+                  }
+                  disabled={busy === g.key}
+                  className={BUTTON_PRIMARY}
+                >
+                  Approve and pay {g.driverName.split(/\s+/)[0]}
                 </button>
                 <button type="button" onClick={() => decide(g, 'reject')} disabled={busy === g.key} className={BUTTON_DANGER}>
                   Send back
