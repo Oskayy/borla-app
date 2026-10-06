@@ -164,8 +164,8 @@ function UserMenu({ name, role }: { name: string; role: string }) {
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="press flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 hover:bg-canvas">
         <span className="grid size-9 place-items-center rounded-full bg-ops text-sm font-semibold text-white">{initials(name)}</span>
         <span className="hidden text-left leading-tight sm:block">
-          <span className="block text-sm font-semibold">{name}</span>
-          <span className="block text-xs text-ink-3">{role}</span>
+          <span className="block whitespace-nowrap text-sm font-semibold">{name}</span>
+          <span className="block whitespace-nowrap text-xs text-ink-3">{role}</span>
         </span>
         <ChevronDown aria-hidden className="hidden size-4 text-ink-3 sm:block" />
       </button>
@@ -179,6 +179,44 @@ function UserMenu({ name, role }: { name: string; role: string }) {
           </Link>
           <SignOutButton className="flex min-h-10 w-full items-center gap-2.5 rounded-control px-3 text-sm font-medium text-danger hover:bg-danger-wash" />
         </div>
+      )}
+    </div>
+  )
+}
+
+function HealthMenu({ health, bad }: { health: ShellHealth[]; bad: number }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [open])
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`press flex min-h-10 items-center gap-2 rounded-full px-3 text-sm font-medium ring-1 transition hover:bg-canvas ${
+          bad ? 'text-driver-deep ring-driver/40' : 'text-ink-2 ring-line'
+        }`}
+      >
+        <span className={`size-2 rounded-full ${bad ? 'bg-driver' : 'bg-[#22a06b]'}`} aria-hidden />
+        {bad ? `${bad} system ${bad === 1 ? 'warning' : 'warnings'}` : 'All systems working'}
+        <ChevronDown aria-hidden className="size-4" />
+      </button>
+      {open && (
+        <ul className="absolute left-0 top-full z-40 mt-2 w-72 divide-y divide-line overflow-hidden rounded-card bg-surface shadow-lift ring-1 ring-line">
+          {health.map((h) => (
+            <li key={h.label} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+              <span className="flex items-center gap-2 font-medium">
+                <span className={`size-2 rounded-full ${DOT[h.state]}`} aria-hidden /> {h.label}
+              </span>
+              <span className={h.state === 'warn' ? 'font-medium text-driver-deep' : 'text-ink-3'}>{h.text}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )
@@ -268,8 +306,9 @@ export default function OpsShell({
               </span>
             </Link>
 
-            {/* System health: real signals only (lib/system-health.ts). */}
-            <div className="hidden min-w-0 items-center gap-5 xl:flex">
+            {/* System health: real signals only (lib/system-health.ts). The full strip only where it fits;
+                otherwise a compact button that opens the list. */}
+            <div className="hidden min-w-0 items-center gap-5 overflow-hidden 2xl:flex">
               <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">System</span>
               {health.map((h) => (
                 <span key={h.label} className="flex items-center gap-1.5 whitespace-nowrap text-sm" title={`${h.label}: ${h.text}`}>
@@ -279,11 +318,9 @@ export default function OpsShell({
                 </span>
               ))}
             </div>
-            {healthBad > 0 && (
-              <span className="hidden items-center gap-1.5 text-sm font-medium text-driver-deep sm:flex xl:hidden" title={health.map((h) => `${h.label}: ${h.text}`).join(' · ')}>
-                <span className="size-2 rounded-full bg-driver" aria-hidden /> {healthBad} system {healthBad === 1 ? 'warning' : 'warnings'}
-              </span>
-            )}
+            <div className="hidden sm:block 2xl:hidden">
+              <HealthMenu health={health} bad={healthBad} />
+            </div>
 
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <ThemeToggle />
