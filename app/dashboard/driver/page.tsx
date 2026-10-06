@@ -8,7 +8,6 @@ import { sweepExpiredOffers } from '@/lib/offers-server'
 import { offerDeadline } from '@/lib/offers'
 import { driverRouteVersion } from '@/lib/driver-updates'
 import { getAcceptMinutes } from '@/lib/settings'
-import { getWalletSummary } from '@/lib/wallet-server'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import { describeHours } from '@/lib/disposal-sites'
@@ -61,10 +60,7 @@ export default async function DriverDashboard() {
     orderBy: [{ routeStop: { route: { createdAt: 'asc' } } }, { routeStop: { sequence: 'asc' } }],
   })
 
-  const [wallet, payoutRule] = await Promise.all([
-    getWalletSummary(user.id),
-    prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true, disposalPercent: true } }),
-  ])
+  const payoutRule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true, disposalPercent: true } })
   // The driver's pay for a stop: the same sums the pickup and unload payouts use (driver pool x the active rule).
   const payFor = (snapshot: unknown) => {
     const pool = driverPoolFromSnapshot(snapshot)
@@ -155,7 +151,6 @@ export default async function DriverDashboard() {
       waitingIds={waitingIds}
       firstDeadline={firstDeadline}
       nextPhone={nextPhone}
-      wallet={{ available: wallet.available, earned: wallet.earned }}
       mapPoints={mapPoints}
       offTonight={!worksNight(driverProfile, planningShiftDate(now, settings))}
       start={start}

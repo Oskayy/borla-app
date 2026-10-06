@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertTriangle, CalendarDays, Check, ChevronDown, ChevronRight, Flag, Moon, Phone } from 'lucide-react'
+import { AlertTriangle, CalendarDays, Check, ChevronDown, Flag, Moon, Phone } from 'lucide-react'
 import ConfirmPickupButton from '@/app/dashboard/driver/confirm-pickup-button'
 import ConfirmDisposalButton from '@/app/dashboard/driver/confirm-disposal-button'
 import DriverOnlineToggle from '@/components/DriverOnlineToggle'
@@ -51,7 +51,6 @@ export interface TonightProps {
   waitingIds: string[]
   firstDeadline: string | null
   nextPhone: string | null
-  wallet: { available: number; earned: number }
   mapPoints: RoutePoint[]
   start: { lat: number; lng: number }
   offTonight?: boolean // the driver marked tonight off (Availability)
@@ -216,7 +215,6 @@ export default function TonightView({
   waitingIds,
   firstDeadline,
   nextPhone,
-  wallet,
   mapPoints,
   start,
   offTonight = false,
@@ -261,22 +259,8 @@ export default function TonightView({
         <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
       )}
 
-      {/* Status and money, side by side at the same height. */}
-      <div className="grid items-stretch gap-4 sm:grid-cols-2">
-        <DriverOnlineToggle initialOnline={online} canGoOnline={canGoOnline} shiftLabel={shiftLabel} overrideUntil={overrideUntil} />
-        <Link
-          href="/dashboard/driver/earnings"
-          className="press flex h-full items-center justify-between gap-4 rounded-card bg-surface p-4 ring-1 ring-line transition hover:ring-action/50 sm:p-5"
-        >
-          <span>
-            <span className="block text-sm text-ink-3">Available to withdraw</span>
-            <span className="block text-2xl font-bold tabular-nums tracking-tight">GHS {wallet.available.toFixed(2)}</span>
-          </span>
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-action-deep">
-            Withdraw <ChevronRight aria-hidden className="size-4" />
-          </span>
-        </Link>
-      </div>
+      {/* The online switch; money lives on the Earnings tab. */}
+      <DriverOnlineToggle initialOnline={online} canGoOnline={canGoOnline} shiftLabel={shiftLabel} overrideUntil={overrideUntil} />
 
       {next?.kind !== 'accept' && (
         <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
