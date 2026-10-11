@@ -115,3 +115,14 @@ describe('settlements', () => {
     expect(sum(lines, ACCOUNTS.paystackClearing)).toBe(-4902)
   })
 })
+
+describe('opening balances', () => {
+  it('records what was already there, apart from top-ups and income', async () => {
+    const { openingBalanceLines } = await import('@/lib/accounts')
+    const lines = openingBalanceLines(ACCOUNTS.paystackBalance, 152_147)
+    expect(isBalanced(lines)).toBe(true)
+    expect(sum(lines, ACCOUNTS.paystackBalance)).toBe(152_147)
+    expect(sum(lines, ACCOUNTS.bank)).toBe(0)
+    expect(isBalanced(openingBalanceLines(ACCOUNTS.paystackBalance, -500))).toBe(true)
+  })
+})

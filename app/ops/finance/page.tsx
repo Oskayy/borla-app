@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { PAYOUT_ROLES } from '@/lib/wallet-server'
-import { ACCOUNTS } from '@/lib/accounts'
+import { ACCOUNTS, TRANSFER_FEE_PESEWAS } from '@/lib/accounts'
 import { getBalancePesewas } from '@/lib/paystack'
 import { getShiftSettings } from '@/lib/settings'
 import { localParts } from '@/lib/shift'
@@ -14,7 +14,7 @@ import { dateLabel } from '@/lib/format'
 import type { CheckResult } from '@/lib/reconcile'
 import { PageHeader } from '@/components/ui'
 import { AllClear, PANEL, SectionTitle } from '@/components/ops/kit'
-import { ConfirmSettlement, ReviewCheck, TopUpForm } from '@/components/ops/FinanceActions'
+import { ConfirmSettlement, OpeningBalanceForm, ReviewCheck, TopUpForm } from '@/components/ops/FinanceActions'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,6 +70,11 @@ export default async function FinancePage() {
   const owed = -total(byAccount, ACCOUNTS.driverPayable)
   const refunding = Math.round((refunds._sum.amount ?? 0) * 100)
   const own = bank + paystack + clearing - held - owed - refunding
+  const opening = -total(byAccount, ACCOUNTS.openingBalances)
+  // Paystack's balance minus what the ledger has, less payouts still on their way: the gap an opening balance closes.
+  const inFlight = await prisma.withdrawal.findMany({ where: { status: 'PROCESSING', method: 'paystack' }, select: { amount: true, feePesewas: true } })
+  const gap =
+    liveBalance == null ? null : liveBalance - (paystack - inFlight.reduce((s, w) => s + Math.round(w.amount * 100) - w.feePesewas + TRANSFER_FEE_PESEWAS, 0))
 
   const income = -total(month, ACCOUNTS.platformFeeIncome)
   const payFees = total(month, ACCOUNTS.paymentFees)
@@ -137,6 +142,21 @@ export default async function FinancePage() {
           <p className="mb-2 font-semibold">Record a top-up</p>
           <TopUpForm />
         </div>
+      </section>
+
+      <section aria-labelledby="h-opening" className={PANEL}>
+        <SectionTitle id="h-opening">Opening balances</SectionTitle>
+        <p className="mb-4 text-[15px] text-ink-2">
+          Money that was already in the Paystack balance or the bank when the ledger started, or when Paystack moves from test to live. It
+          isn&apos;t income or a top-up.{' '}
+          {gap == null
+            ? 'Paystack didn’t report its balance just now.'
+            : gap === 0
+            ? 'The Paystack balance matches the ledger.'
+            : `Paystack shows ${ghs(liveBalance!)}; the ledger expects ${ghs(liveBalance! - gap)}, a gap of ${ghs(gap)}.`}
+          {opening !== 0 && ` Recorded so far: ${ghs(opening)}.`}
+        </p>
+        <OpeningBalanceForm suggestedPaystack={gap != null && gap !== 0 ? gap / 100 : null} />
       </section>
 
       <section aria-labelledby="h-settle">

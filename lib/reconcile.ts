@@ -51,7 +51,7 @@ export function compareBalance(args: { ledger: number; inFlight: number; paystac
     name: 'Paystack balance',
     ok: diff === 0,
     summary: diff === 0 ? `${ghs(args.paystack)}, as the ledger expects` : `Paystack shows ${ghs(args.paystack)}, the ledger expects ${ghs(expected)} (difference ${ghs(diff)})`,
-    details: diff === 0 ? [] : ['Was a top-up or a settlement not recorded on the Finance page?'],
+    details: diff === 0 ? [] : ['Was a top-up, settlement or opening balance not recorded on the Finance page?'],
   }
 }
 

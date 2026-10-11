@@ -17,6 +17,7 @@ export const ACCOUNTS = {
   transferFees: 'transfer_fees', // cost: Paystack's fee on driver payouts (after any part the driver paid)
   refundLosses: 'refund_losses', // cost: refunds Trashit covers from its own money
   reconciliationDifferences: 'reconciliation_differences', // a settlement that didn't match what arrived in the bank
+  openingBalances: 'opening_balances', // what the bank or Paystack balance already held when the ledger started (or at a switch to live)
 } as const
 
 export type Account = (typeof ACCOUNTS)[keyof typeof ACCOUNTS]
@@ -149,6 +150,15 @@ export function topUpLines(amount: number): Line[] {
     { account: ACCOUNTS.paystackBalance, amount },
     { account: ACCOUNTS.bank, amount: -amount },
   ]
+}
+
+// Money that was already in the Paystack balance or the bank when the ledger started (or when Paystack moved from
+// test to live). It isn't income or a top-up, so it is kept in its own account. Can be negative (to correct one).
+export function openingBalanceLines(account: typeof ACCOUNTS.paystackBalance | typeof ACCOUNTS.bank, amount: number): Line[] {
+  return drop([
+    { account, amount },
+    { account: ACCOUNTS.openingBalances, amount: -amount },
+  ])
 }
 
 // A Paystack settlement arrives in the bank. Any difference from what Paystack said it sent is kept apart

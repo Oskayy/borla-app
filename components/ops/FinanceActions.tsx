@@ -129,3 +129,62 @@ export function ReviewCheck({ day }: { day: string }) {
     </div>
   )
 }
+
+// What the Paystack balance (or the bank) already held when the ledger started, or at the switch to live.
+export function OpeningBalanceForm({ suggestedPaystack }: { suggestedPaystack: number | null }) {
+  const [account, setAccount] = useState<'paystack_balance' | 'bank'>('paystack_balance')
+  const [amount, setAmount] = useState(suggestedPaystack != null ? suggestedPaystack.toFixed(2) : '')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const router = useRouter()
+  return (
+    <div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label>
+          <span className="text-sm font-medium text-ink-2">Where</span>
+          <select
+            value={account}
+            onChange={(e) => {
+              const a = e.target.value as 'paystack_balance' | 'bank'
+              setAccount(a)
+              setAmount(a === 'paystack_balance' && suggestedPaystack != null ? suggestedPaystack.toFixed(2) : '')
+            }}
+            className={`${FIELD} mt-1.5 w-auto`}
+          >
+            <option value="paystack_balance">Paystack balance</option>
+            <option value="bank">Bank</option>
+          </select>
+        </label>
+        <label>
+          <span className="text-sm font-medium text-ink-2">Amount (GHS)</span>
+          <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={`${FIELD} mt-1.5 w-40 tabular-nums`} />
+        </label>
+        <label className="min-w-0 flex-1 basis-56">
+          <span className="text-sm font-medium text-ink-2">What it is</span>
+          <input value={note} onChange={(e) => setNote(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Paystack test balance when the ledger started" />
+        </label>
+        <button
+          type="button"
+          disabled={busy || !amount || Number(amount) === 0 || note.trim().length < 3}
+          onClick={async () => {
+            const where = account === 'bank' ? 'the bank' : 'the Paystack balance'
+            if (!confirm(`Record an opening balance of GHS ${Number(amount).toFixed(2)} for ${where}? It isn't income or a top-up.`)) return
+            setBusy(true)
+            const r = await post('/api/admin/finance/opening', { account, amount: Number(amount), note })
+            setBusy(false)
+            setMsg(r.ok ? { ok: true, text: 'Opening balance recorded.' } : r)
+            if (r.ok) {
+              setNote('')
+              router.refresh()
+            }
+          }}
+          className={BUTTON_QUIET}
+        >
+          {busy ? 'Saving…' : 'Record opening balance'}
+        </button>
+      </div>
+      <Result msg={msg} />
+    </div>
+  )
+}
