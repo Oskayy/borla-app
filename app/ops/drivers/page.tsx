@@ -6,6 +6,9 @@ import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import DriversClient from '@/components/DriversClient'
 import { PageHeader } from '@/components/ui'
+import { APPROVAL_ROLES, DRIVER_DOCS_BUCKET } from '@/lib/driver-docs'
+import { maskGhanaCard } from '@/lib/ghana-card'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,12 +39,28 @@ export default async function DriversPage() {
             lastLocationAt: true,
             vehicleTypeRef: { select: { name: true, capacityLitres: true } },
             zone: { select: { name: true } },
+            ghanaCardNumber: true,
           },
         },
+        // Card photos uploaded before the number was asked for (to copy the number from).
+        driverDocuments: { where: { type: 'ghana_card' }, select: { path: true }, take: 1 },
       },
     }),
     getShiftSettings(),
   ])
+
+  // Only the staff who approve drivers see Ghana Card details.
+  const canEditId = APPROVAL_ROLES.includes(dbUser.role)
+  const cardPhotos = new Map<string, string>()
+  if (canEditId) {
+    const storage = createAdminClient().storage.from(DRIVER_DOCS_BUCKET)
+    for (const d of drivers) {
+      const path = d.driverDocuments[0]?.path
+      if (!path) continue
+      const url = (await storage.createSignedUrl(path, 60 * 30)).data?.signedUrl
+      if (url) cardPhotos.set(d.id, url)
+    }
+  }
 
   const now = new Date()
   const rows = drivers
@@ -63,6 +82,8 @@ export default async function DriversPage() {
         zone: p.zone?.name ?? null,
         hasHomeBase: p.homeLat != null,
         lastLocationAt: available && p.lastLocationAt ? p.lastLocationAt.toISOString() : null,
+        ghanaCard: canEditId ? maskGhanaCard(p.ghanaCardNumber) : null,
+        cardPhotoUrl: cardPhotos.get(d.id) ?? null,
       }
     })
     .sort((a, b) => Number(b.online) - Number(a.online))
@@ -78,7 +99,7 @@ export default async function DriversPage() {
           rows.length === 1 ? 'driver' : 'drivers'
         } online. Drivers can only go online during shift hours; "Allow extra hours" lets one driver work outside them, for example to clear a backlog.`}
       />
-      <DriversClient drivers={rows} />
+      <DriversClient drivers={rows} canEditId={canEditId} />
     </div>
   )
 }

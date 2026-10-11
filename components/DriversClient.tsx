@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, MapPin, Phone } from 'lucide-react'
-import { BUTTON_QUIET } from '@/components/ui'
+import { Clock, IdCard, MapPin, Phone } from 'lucide-react'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 import { AllClear, Chip, Result, SELECT } from '@/components/ops/kit'
 import { TZ } from '@/lib/format'
 import { useNow } from '@/lib/use-now'
@@ -22,6 +22,91 @@ interface DriverRow {
   zone: string | null
   hasHomeBase: boolean
   lastLocationAt: string | null
+  ghanaCard: string | null // partly hidden; only for staff who approve drivers
+  cardPhotoUrl: string | null // an old Ghana Card photo, to copy the number from (30-minute link)
+}
+
+// Enter (or, with a reason, correct) a driver's Ghana Card number.
+function GhanaCard({ d }: { d: DriverRow }) {
+  const [open, setOpen] = useState(false)
+  const [number, setNumber] = useState('')
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const router = useRouter()
+
+  async function save() {
+    setBusy(true)
+    setMsg(null)
+    try {
+      const res = await fetch(`/api/admin/drivers/${d.id}/ghana-card`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number, reason }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setMsg({ ok: false, text: data.error || 'Could not save' })
+        return
+      }
+      setOpen(false)
+      setNumber('')
+      setReason('')
+      router.refresh()
+    } catch {
+      setMsg({ ok: false, text: 'Could not reach Trashit. Please try again.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-1.5 text-sm">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className={`inline-flex items-center gap-1.5 ${d.ghanaCard ? 'text-ink-2' : 'font-medium text-danger'}`}>
+          <IdCard aria-hidden className="size-4" /> {d.ghanaCard ? `Ghana Card ${d.ghanaCard}` : 'No Ghana Card number'}
+        </span>
+        {d.cardPhotoUrl && (
+          <a href={d.cardPhotoUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-ops-deep hover:underline">
+            Open old card photo
+          </a>
+        )}
+        {!open && (
+          <button type="button" onClick={() => setOpen(true)} className="min-h-9 font-semibold text-ops-deep hover:underline">
+            {d.ghanaCard ? 'Correct' : 'Add number'}
+          </button>
+        )}
+      </p>
+      {open && (
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <label>
+            <span className="sr-only">Ghana Card number for {d.name}</span>
+            <input
+              value={number}
+              onChange={(e) => setNumber(e.target.value.toUpperCase())}
+              placeholder="GHA-123456789-0"
+              autoCapitalize="characters"
+              autoComplete="off"
+              className={`${FIELD} w-52 tabular-nums`}
+            />
+          </label>
+          {d.ghanaCard && (
+            <label className="min-w-0 flex-1 basis-48">
+              <span className="sr-only">Why you are correcting it</span>
+              <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why it's being corrected" className={FIELD} />
+            </label>
+          )}
+          <button type="button" onClick={save} disabled={busy || number.trim().length < 10 || (!!d.ghanaCard && reason.trim().length < 3)} className={BUTTON_PRIMARY}>
+            {busy ? 'Saving…' : 'Save'}
+          </button>
+          <button type="button" onClick={() => setOpen(false)} disabled={busy} className={BUTTON_QUIET}>
+            Cancel
+          </button>
+        </div>
+      )}
+      <Result msg={msg} />
+    </div>
+  )
 }
 
 function ago(iso: string, now: number): string {
@@ -36,7 +121,7 @@ function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-GB', { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
-export default function DriversClient({ drivers }: { drivers: DriverRow[] }) {
+export default function DriversClient({ drivers, canEditId = false }: { drivers: DriverRow[]; canEditId?: boolean }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [hours, setHours] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
@@ -93,6 +178,7 @@ export default function DriversClient({ drivers }: { drivers: DriverRow[] }) {
                 </span>
                 {!d.hasHomeBase && <span className="text-danger">No home base yet</span>}
               </p>
+              {canEditId && <GhanaCard d={d} />}
               {d.online && (
                 <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-3">
                   <MapPin aria-hidden className="size-3.5" />
