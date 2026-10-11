@@ -21,7 +21,7 @@ export default async function PayoutRulesPage() {
 
   return (
     <div className="grid max-w-3xl gap-8">
-      <PageHeader title="Payout rules" lead="Drivers are paid part of each stop at pickup and the rest once the unload is verified." />
+      <PageHeader title="Payout rules" lead="Drivers are paid part of each stop at pickup and the rest once the unload is verified. The split is fixed on each order when the customer pays, so a change here only affects orders paid after it. Earnings can be withdrawn 24 hours after the unload and the end of that night's shift." />
 
       <PayoutRuleForm />
 

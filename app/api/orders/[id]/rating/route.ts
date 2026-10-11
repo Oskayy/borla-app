@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params
-  if (!isUuid(id)) return NextResponse.json({ error: 'Invalid order' }, { status: 400 })
+  if (!isUuid(id)) return NextResponse.json({ error: "We couldn't find that pickup." }, { status: 400 })
   const parsed = parseRating(await readJson(req))
   if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
 

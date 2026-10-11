@@ -4,6 +4,7 @@ import { validatePasswordStrength, isPasswordBreached } from '@/lib/password'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { readJson } from '@/lib/validate'
 import { prisma } from '@/lib/prisma'
+import { friendlyAuthError } from '@/lib/friendly-errors'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: friendlyAuthError(error, "We couldn't change your password. Please try again.") }, { status: 400 })
   }
 
   // Sign out every other device that might be using the old password.

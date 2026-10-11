@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import ZoneMap from './ZoneMap'
 import { AlertCircle, Check, Search, Truck } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import PhotoUpload from '@/components/driver/PhotoUpload'
+import { maskGhanaCard, parseGhanaCard, parsePlate } from '@/lib/ghana-card'
 
 interface Zone {
   id: string
@@ -29,6 +31,7 @@ interface VehicleOption {
 interface ExistingProfile {
   vehicleTypeId: string | null
   vehiclePlate: string | null
+  ghanaCardNumber?: string | null
   radiusKm: number | null
   zoneId: string | null
   homeAddress: string | null
@@ -43,11 +46,13 @@ export default function DriverProfileSetupForm({
   vehicleTypes,
   initial,
   approved = false,
+  vehiclePhotoUrl = null,
 }: {
   zones: Zone[]
   vehicleTypes: VehicleOption[]
   initial: ExistingProfile | null
   approved?: boolean // approved drivers' vehicle changes wait for ops (lib/vehicle-change.ts)
+  vehiclePhotoUrl?: string | null // before approval, the vehicle photo is taken here (required)
 }) {
   // A vehicle change that is waiting shows as the chosen vehicle, so saving again keeps it.
   const startVehicle =
@@ -57,6 +62,7 @@ export default function DriverProfileSetupForm({
   const [vehicleTypeId, setVehicleTypeId] = useState(startVehicle?.id ?? '')
   const [radiusKm, setRadiusKm] = useState(initial?.pendingRadiusKm ?? initial?.radiusKm ?? startVehicle?.defaultRadiusKm ?? 3)
   const [vehiclePlate, setVehiclePlate] = useState(initial?.vehiclePlate ?? '')
+  const [ghanaCard, setGhanaCard] = useState(initial?.ghanaCardNumber ?? '')
   const [address, setAddress] = useState(initial?.homeAddress ?? '')
   const [zoneId, setZoneId] = useState(initial?.zoneId ?? '')
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
@@ -128,6 +134,18 @@ export default function DriverProfileSetupForm({
       setError('Please choose your vehicle')
       return
     }
+    if (!approved && !parseGhanaCard(ghanaCard)) {
+      setError('Please enter your Ghana Card number, e.g. GHA-123456789-0')
+      return
+    }
+    if (!parsePlate(vehiclePlate)) {
+      setError('Please enter your vehicle number plate, e.g. GT 1234-24')
+      return
+    }
+    if (!approved && !vehiclePhotoUrl) {
+      setError('Please add a photo of your vehicle')
+      return
+    }
     if (!pin) {
       setError('Please pin your home base on the map')
       return
@@ -142,6 +160,7 @@ export default function DriverProfileSetupForm({
         body: JSON.stringify({
           vehicleTypeId,
           vehiclePlate,
+          ghanaCardNumber: approved ? undefined : ghanaCard,
           radiusKm,
           zoneId,
           homeAddress: address || null,
@@ -213,10 +232,56 @@ export default function DriverProfileSetupForm({
 
       <div>
         <label htmlFor="plate" className={label}>
-          Vehicle plate number <span className="font-normal text-ink-3">(optional for now)</span>
+          Vehicle number plate
         </label>
-        <input id="plate" value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. GT 1234-24" />
+        <input
+          id="plate"
+          value={vehiclePlate}
+          onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
+          className={`${FIELD} mt-1.5`}
+          placeholder="e.g. GT 1234-24"
+          autoCapitalize="characters"
+          autoComplete="off"
+          required
+        />
       </div>
+
+      {!approved && (
+        <div>
+          <p className={label}>Photo of your vehicle</p>
+          <p className="mt-0.5 text-sm text-ink-3">The whole vehicle, clearly visible. Trashit checks it before your first pickup.</p>
+          <div className="mt-2 max-w-sm">
+            <PhotoUpload type="vehicle_photo" url={vehiclePhotoUrl} label="Add a photo of your vehicle" />
+          </div>
+        </div>
+      )}
+
+      {approved ? (
+        initial?.ghanaCardNumber && (
+          <p className="text-sm text-ink-2">
+            Ghana Card <span className="font-medium tabular-nums text-ink">{maskGhanaCard(initial.ghanaCardNumber)}</span> (checked when you were
+            approved)
+          </p>
+        )
+      ) : (
+        <div>
+          <label htmlFor="ghana-card" className={label}>
+            Ghana Card number
+          </label>
+          <input
+            id="ghana-card"
+            value={ghanaCard}
+            onChange={(e) => setGhanaCard(e.target.value.toUpperCase())}
+            className={`${FIELD} mt-1.5 tabular-nums`}
+            placeholder="GHA-123456789-0"
+            autoCapitalize="characters"
+            autoComplete="off"
+            inputMode="text"
+            required
+          />
+          <p className="mt-1 text-sm text-ink-3">Only the Trashit team who approve drivers can see it. No photo of the card is needed.</p>
+        </div>
+      )}
 
       <div>
         <label htmlFor="home-base" className={label}>

@@ -20,6 +20,7 @@ import Logo from '@/components/Logo'
 import HeroFlow from '@/components/landing/HeroFlow'
 import DeletedNotice from '@/components/landing/DeletedNotice'
 import { activeZones, coverageMapUrl, PROOF_STATS, TESTIMONIAL } from '@/lib/marketing'
+import { getAcceptHazardous } from '@/lib/settings'
 
 // Public landing page. Coverage comes from the live zones; refreshed hourly.
 export const revalidate = 3600
@@ -65,6 +66,8 @@ const FAQ = [
   {
     q: 'What can I put out for collection?',
     a: 'Household waste in standard bins of 30, 60 or 120 litres. Tell us when you book if it is recyclable or hazardous; hazardous waste costs a little more so it can be handled safely.',
+    noHazardous:
+      "Household waste in standard bins of 30, 60 or 120 litres. Tell us when you book if it is recyclable. We can't collect hazardous waste yet (batteries, chemicals, paint, medical waste).",
   },
   {
     q: 'What if my gate is hard to find?',
@@ -81,7 +84,7 @@ const FAQ = [
 ]
 
 export default async function Home() {
-  const zones = await activeZones()
+  const [zones, acceptHazardous] = await Promise.all([activeZones(), getAcceptHazardous().catch(() => false)])
   const mapUrl = coverageMapUrl(zones)
 
   return (
@@ -102,7 +105,7 @@ export default async function Home() {
               Sign in
             </Link>
             <Link
-              href="/signup"
+              href="/book"
               className="inline-flex min-h-11 items-center gap-1.5 rounded-control bg-customer px-4 text-sm font-semibold text-white shadow-card transition hover:bg-customer-deep"
             >
               Book a pickup <ArrowRight aria-hidden className="size-4" />
@@ -125,7 +128,7 @@ export default async function Home() {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
-                href="/signup"
+                href="/book"
                 className="inline-flex min-h-12 items-center gap-2 rounded-control bg-customer px-6 text-base font-semibold text-white shadow-card transition hover:bg-customer-deep"
               >
                 Book tonight&apos;s pickup <ArrowRight aria-hidden className="size-4" />
@@ -271,7 +274,7 @@ export default async function Home() {
                 </ul>
               )}
               <Link
-                href="/signup"
+                href="/book"
                 className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-control bg-customer px-6 font-semibold text-white transition hover:bg-customer-deep"
               >
                 Check your gate pin <ArrowRight aria-hidden className="size-4" />
@@ -298,7 +301,7 @@ export default async function Home() {
                   {[
                     '40% of your share at pickup, 60% once the unload is verified',
                     'Go online only when you want to work',
-                    'Approval with your Ghana Card and vehicle photos',
+                    'Approval with your Ghana Card number and a vehicle photo',
                   ].map((t) => (
                     <li key={t} className="flex items-start gap-2.5">
                       <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-driver" /> {t}
@@ -354,7 +357,7 @@ export default async function Home() {
               </h2>
               <ul className={`grid gap-4 ${TESTIMONIAL ? 'mt-8' : 'sm:grid-cols-2'}`}>
                 {[
-                  { icon: BadgeCheck, text: 'Every driver is approved with their Ghana Card, a photo and their vehicle.' },
+                  { icon: BadgeCheck, text: 'Every driver is approved with their Ghana Card number, a photo and their vehicle.' },
                   { icon: Clock, text: 'Every assignment, pickup and unload is recorded with its time.' },
                   { icon: Camera, text: 'Pickup photos are stored privately and checked when something looks off.' },
                   { icon: Phone, text: 'A real person handles missed pickups, disputes and refunds.' },
@@ -383,7 +386,7 @@ export default async function Home() {
                     {f.q}
                     <ChevronDown aria-hidden className="size-5 shrink-0 text-ink-3 transition-transform duration-300 group-open:rotate-180" />
                   </summary>
-                  <p className="max-w-[65ch] pb-5 leading-relaxed text-ink-2">{f.a}</p>
+                  <p className="max-w-[65ch] pb-5 leading-relaxed text-ink-2">{!acceptHazardous && "noHazardous" in f ? f.noHazardous : f.a}</p>
                 </details>
               ))}
             </div>
@@ -398,7 +401,7 @@ export default async function Home() {
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-white">Pin your gate, choose your bins and pay with MoMo.</p>
             <Link
-              href="/signup"
+              href="/book"
               className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-control bg-white px-6 font-semibold text-customer-deep shadow-card transition hover:bg-customer-wash"
             >
               Book tonight&apos;s pickup <ArrowRight aria-hidden className="size-4" />
@@ -415,7 +418,7 @@ export default async function Home() {
             <p className="mt-4 max-w-xs text-sm leading-relaxed">Night-time refuse collection in Ghana, with proof at every step.</p>
           </div>
           {[
-            { title: 'Service', links: [['Book a pickup', '/signup'], ['How it works', '#how'], ['Where we collect', '#coverage']] },
+            { title: 'Service', links: [['Book a pickup', '/book'], ['How it works', '#how'], ['Where we collect', '#coverage']] },
             { title: 'Work with us', links: [['Drive with Trashit', '/signup?role=driver'], ['Sign in', '/login']] },
             { title: 'Legal', links: [['Privacy', '/privacy-policy'], ['Terms', '/terms'], ['Cookies', '/cookie-policy'], ['Refunds', '/refund-policy']] },
           ].map((col) => (

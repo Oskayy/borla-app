@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import { useClientValue } from '@/lib/use-client-value'
+import { clearDraft, draftRaw, parseDraft, saveDraft, type BookingDraft } from '@/lib/booking-draft'
 import BinIllustration from '@/components/BinIllustration'
 import { AlertCircle, Check, Home as HomeIcon, Lock, MapPin, MapPinOff, Minus, Moon, Plus, Recycle, Trash2 } from 'lucide-react'
 import PhotoCapture from '@/components/PhotoCapture'
@@ -38,22 +41,40 @@ interface Quote {
 
 const MAX_PER_SIZE = 20
 
-export default function BookingForm({
-  sizes,
-  home,
-  homeNeedsCheck = false,
-}: {
+interface BookingFormProps {
   sizes: BinSizeOption[]
   home: { address: string } | null
   homeNeedsCheck?: boolean // a home pin saved before pins had to be confirmed
-}) {
-  // With a saved home, bookings use it by default. The customer can switch to another address for one order.
-  const [useHome, setUseHome] = useState(!!home)
-  const [address, setAddress] = useState('')
-  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null)
-  const [wasteType, setWasteType] = useState('general')
-  const [hazardous, setHazardous] = useState(false)
-  const [bins, setBins] = useState<Record<string, number>>({})
+  acceptHazardous?: boolean // ops setting: off until a disposal site takes hazardous waste
+  guest?: boolean // no account yet: price a pickup, then create an account to book it
+}
+
+// A pickup priced before signing up (lib/booking-draft.ts) fills the form in, so nobody starts again.
+export default function BookingForm(props: BookingFormProps) {
+  const raw = useClientValue(draftRaw, '')
+  const draft = useMemo(() => parseDraft(raw), [raw])
+  return <BookingFormInner key={draft ? 'draft' : 'blank'} {...props} draft={draft} />
+}
+
+function BookingFormInner({
+  sizes,
+  home,
+  homeNeedsCheck = false,
+  acceptHazardous = false,
+  guest = false,
+  draft,
+}: BookingFormProps & { draft: BookingDraft | null }) {
+  const router = useRouter()
+  const known = new Set(sizes.map((s) => s.code))
+  // With a saved home, bookings use it by default (unless they priced a different place before signing up).
+  const [useHome, setUseHome] = useState(!!home && !draft?.pin)
+  const [address, setAddress] = useState(draft?.address ?? '')
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(draft?.pin ?? null)
+  const [wasteType, setWasteType] = useState(draft?.wasteType === 'recyclable' ? 'recyclable' : 'general')
+  const [hazardous, setHazardous] = useState(acceptHazardous && !!draft?.hazardous)
+  const [bins, setBins] = useState<Record<string, number>>(() =>
+    Object.fromEntries(Object.entries(draft?.bins ?? {}).filter(([code]) => known.has(code)))
+  )
   const [file, setFile] = useState<File | null>(null)
   const [gpsLat, setGpsLat] = useState<number | null>(null)
   const [gpsLng, setGpsLng] = useState<number | null>(null)
@@ -105,7 +126,7 @@ export default function BookingForm({
     setError('')
     setLoading(true)
     try {
-      const res = await fetch('/api/pricing/quote', {
+      const res = await fetch(guest ? '/api/pricing/quote-public' : '/api/pricing/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderBody()),
@@ -179,10 +200,12 @@ export default function BookingForm({
     const { error: uploadError } = await supabase.storage.from('pickup-evidence').upload(filePath, file)
 
     if (uploadError) {
+      console.error('[booking] photo upload failed', uploadError)
       setLoading(false)
-      setError('Photo upload failed: ' + uploadError.message)
+      setError("Your photo didn't upload. Please check your connection and try again.")
       return
     }
+    clearDraft() // booked: the priced pickup is no longer needed
 
     const evidenceRes = await fetch('/api/orders/add-evidence', {
       method: 'POST',
@@ -192,7 +215,7 @@ export default function BookingForm({
 
     if (!evidenceRes.ok) {
       setLoading(false)
-      setError('Order created, but photo could not be saved. Contact support.')
+      setError("Your photo didn't save. Please try again.")
       return
     }
 
@@ -269,6 +292,12 @@ export default function BookingForm({
     )
   }
 
+  // No account yet: keep what they chose on this phone, then sign up (or sign in) to book it.
+  function continueToAccount(path: '/signup' | '/login') {
+    saveDraft({ address, pin, wasteType, hazardous, bins })
+    router.push(path)
+  }
+
   const label = 'text-sm font-semibold text-ink'
   const optionCard = (on: boolean) =>
     `flex cursor-pointer items-start gap-3 rounded-card border p-4 transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ops ${
@@ -277,7 +306,17 @@ export default function BookingForm({
 
   return (
     <div>
-      <PageHeader title="Book a pickup" lead="Book any time. Collection happens overnight, and you see your collection night before you pay." />
+      {guest ? (
+        <PageHeader title="Price a pickup" lead="See your price and collection night first. You only need an account when you book." />
+      ) : (
+        <PageHeader title="Book a pickup" lead="Book any time. Collection happens overnight, and you see your collection night before you pay." />
+      )}
+      {!guest && draft && (
+        <p role="status" className="mb-5 flex items-start gap-2.5 rounded-card bg-customer-wash p-4 text-[15px] text-ink ring-1 ring-customer/20">
+          <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-customer-deep" strokeWidth={2.5} />
+          We kept the pickup you priced. Add a photo of your waste, check the price, then pay.
+        </p>
+      )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
         <div className="grid gap-6">
@@ -329,7 +368,7 @@ export default function BookingForm({
                 </Link>{' '}
                 once. Until then, place a pin for this order below.
               </p>
-            ) : (
+            ) : guest ? null : (
               <p className="mt-3 text-sm text-ink-2">
                 Tip:{' '}
                 <Link href="/dashboard/customer/home-location" className="font-semibold text-customer-deep hover:underline">
@@ -450,6 +489,7 @@ export default function BookingForm({
                 </label>
               ))}
             </div>
+            {acceptHazardous ? (
             <label className="mt-4 flex cursor-pointer items-start gap-3 text-[15px]">
               <input
                 type="checkbox"
@@ -464,9 +504,15 @@ export default function BookingForm({
                 Contains hazardous items <span className="text-ink-2">(batteries, chemicals, paint, medical waste). An extra charge applies.</span>
               </span>
             </label>
+            ) : (
+              <p className="mt-4 text-sm text-ink-2">
+                We can&apos;t collect hazardous waste yet (batteries, chemicals, paint, medical waste). Please keep it out of your bins.
+              </p>
+            )}
           </Card>
 
-          {/* 4. Photo */}
+          {/* 4. Photo (once they have an account) */}
+          {!guest && (
           <Card>
             <h2 className={label}>4. Photo of your waste</h2>
             <p className="mt-1 text-sm text-ink-2">Required. It helps your driver know what to expect.</p>
@@ -487,6 +533,7 @@ export default function BookingForm({
               )}
             </div>
           </Card>
+          )}
         </div>
 
         {/* Price summary */}
@@ -548,12 +595,26 @@ export default function BookingForm({
                 </p>
 
                 <ErrorText text={error} />
-                <button onClick={confirmBooking} disabled={loading} className={`mt-5 w-full ${BUTTON_PRIMARY}`}>
-                  {loading ? 'Booking…' : `Book and pay GHS ${quote.price.toFixed(2)}`}
-                </button>
-                <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-ink-3">
-                  <Lock aria-hidden className="size-3.5" /> Secure payment with MoMo or card via Paystack
-                </p>
+                {guest ? (
+                  <>
+                    <button onClick={() => continueToAccount('/signup')} className={`mt-5 w-full ${BUTTON_PRIMARY}`}>
+                      Create an account to book
+                    </button>
+                    <button onClick={() => continueToAccount('/login')} className={`mt-2.5 w-full ${BUTTON_QUIET}`}>
+                      I already have an account
+                    </button>
+                    <p className="mt-2.5 text-center text-xs text-ink-3">It takes a minute. Your bins and pin are kept.</p>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={confirmBooking} disabled={loading} className={`mt-5 w-full ${BUTTON_PRIMARY}`}>
+                      {loading ? 'Booking…' : `Book and pay GHS ${quote.price.toFixed(2)}`}
+                    </button>
+                    <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-ink-3">
+                      <Lock aria-hidden className="size-3.5" /> Secure payment with MoMo or card via Paystack
+                    </p>
+                  </>
+                )}
               </>
             )}
           </Card>

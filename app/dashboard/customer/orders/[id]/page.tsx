@@ -12,6 +12,7 @@ import { BUTTON_QUIET, Card, CardTitle, StatusPill } from '@/components/ui'
 import CancelOrderButton from '@/components/CancelOrderButton'
 import RateOrder from '@/components/customer/RateOrder'
 import { canRate } from '@/lib/ratings'
+import EnableAlerts from '@/components/EnableAlerts'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,6 +93,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="grid gap-6">
+        {waitingForNight && (
+          <EnableAlerts compact message="Paid and booked. Want a message when a driver is assigned and when your bins are collected?" />
+        )}
         <Card>
           <p className="text-lg font-semibold tracking-tight">{status.message}</p>
           {collection && waitingForNight && (
@@ -134,7 +138,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
         {rateable && order.driver && (
           <Card>
-            <RateOrder orderId={order.id} driverName={order.driver.name.split(/s+/)[0]} />
+            <RateOrder orderId={order.id} driverName={order.driver.name.split(/\s+/)[0]} />
           </Card>
         )}
         {order.rating && (

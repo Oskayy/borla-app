@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params
-  if (!isUuid(id)) return NextResponse.json({ error: 'Invalid order' }, { status: 400 })
+  if (!isUuid(id)) return NextResponse.json({ error: "We couldn't find that pickup." }, { status: 400 })
 
   const order = await prisma.order.findUnique({
     where: { id },

@@ -26,7 +26,16 @@ export default async function DriverApprovalsPage() {
       phone: true,
       email: true,
       createdAt: true,
-      driverProfile: { select: { approvalStatus: true, approvalNote: true, submittedAt: true, vehicleTypeRef: { select: { name: true } } } },
+      driverProfile: {
+        select: {
+          approvalStatus: true,
+          approvalNote: true,
+          submittedAt: true,
+          ghanaCardNumber: true,
+          vehiclePlate: true,
+          vehicleTypeRef: { select: { name: true } },
+        },
+      },
       driverDocuments: { select: { type: true, path: true } },
     },
   })
@@ -51,6 +60,8 @@ export default async function DriverApprovalsPage() {
       note: d.driverProfile?.approvalNote ?? null,
       submittedAt: d.driverProfile?.submittedAt ? d.driverProfile.submittedAt.toISOString() : null,
       vehicle: d.driverProfile?.vehicleTypeRef?.name ?? null,
+      plate: d.driverProfile?.vehiclePlate ?? null,
+      ghanaCard: d.driverProfile?.ghanaCardNumber ?? null,
       docs,
     })
   }

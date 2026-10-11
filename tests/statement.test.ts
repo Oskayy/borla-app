@@ -43,7 +43,7 @@ describe('driver statement', () => {
   })
 
   it('totals only what was earned and what was actually sent', () => {
-    expect(statementTotals(sample)).toEqual({ pickup: 22.5, unload: 18, earned: 40.5, sent: 25, stops: 2 })
+    expect(statementTotals(sample)).toEqual({ pickup: 22.5, unload: 18, attempt: 0, takenBack: 0, earned: 40.5, sent: 25, stops: 2 })
   })
 
   it('writes a CSV a spreadsheet will not run as formulas', () => {

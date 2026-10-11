@@ -29,7 +29,10 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
     const { error: uploadError } = await supabase.storage
       .from('pickup-evidence')
       .upload(filePath, file)
-    if (uploadError) throw new Error(uploadError.message)
+    if (uploadError) {
+      console.error('[pickup] photo upload failed', uploadError)
+      throw new Error("Your photo didn't upload. Please check your signal and try again.")
+    }
     return filePath
   }
 

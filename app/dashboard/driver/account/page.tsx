@@ -86,7 +86,13 @@ export default async function DriverAccountPage() {
           value={profile?.zone?.name ?? undefined}
           info="Where you start each night and how far you'll travel. Stops are offered within this distance."
         />
-        <AccountRow href="/dashboard/driver/availability" icon={CalendarDays} title="Availability" value={profile ? nightsSummary(profile.workNights) : undefined} />
+        <AccountRow
+          href="/dashboard/driver/availability"
+          icon={CalendarDays}
+          title="Availability"
+          value={profile ? nightsSummary(profile.workNights) : undefined}
+          info="The nights you work. On nights off you aren't given any stops."
+        />
         <AccountRow
           href="/dashboard/driver/vehicle"
           icon={Truck}

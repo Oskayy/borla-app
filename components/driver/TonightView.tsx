@@ -12,6 +12,7 @@ import DriverLiveUpdates from '@/components/DriverLiveUpdates'
 import EnableAlerts from '@/components/EnableAlerts'
 import type { NextPoint } from '@/lib/driver-next'
 import FlashHost from '@/components/driver/Flash'
+import { durationLabel } from '@/lib/trip-time'
 
 // The driver's Tonight screen: online switch and balance side by side, the next thing to do, then the night's
 // trips (one card each: stops, then where to unload) beside the map.
@@ -36,7 +37,8 @@ export interface TripGroup {
     approximate: boolean // the customer didn't pin this spot; the position was looked up from text
     customerPhone: string | null
   }[]
-  site: { name: string; lat: number | null; lng: number | null; hours: string; notes: string | null; status: string } | null
+  site: { name: string; lat: number | null; lng: number | null; hours: string; notes: string | null; status: string; unloadMinutes?: number } | null
+  minutes: number | null // about how long what's left of this trip takes (null once it's done)
 }
 
 export interface TonightProps {
@@ -92,7 +94,8 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
             <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${badge.cls}`}>{badge.text}</span>
           </span>
           <span className="block truncate text-sm text-ink-3">
-            {g.orders.length} {g.orders.length === 1 ? 'stop' : 'stops'} · unload at {g.site?.name ?? 'no site yet'}
+            {g.orders.length} {g.orders.length === 1 ? 'stop' : 'stops'}
+            {!done && g.minutes != null && ` · ${durationLabel(g.minutes)}`} · unload at {g.site?.name ?? 'no site yet'}
           </span>
         </span>
         <ChevronDown aria-hidden className="size-5 shrink-0 text-ink-3 transition group-open:rotate-180" />
@@ -265,7 +268,9 @@ export default function TonightView({
       {next?.kind !== 'accept' && (
         <NextStopCard next={next} online={online} waitingIds={waitingIds} firstDeadline={firstDeadline} customerPhone={nextPhone} />
       )}
-      <EnableAlerts compact message="Turn on alerts so your phone rings when stops are added, even with Trashit closed." />
+      {(online || orderCount > 0) && (
+        <EnableAlerts compact message="Turn on alerts so your phone rings when stops are added, even with Trashit closed." />
+      )}
 
       {groups.length > 0 && (
         <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

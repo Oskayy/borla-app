@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   const body = await readJson(req)
   if (!isValidLat(body?.lat) || !isValidLng(body?.lng)) {
-    return NextResponse.json({ error: 'Invalid location' }, { status: 400 })
+    return NextResponse.json({ error: "We couldn't read your location. Please try again." }, { status: 400 })
   }
 
   const profile = await prisma.driverProfile.findUnique({

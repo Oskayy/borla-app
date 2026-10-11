@@ -31,7 +31,8 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
       .upload(filePath, file)
 
     if (uploadError) {
-      setError('Photo upload failed: ' + uploadError.message)
+      console.error('[unload] photo upload failed', uploadError)
+      setError("Your photo didn't upload. Please check your signal and try again.")
       setLoading(false)
       return
     }

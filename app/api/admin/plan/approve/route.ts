@@ -6,7 +6,7 @@ import { isUuid, readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
 import { checkAssignment, loadDispatchDrivers, loadPlanSites } from '@/lib/dispatch-server'
 import { orderLitres } from '@/lib/dispatch'
-import { buildDriverPlan, orderWasteKind, type PlanOrder } from '@/lib/planner'
+import { buildDriverPlan, limitProblems, orderWasteKind, type PlanOrder } from '@/lib/planner'
 import { notifyUser } from '@/lib/notify'
 import { newStopsMessage } from '@/lib/offers'
 import { getAcceptMinutes } from '@/lib/settings'
@@ -98,6 +98,22 @@ export async function POST(req: NextRequest) {
     }))
     const built = buildDriverPlan(drivers[0], planOrders, shiftRunning, now, sites)
 
+    // Trips and shift time: ops can go over, but only with a reason (recorded on each order).
+    const limits = limitProblems(drivers[0], built.trips.length, built.minutes)
+    let limitNote = ''
+    if (limits.length > 0) {
+      const reason = typeof p.overrideReason === 'string' ? p.overrideReason.trim().slice(0, 200) : ''
+      if (p.override !== true || reason.length < 3) {
+        results.push({
+          driverId,
+          ok: false,
+          message: `Too much for this driver tonight: ${limits.join('; ')}. Move some stops, or give a reason to approve anyway.`,
+        })
+        continue
+      }
+      limitNote = ` [OVER LIMIT: ${limits.join('; ')}. Reason: ${reason}]`
+    }
+
     // Ops may pick a different site for a trip on the plan page ({ tripNumber: siteId }).
     const choices = p.siteChoices && typeof p.siteChoices === 'object' ? p.siteChoices : {}
     const siteFor = (tripNumber: number, planned: string | null) => {
@@ -138,7 +154,7 @@ export async function POST(req: NextRequest) {
               actorId: auth.user.id,
               fromState: 'PAID',
               toState: 'ASSIGNED',
-              reason: `Assigned by approved plan (trip ${tripOf.get(orderId) ?? 1})${check.note}`,
+              reason: `Assigned by approved plan (trip ${tripOf.get(orderId) ?? 1})${check.note}${limitNote}`,
             })),
           })
         },

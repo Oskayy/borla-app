@@ -8,6 +8,7 @@ import { refundStatusFromPaystack } from '@/lib/refunds'
 import { markRefundProcessed } from '@/lib/refunds-server'
 import { notifyOps, notifyUser } from '@/lib/notify'
 import { caught } from '@/lib/errors'
+import { freezeSplitAtPayment } from '@/lib/order-split-server'
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
         data: { orderId, provider: 'paystack', amount, status: 'success', providerRef },
       })
       await tx.ledgerEntry.create({
-        data: { orderId, type: 'customer_payment', amount, idempotencyKey: `payment-${providerRef}` },
+        data: { orderId, type: 'customer_payment', amount, amountPesewas: paidPesewas, idempotencyKey: `payment-${providerRef}` },
       })
 
       // Only an unpaid order may become PAID.
@@ -127,12 +128,23 @@ export async function POST(req: NextRequest) {
 
       if (moved.count === 1) paidCustomerId = order.customerId
 
-      // Trashit's platform fee, recorded once per order.
-      const platformFee = quote?.platformFee
-      if (moved.count === 1 && typeof platformFee === 'number' && platformFee > 0) {
-        await tx.ledgerEntry.create({
-          data: { orderId, type: 'platform_fee', amount: platformFee, idempotencyKey: `platform-fee-${orderId}` },
-        })
+      // Freeze the split now (price, platform fee, pickup and unload shares), so later rule changes don't
+      // touch this order. If no payout rule is active it is worked out at the first payout instead; the
+      // payment is still recorded.
+      if (moved.count === 1) {
+        let platformFee: number | null = null
+        try {
+          platformFee = (await freezeSplitAtPayment(tx, orderId, paidPesewas, order.quoteSnapshot)).platformFee
+        } catch (err) {
+          if (caught(err)?.message !== 'NO_PAYOUT_RULE') throw err
+          console.error('[webhook] No active payout rule: split not frozen at payment for', orderId)
+        }
+        // Trashit's platform fee, recorded once per order.
+        if (platformFee && platformFee > 0) {
+          await tx.ledgerEntry.create({
+            data: { orderId, type: 'platform_fee', amount: platformFee / 100, amountPesewas: platformFee, idempotencyKey: `platform-fee-${orderId}` },
+          })
+        }
       }
 
       await tx.auditLog.create({

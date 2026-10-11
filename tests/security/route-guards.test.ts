@@ -26,6 +26,8 @@ const PUBLIC_ROUTES: Record<string, string[]> = {
   'auth/mfa/unenroll': ['auth.getUser()', 'MANDATORY_MFA_ROLES'],
   'cron/dispatch': ['CRON_SECRET', 'timingSafeEqual'],
   'payments/webhook': ['x-paystack-signature', 'timingSafeEqual'],
+  // Price check before signing up: saves nothing, limited per IP.
+  'pricing/quote-public': ['enforceRateLimit(', 'getClientIp('],
 }
 
 const routes = routeFiles(API).map((file) => ({

@@ -47,7 +47,8 @@ async function loadQueueCounts(role: string): Promise<QueueCounts> {
   const [row] = await prisma.$queryRaw<Record<string, bigint>[]>`
     SELECT
       (SELECT count(*) FROM "Order" WHERE status = 'PAID' AND "driverId" IS NULL AND ("shiftDate" <= ${night} OR "shiftDate" IS NULL)) AS "needsDriver",
-      (SELECT count(*) FROM "Order" WHERE status = 'DISPOSAL_PENDING') AS "unloads",
+      (SELECT count(*) FROM "Order" WHERE status = 'DISPOSAL_PENDING'
+        OR (status = 'PICKED_UP' AND "shiftDate" < ${night})) AS "unloads",
       (SELECT count(*) FROM "Order" WHERE status IN ('FAILED_PICKUP', 'DISPUTED')) AS "flagged",
       (SELECT count(*) FROM "Order" o
         WHERE EXISTS (SELECT 1 FROM "AuditLog" a WHERE a."orderId" = o.id AND (strpos(a.reason, 'GPS MISMATCH') > 0 OR strpos(a.reason, ${PICKUP_CHECK_MARKER}) > 0))

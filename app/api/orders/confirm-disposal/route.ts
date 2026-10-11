@@ -5,7 +5,8 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
-import { driverPoolFromSnapshot } from '@/lib/pricing-core'
+import { releaseDisposal } from '@/lib/disposal-release'
+import { getShiftSettings } from '@/lib/settings'
 import { caught } from '@/lib/errors'
 
 export async function POST(req: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   const gps = parseGps(body)
 
   if (!isUuid(orderId) || !gps.ok) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
   if (!isValidEvidencePath(photoPath, orderId)) {
     return NextResponse.json({ error: 'A valid photo is required to confirm disposal' }, { status: 400 })
@@ -49,26 +50,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Photo upload not found. Please retake the photo and try again.' }, { status: 400 })
   }
 
-  const rule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' } })
-  if (!rule) return NextResponse.json({ error: 'No active payout rule' }, { status: 500 })
-
-  // Drivers share the price after Trashit's platform fee (the "driver pool").
-  const driverPool = driverPoolFromSnapshot(order.quoteSnapshot)
-  if (driverPool === null) {
-    return NextResponse.json({ error: 'This order has an invalid price' }, { status: 400 })
-  }
-
-  const payoutAmount = Math.round(driverPool * rule.disposalPercent) / 100
-  const idempotencyKey = `disposal-${orderId}`
+  const settings = await getShiftSettings()
+  let payoutAmount = 0
 
   try {
     await prisma.$transaction(async (tx) => {
-      const moved = await tx.order.updateMany({
-        where: { id: orderId, driverId: user.id, status: 'PICKED_UP' },
-        data: { status: 'COMPLETED' },
-      })
-      if (moved.count !== 1) throw new Error('STATE_CHANGED')
-
       await tx.orderEvidence.create({
         data: {
           orderId,
@@ -79,17 +65,15 @@ export async function POST(req: NextRequest) {
           capturedAt: new Date(),
         },
       })
-      await tx.ledgerEntry.create({
-        data: { orderId, type: 'driver_payout_disposal', amount: payoutAmount, idempotencyKey, driverId: user.id },
-      })
-      await tx.auditLog.create({
-        data: {
-          orderId,
-          actorId: user.id,
-          fromState: 'PICKED_UP',
-          toState: 'COMPLETED',
-          reason: 'Driver confirmed disposal with photo evidence',
-        },
+      payoutAmount = await releaseDisposal(tx, {
+        orders: [{ id: orderId, shiftDate: order.shiftDate }],
+        fromStatus: 'PICKED_UP',
+        driverId: user.id,
+        settings,
+        facilityId: null,
+        method: 'driver_photo',
+        actorId: user.id,
+        reason: 'Driver confirmed disposal with photo evidence',
       })
     })
   } catch (err) {
@@ -97,6 +81,10 @@ export async function POST(req: NextRequest) {
     if (e?.code === 'P2002') return NextResponse.json({ success: true, note: 'Already processed' })
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'This order was just updated. Please refresh.' }, { status: 409 })
+    }
+    if (e?.message === 'BAD_PRICE' || e?.message === 'NO_PAYOUT_RULE') {
+      console.error('[confirm-disposal] cannot work out the pay:', e.message, orderId)
+      return NextResponse.json({ error: "This stop's pay can't be worked out right now. Please call Trashit support." }, { status: 409 })
     }
     console.error('[confirm-disposal] failed:', e)
     return NextResponse.json({ error: 'Could not confirm disposal. Please try again.' }, { status: 500 })

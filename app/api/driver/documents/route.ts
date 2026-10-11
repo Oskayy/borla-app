@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   } else if (type === AVATAR_DOC) {
     // A profile picture: any time.
   } else {
-    if (!isDocType(type)) return NextResponse.json({ error: 'Invalid document type' }, { status: 400 })
+    if (!isDocType(type)) return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
     // Approved drivers can refresh their vehicle photo (same vehicle); verification documents stay as approved.
     if (profile.approvalStatus === 'APPROVED' && type !== 'vehicle_photo') {
       return NextResponse.json({ error: 'Your account is already approved. Contact Trashit to update your documents.' }, { status: 409 })

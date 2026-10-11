@@ -29,14 +29,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const paymentId = body?.paymentId == null ? undefined : body.paymentId
   if (paymentId !== undefined && !isUuid(paymentId)) return NextResponse.json({ error: 'Invalid payment' }, { status: 400 })
 
-  const result = await refundOrder({ orderId: id, amount, reason, actorId: auth.user.id, cancel: body?.cancel === true, paymentId, staffApproval: true })
+  const driverFault = body?.driverFault === true
+  const result = await refundOrder({ orderId: id, amount, reason, actorId: auth.user.id, cancel: body?.cancel === true, paymentId, staffApproval: true, driverFault })
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
 
   if (result.awaitingApproval) {
-    await logAdminAction(auth.user.id, 'REFUND_REQUESTED', id, `GHS ${result.awaitingApproval.toFixed(2)}${body?.cancel === true ? ' + cancel' : ''}, waiting for a second approver: ${reason}`)
+    await logAdminAction(auth.user.id, 'REFUND_REQUESTED', id, `GHS ${result.awaitingApproval.toFixed(2)}${body?.cancel === true ? ' + cancel' : ''}${driverFault ? ' (driver at fault)' : ''}, waiting for a second approver: ${reason}`)
     return NextResponse.json({ success: true, refunded: 0, awaitingApproval: result.awaitingApproval })
   }
 
-  await logAdminAction(auth.user.id, 'REFUND_STARTED', id, `GHS ${result.refunded.toFixed(2)}${body?.cancel === true ? ' + cancelled' : ''}: ${reason}`)
+  await logAdminAction(auth.user.id, 'REFUND_STARTED', id, `GHS ${result.refunded.toFixed(2)}${body?.cancel === true ? ' + cancelled' : ''}${driverFault ? ' (driver at fault)' : ''}: ${reason}`)
   return NextResponse.json({ success: true, refunded: result.refunded })
 }

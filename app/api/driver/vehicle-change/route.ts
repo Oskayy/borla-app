@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const action = (await readJson(req))?.action
-  if (action !== 'send' && action !== 'cancel') return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  if (action !== 'send' && action !== 'cancel') return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
 
   const profile = await prisma.driverProfile.findUnique({
     where: { userId: auth.user.id },

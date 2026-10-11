@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const orderId = body?.orderId
   const reason = cleanText(body?.reason, 200)
-  if (!isUuid(orderId)) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  if (!isUuid(orderId)) return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   if (!reason || reason.length < 3) {
     return NextResponse.json({ error: 'Please say why you are declining' }, { status: 400 })
   }

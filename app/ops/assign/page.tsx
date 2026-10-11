@@ -89,7 +89,7 @@ export default async function AssignOrdersPage() {
           dispatch.shiftRunning
             ? 'The shift is running: only online drivers are offered, measured from their live position.'
             : "The shift isn't running: you're planning ahead, so every active driver working tonight is offered, measured from their home base."
-        } Trashit suggests a driver for every order, in trips that fill each vehicle to about 90%. Check it, move anything you want, then approve. Nothing is assigned until you approve.`}
+        } Trashit suggests a driver for every order, in trips that fill each vehicle to about 90% and fit in the driver’s shift. Check it, move anything you want, then approve. Nothing is assigned until you approve.`}
       />
       <div className="grid gap-4">
         {bounced > 0 && (

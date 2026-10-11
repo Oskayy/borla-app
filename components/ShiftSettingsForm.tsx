@@ -13,16 +13,17 @@ interface ShiftTimes {
   maxTripsPerNight: string
   acceptMinutes: string
   autoDispatch: boolean
+  acceptHazardous: boolean
 }
 
-const FIELDS: { key: Exclude<keyof ShiftTimes, 'maxTripsPerNight' | 'acceptMinutes' | 'autoDispatch'>; label: string; hint: string }[] = [
+const FIELDS: { key: Exclude<keyof ShiftTimes, 'maxTripsPerNight' | 'acceptMinutes' | 'autoDispatch' | 'acceptHazardous'>; label: string; hint: string }[] = [
   { key: 'shiftStart', label: 'Shift starts', hint: 'When drivers start collecting (evening).' },
   { key: 'shiftEnd', label: 'Shift ends', hint: 'When collection stops the next morning.' },
   { key: 'planningSnapshot', label: 'Planning snapshot', hint: "Orders paid before this are planned into tonight's routes." },
   { key: 'hardCutoff', label: 'Hard cutoff', hint: "Last time an order can still join tonight's shift (00:00 = midnight)." },
 ]
 
-export default function ShiftSettingsForm({ initial }: { initial: ShiftTimes }) {
+export default function ShiftSettingsForm({ initial, hazardSites }: { initial: ShiftTimes; hazardSites: number }) {
   const [values, setValues] = useState<ShiftTimes>(initial)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -118,6 +119,27 @@ export default function ShiftSettingsForm({ initial }: { initial: ShiftTimes }) 
               start, and every late order after it, goes to the best online driver within a couple of minutes. Off means everything is assigned by
               hand.
             </span>
+          </span>
+        </label>
+
+        <label className="mt-5 flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={values.acceptHazardous}
+            onChange={(e) => setValues((v) => ({ ...v, acceptHazardous: e.target.checked }))}
+            className={`${CHECK} mt-1`}
+          />
+          <span>
+            <span className="block text-[15px] font-medium">Accept hazardous waste bookings</span>
+            <span className="mt-0.5 block text-sm text-ink-3">
+              Batteries, chemicals, paint, medical waste. These orders are never assigned automatically: plan each one by hand on the Assign
+              page, to a site that takes hazardous waste.
+            </span>
+            {values.acceptHazardous && hazardSites === 0 && (
+              <span role="alert" className="mt-1.5 block text-sm font-medium text-danger">
+                No active disposal site takes hazardous waste yet. Add one under Disposal sites before turning this on.
+              </span>
+            )}
           </span>
         </label>
       </fieldset>

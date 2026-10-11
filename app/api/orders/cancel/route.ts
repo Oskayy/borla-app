@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const orderId = body?.orderId
   const reason = cleanText(body?.reason, 200) || 'No reason given'
-  if (!isUuid(orderId)) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  if (!isUuid(orderId)) return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
 
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { customerId: true, status: true, shiftDate: true } })
   if (!order || order.customerId !== auth.user.id) return NextResponse.json({ error: 'Order not found' }, { status: 404 })

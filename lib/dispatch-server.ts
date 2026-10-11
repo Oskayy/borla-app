@@ -1,17 +1,57 @@
 import { prisma } from '@/lib/prisma'
 import { getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
 import { isDriverAvailable, isWithinShift, localParts } from '@/lib/shift'
-import { planningShiftDate } from '@/lib/schedule'
+import { dbDate, planningShiftDate } from '@/lib/schedule'
+import { shiftLengthMinutes, tripMinutes, type Point } from '@/lib/trip-time'
 import { worksNight } from '@/lib/availability'
 import { coversShift, isOpenAt } from '@/lib/disposal-sites'
 import type { PlanSite } from '@/lib/planner'
-import { assessDriver, orderLitres, type DispatchDriver, type DispatchOrder, type DriverFit } from '@/lib/dispatch'
+import { assessDriver, driverPosition, orderLitres, type DispatchDriver, type DispatchOrder, type DriverFit } from '@/lib/dispatch'
 
 // Orders that are on a driver's vehicle or on their list and not yet unloaded.
 // (DISPOSAL_PENDING is left out: the load is already off the vehicle, only the paperwork is waiting.)
 export const LOAD_STATUSES = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP'] as const
 
-// Loads drivers with everything the dispatch rules need, including their current load in litres.
+const TO_COLLECT = new Set(['ASSIGNED', 'EN_ROUTE', 'ARRIVED'])
+const OPEN = new Set<string>(LOAD_STATUSES)
+
+type NightStop = {
+  routeId: string
+  tripNumber: number
+  sequence: number
+  order: { status: string; latitude: number | null; longitude: number | null }
+  route: { driverId: string; createdAt: Date; trips: { tripNumber: number; facility: { lat: number | null; lng: number | null; avgUnloadMinutes: number } | null }[] }
+}
+
+// Trips a driver already has tonight, and the minutes their unfinished ones still need
+// (from where they are now: collect what's left, then unload).
+export function nightWork(stops: NightStop[], from: Point | null): { tripsUsed: number; committedMinutes: number } {
+  const trips = new Map<string, NightStop[]>()
+  for (const s of stops) {
+    const key = `${s.routeId}:${s.tripNumber}`
+    trips.set(key, [...(trips.get(key) ?? []), s])
+  }
+  const ordered = Array.from(trips.values()).sort(
+    (a, b) => a[0].route.createdAt.getTime() - b[0].route.createdAt.getTime() || a[0].tripNumber - b[0].tripNumber
+  )
+  let committedMinutes = 0
+  let here = from
+  for (const t of ordered) {
+    if (!t.some((s) => OPEN.has(s.order.status))) continue // finished: unloaded already
+    const collect = t
+      .filter((s) => TO_COLLECT.has(s.order.status))
+      .sort((a, b) => a.sequence - b.sequence)
+      .map((s) => (s.order.latitude != null && s.order.longitude != null ? { lat: s.order.latitude, lng: s.order.longitude } : null))
+    const f = t[0].route.trips.find((x) => x.tripNumber === t[0].tripNumber)?.facility
+    const site = f && f.lat != null && f.lng != null ? { lat: f.lat, lng: f.lng, unloadMinutes: f.avgUnloadMinutes } : null
+    committedMinutes += tripMinutes(here, collect, site)
+    if (site) here = site
+  }
+  return { tripsUsed: trips.size, committedMinutes: Math.round(committedMinutes) }
+}
+
+// Loads drivers with everything the dispatch rules need, including their current load in litres,
+// the trips they've used tonight and the shift time they have left.
 export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ drivers: DispatchDriver[]; shiftRunning: boolean; now: Date }> {
   const now = new Date()
   const [settings, tripsPerNight] = await Promise.all([getShiftSettings(), getMaxTripsPerNight()])
@@ -48,9 +88,35 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
     },
   })
 
+  // Tonight's route stops (and any older ones still open), for trips used and time already committed.
+  const nightStops: NightStop[] = users.length
+    ? await prisma.routeStop.findMany({
+        where: {
+          route: { driverId: { in: users.map((u) => u.id) } },
+          OR: [{ order: { status: { in: [...LOAD_STATUSES] } } }, { order: { shiftDate: dbDate(night) } }],
+        },
+        select: {
+          routeId: true,
+          tripNumber: true,
+          sequence: true,
+          order: { select: { status: true, latitude: true, longitude: true } },
+          route: {
+            select: {
+              driverId: true,
+              createdAt: true,
+              trips: { select: { tripNumber: true, facility: { select: { lat: true, lng: true, avgUnloadMinutes: true } } } },
+            },
+          },
+        },
+      })
+    : []
+  // Time left in the shift: all of it when planning ahead, the rest of it once it's running.
+  const shiftLength = shiftLengthMinutes(settings.shiftStartMinutes, settings.shiftEndMinutes)
+  const budget = shiftRunning ? (settings.shiftEndMinutes - localParts(now, settings.timezone).minutes + 1440) % 1440 : shiftLength
+
   const drivers: DispatchDriver[] = users.map((u) => {
     const p = u.driverProfile!
-    return {
+    const d: DispatchDriver = {
       id: u.id,
       name: u.name,
       isActive: p.isActive,
@@ -67,6 +133,14 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
       tripsPerNight,
       vehicleName: p.vehicleTypeRef?.name ?? null,
     }
+    const pos = driverPosition(d, shiftRunning, now)
+    const work = nightWork(
+      nightStops.filter((s) => s.route.driverId === u.id),
+      pos ? { lat: pos.lat, lng: pos.lng } : null
+    )
+    d.tripsUsed = work.tripsUsed
+    d.minutesLeft = budget - work.committedMinutes
+    return d
   })
 
   return { drivers, shiftRunning, now }
@@ -123,6 +197,7 @@ export async function loadPlanSites(): Promise<PlanSite[]> {
     lat: f.lat!,
     lng: f.lng!,
     acceptedWaste: f.acceptedWaste,
+    unloadMinutes: f.avgUnloadMinutes,
     usable:
       f.status === 'OPEN' &&
       (shiftRunning ? isOpenAt(f, minutesNow) : coversShift(f, settings.shiftStartMinutes, settings.shiftEndMinutes)),

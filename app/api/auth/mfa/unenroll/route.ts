@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { MANDATORY_MFA_ROLES } from '@/lib/mfa'
 import { readJson } from '@/lib/validate'
+import { friendlyAuthError } from '@/lib/friendly-errors'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   const factorId = (await readJson(req))?.factorId
   if (typeof factorId !== 'string' || !factorId || factorId.length > 100) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabase.auth.mfa.unenroll({ factorId })
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ error: friendlyAuthError(error, "We couldn't turn off two-factor sign-in. Please try again.") }, { status: 400 })
   }
 
   return NextResponse.json({ success: true })

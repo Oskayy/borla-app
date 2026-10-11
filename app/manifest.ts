@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Trashit',
     short_name: 'Trashit',
     description: 'Waste collection, done reliably.',
-    start_url: '/dashboard',
+    start_url: '/start',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',

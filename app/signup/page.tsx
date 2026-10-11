@@ -7,6 +7,7 @@ import { ArrowRight, Check, Circle, Home, MailCheck, Truck } from 'lucide-react'
 import PasswordInput from '@/components/PasswordInput'
 import AuthShell, { AUTH_BUTTON, AUTH_FIELD, AuthTabs, ErrorLine } from '@/components/auth/AuthShell'
 import { useClientValue } from '@/lib/use-client-value'
+import { draftRaw } from '@/lib/booking-draft'
 
 function checkStrength(password: string) {
   return [
@@ -54,6 +55,8 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
 
+  // Came from pricing a pickup (lib/booking-draft.ts): say it's kept.
+  const pricedFirst = useClientValue(() => draftRaw() !== '', false)
   const router = useRouter()
   const strengthChecks = checkStrength(password)
   const allPass = strengthChecks.every((c) => c.pass)
@@ -86,7 +89,9 @@ export default function SignupPage() {
         setCheckEmail(true)
         return
       }
-      router.push('/login')
+      // Signed in already (no email to confirm): straight in. A pickup priced before signing up opens next.
+      router.push('/dashboard')
+      router.refresh()
     } catch {
       setLoading(false)
       setError('Could not reach Trashit. Please check your connection and try again.')
@@ -121,7 +126,9 @@ export default function SignupPage() {
     <AuthShell agreeVerb="creating an account">
       <AuthTabs current="signup" />
       <h1 className="mt-7 text-2xl font-bold tracking-tight">Create your account</h1>
-      <p className="mt-2 text-[15px] text-ink-2">It takes about a minute.</p>
+      <p className="mt-2 text-[15px] text-ink-2">
+        {pricedFirst ? 'Your pickup is saved. Create your account to book it; it takes about a minute.' : 'It takes about a minute.'}
+      </p>
 
       <form onSubmit={handleSignup} className="mt-6 grid gap-4">
         <fieldset>

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import BookingForm from '@/components/BookingForm'
+import { getAcceptHazardous } from '@/lib/settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,7 @@ export default async function BookPickupPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [sizes, profile] = await Promise.all([
+  const [sizes, profile, acceptHazardous] = await Promise.all([
     prisma.binSize.findMany({
       where: { active: true },
       orderBy: { sortOrder: 'asc' },
@@ -20,6 +21,7 @@ export default async function BookPickupPage() {
       where: { userId: user.id },
       select: { address: true, homeLat: true, homeLng: true, homePinConfirmedAt: true },
     }),
+    getAcceptHazardous(),
   ])
 
   // Only offer "use my home" once the customer has pinned it on the map and confirmed the pin is on their gate.
@@ -28,5 +30,5 @@ export default async function BookPickupPage() {
   const home = pinned && profile!.homePinConfirmedAt ? { address: profile!.address } : null
   const homeNeedsCheck = pinned && !profile!.homePinConfirmedAt
 
-  return <BookingForm sizes={sizes} home={home} homeNeedsCheck={homeNeedsCheck} />
+  return <BookingForm sizes={sizes} home={home} homeNeedsCheck={homeNeedsCheck} acceptHazardous={acceptHazardous} />
 }

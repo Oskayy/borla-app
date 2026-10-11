@@ -33,7 +33,7 @@ export default async function PricingRulesPage() {
     <div className="grid max-w-3xl gap-8">
       <PageHeader
         title="Pricing"
-        lead="Price = (base fee + each bin's fee and per-bin charge) × the zone multiplier, minus the recyclable discount, plus hazard and late surcharges. Worked out on the server; the browser never sets a price."
+        lead="Price = (base fee + each bin's fee and per-bin charge) × the zone multiplier, minus the recyclable discount, plus hazard and late surcharges. Worked out on the server; the browser never sets a price. The platform fee is fixed on each order when it is priced, so a change here only affects new bookings."
       />
 
       <PricingRuleForm sizes={sizes} />

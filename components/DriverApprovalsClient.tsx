@@ -17,6 +17,8 @@ export interface ApplicantRow {
   note: string | null
   submittedAt: string | null
   vehicle: string | null
+  plate: string | null
+  ghanaCard: string | null // GHA-123456789-0, typed by the driver
   docs: { type: string; label: string; url: string | null }[]
 }
 
@@ -84,6 +86,12 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
           </div>
           {r.status === 'REJECTED' && <Chip tone="danger">Sent back</Chip>}
         </div>
+        <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
+          <dt className="text-ink-3">Ghana Card</dt>
+          <dd className={r.ghanaCard ? 'font-medium tabular-nums' : 'text-danger'}>{r.ghanaCard ?? 'Not entered'}</dd>
+          <dt className="text-ink-3">Number plate</dt>
+          <dd className={r.plate ? 'font-medium' : 'text-danger'}>{r.plate ?? 'Not entered'}</dd>
+        </dl>
         {r.note && <p className="mt-3 rounded-control bg-canvas p-3 text-sm text-ink">Last note: {r.note}</p>}
 
         <div className="mt-4 flex flex-wrap gap-3">
@@ -100,7 +108,7 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
                 value={notes[r.id] ?? ''}
                 onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
                 className={`${FIELD} mt-1.5`}
-                placeholder="e.g. Ghana Card photo is blurry"
+                placeholder="e.g. Ghana Card number doesn't match your name"
               />
             </label>
             <div className="mt-3 flex flex-wrap gap-2.5">
@@ -121,7 +129,7 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
   return (
     <div className="grid gap-10">
       <section aria-labelledby="h-wait">
-        <SectionTitle id="h-wait" count={waiting.length} hint="Check the Ghana Card photo matches the driver's photo and name, and that the vehicle looks roadworthy.">
+        <SectionTitle id="h-wait" count={waiting.length} hint="Check the Ghana Card number belongs to this driver (name and photo), the plate matches the vehicle, and the vehicle looks roadworthy.">
           New drivers waiting for review
         </SectionTitle>
         {waiting.length === 0 && <AllClear>No drivers waiting.</AllClear>}

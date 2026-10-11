@@ -50,11 +50,11 @@ export default async function DriverVerificationPage() {
       )}
       {!waiting && profile.approvalStatus !== 'REJECTED' && (
         <p className="mb-6 max-w-[60ch] text-[15px] text-ink-2">
-          To keep customers safe, every Trashit driver is checked before their first pickup. Take clear photos of the items below, then
-          send them for review.
+          To keep customers safe, every Trashit driver is checked before their first pickup. Add a clear photo of yourself, then send
+          your details for review. Your Ghana Card number, plate number and vehicle photo are on the setup page.
         </p>
       )}
-      <DriverDocumentsForm types={DOC_TYPES} uploaded={uploaded} submitted={waiting} />
+      <DriverDocumentsForm types={DOC_TYPES.filter((t) => !t.setup)} uploaded={uploaded} submitted={waiting} />
     </div>
   )
 }

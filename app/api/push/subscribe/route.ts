@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sub = parse(await readJson(req))
-  if (!sub) return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 })
+  if (!sub) return NextResponse.json({ error: "This phone couldn't turn on alerts. Please try again." }, { status: 400 })
 
   // One phone = one endpoint. If someone else signs in on this phone, the alerts follow the new user.
   await prisma.pushSubscription.upsert({
@@ -38,7 +38,7 @@ export async function DELETE(req: NextRequest) {
   const session = await requireAuth()
   if (!session.ok) return session.response
   const endpoint = (await readJson(req))?.endpoint
-  if (typeof endpoint !== 'string') return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  if (typeof endpoint !== 'string') return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: session.user.id } })
   return NextResponse.json({ success: true })
 }

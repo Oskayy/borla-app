@@ -189,10 +189,13 @@ export default async function CustomerHome() {
         )}
       </Card>
 
-      <div className="grid gap-4 empty:hidden">
-        <EnableAlerts compact message="Turn on alerts to hear when your driver is assigned and when your bins are collected." />
-        <InstallPrompt />
-      </div>
+      {/* Asked only once there's a paid pickup on the way: then an alert is worth having. */}
+      {active && active.status !== 'PENDING_PAYMENT' && (
+        <div className="grid gap-4 empty:hidden">
+          <EnableAlerts compact message="Want a message when a driver is assigned to this pickup and when your bins are collected?" />
+          <InstallPrompt />
+        </div>
+      )}
     </div>
   )
 }

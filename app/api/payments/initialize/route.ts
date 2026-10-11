@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const orderId = body?.orderId
   if (!isUuid(orderId)) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   const quote = order.quoteSnapshot as { price?: number } | null
   const price = quote?.price
   if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
-    return NextResponse.json({ error: 'This order has an invalid price' }, { status: 400 })
+    return NextResponse.json({ error: "We couldn't work out the price for this booking. Please book again, or contact Trashit support." }, { status: 400 })
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL

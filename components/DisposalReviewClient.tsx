@@ -8,6 +8,7 @@ import { dateTimeLabel } from '@/lib/format'
 
 export interface ReviewGroup {
   key: string
+  kind: 'review' | 'never_unloaded' // photo to check, or collected and never confirmed as unloaded
   driverName: string
   driverPhone: string
   siteName: string | null
@@ -17,25 +18,33 @@ export interface ReviewGroup {
   orders: { id: string; address: string; litres: number | null }[]
 }
 
-export default function DisposalReviewClient({ groups }: { groups: ReviewGroup[] }) {
+export default function DisposalReviewClient({ groups, canRefund = false }: { groups: ReviewGroup[]; canRefund?: boolean }) {
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [messages, setMessages] = useState<Record<string, { ok: boolean; text: string }>>({})
   const router = useRouter()
 
-  async function decide(g: ReviewGroup, decision: 'approve' | 'reject') {
+  async function decide(g: ReviewGroup, decision: 'approve' | 'reject' | 'driver_fault') {
     setBusy(g.key)
     try {
       const res = await fetch('/api/admin/disposal-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds: g.orders.map((o) => o.id), decision, note: notes[g.key] ?? '' }),
+        body: JSON.stringify({ orderIds: g.orders.map((o) => o.id), decision, note: notes[g.key] ?? '', kind: g.kind }),
       })
       const data = await res.json().catch(() => ({}))
       setMessages((m) => ({
         ...m,
         [g.key]: res.ok
-          ? { ok: true, text: decision === 'approve' ? `Approved. GHS ${Number(data.paid ?? 0).toFixed(2)} released to the driver.` : 'Sent back to the driver.' }
+          ? {
+              ok: true,
+              text:
+                decision === 'approve'
+                  ? `Approved. GHS ${Number(data.paid ?? 0).toFixed(2)} released to the driver.`
+                  : decision === 'driver_fault'
+                  ? 'Refund started. The pickup share is taken back once the refund goes through.'
+                  : 'Sent back to the driver.',
+            }
           : { ok: false, text: data.error || 'Could not save' },
       }))
       if (res.ok) router.refresh()
@@ -78,7 +87,9 @@ export default function DisposalReviewClient({ groups }: { groups: ReviewGroup[]
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <h2 className="text-lg font-semibold tracking-tight">{g.driverName}</h2>
-                <span className="text-sm text-ink-3">Sent {dateTimeLabel(g.submittedAt)}</span>
+                <span className="text-sm text-ink-3">
+                  {g.kind === 'never_unloaded' ? 'Collected' : 'Sent'} {dateTimeLabel(g.submittedAt)}
+                </span>
               </div>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
                 {g.driverPhone && (
@@ -107,12 +118,14 @@ export default function DisposalReviewClient({ groups }: { groups: ReviewGroup[]
               </ul>
 
               <label className="mt-4 block">
-                <span className="text-sm font-medium text-ink-2">Note (required to reject)</span>
+                <span className="text-sm font-medium text-ink-2">
+                  {g.kind === 'never_unloaded' ? 'Note (required if the driver was at fault)' : 'Note (required to reject)'}
+                </span>
                 <input
                   value={notes[g.key] ?? ''}
                   onChange={(e) => setNotes((n) => ({ ...n, [g.key]: e.target.value }))}
                   className={`${FIELD} mt-1.5`}
-                  placeholder="e.g. Photo shows a roadside, not the site"
+                  placeholder={g.kind === 'never_unloaded' ? 'e.g. Called the driver: dumped by the roadside' : 'e.g. Photo shows a roadside, not the site'}
                 />
               </label>
               <div className="mt-3 flex flex-wrap items-center gap-2.5">
@@ -127,9 +140,26 @@ export default function DisposalReviewClient({ groups }: { groups: ReviewGroup[]
                 >
                   Approve and pay {g.driverName.split(/\s+/)[0]}
                 </button>
-                <button type="button" onClick={() => decide(g, 'reject')} disabled={busy === g.key} className={BUTTON_DANGER}>
-                  Send back
-                </button>
+                {g.kind === 'review' ? (
+                  <button type="button" onClick={() => decide(g, 'reject')} disabled={busy === g.key} className={BUTTON_DANGER}>
+                    Send back
+                  </button>
+                ) : (
+                  canRefund && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        confirm(
+                          `Refund the customer in full for ${g.orders.length} ${g.orders.length === 1 ? 'order' : 'orders'}, cancel, and take back ${g.driverName.split(/\s+/)[0]}'s pickup pay?`
+                        ) && decide(g, 'driver_fault')
+                      }
+                      disabled={busy === g.key || (notes[g.key] ?? '').trim().length < 3}
+                      className={BUTTON_DANGER}
+                    >
+                      Driver at fault: refund
+                    </button>
+                  )
+                )}
               </div>
               <p aria-live="polite" className={`mt-2 text-sm ${msg?.ok ? 'text-ops-deep' : 'text-danger'}`}>
                 {msg?.text}

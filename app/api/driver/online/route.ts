@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const online = (await readJson(req))?.online
-  if (typeof online !== 'boolean') return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  if (typeof online !== 'boolean') return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
 
   const profile = await prisma.driverProfile.findUnique({
     where: { userId: auth.user.id },

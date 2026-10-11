@@ -11,9 +11,11 @@ import { getAcceptMinutes } from '@/lib/settings'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
 import { describeHours } from '@/lib/disposal-sites'
-import { driverPoolFromSnapshot } from '@/lib/pricing-core'
+import { ghsToPesewas, pctToBps, splitOrder, storedSplit } from '@/lib/money-split'
 import { planningShiftDate } from '@/lib/schedule'
 import { worksNight } from '@/lib/availability'
+import { LIVE_LOCATION_MAX_AGE_MINUTES } from '@/lib/dispatch'
+import { tripMinutes, type Point } from '@/lib/trip-time'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,14 +62,18 @@ export default async function DriverDashboard() {
     orderBy: [{ routeStop: { route: { createdAt: 'asc' } } }, { routeStop: { sequence: 'asc' } }],
   })
 
-  const payoutRule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true, disposalPercent: true } })
-  // The driver's pay for a stop: the same sums the pickup and unload payouts use (driver pool x the active rule).
-  const payFor = (snapshot: unknown) => {
-    const pool = driverPoolFromSnapshot(snapshot)
-    if (pool === null || !payoutRule) return null
-    const pickup = Math.round(pool * payoutRule.pickupPercent) / 100
-    const unload = Math.round(pool * payoutRule.disposalPercent) / 100
-    return { total: Math.round((pickup + unload) * 100) / 100, pickup, unload }
+  const payoutRule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true } })
+  // The driver's pay for a stop: the split frozen when the customer paid (lib/money-split.ts). Orders paid before
+  // splits were stored show what they'll get at pickup: the same sums from their price and the active rule.
+  const payFor = (order: Parameters<typeof storedSplit>[0] & { quoteSnapshot: unknown }) => {
+    let split = storedSplit(order)
+    if (!split) {
+      const s = order.quoteSnapshot as { price?: unknown; platformFeePercent?: unknown } | null
+      if (typeof s?.price !== 'number' || s.price <= 0 || !payoutRule) return null
+      const fee = typeof s.platformFeePercent === 'number' ? pctToBps(s.platformFeePercent) : 0
+      split = splitOrder(ghsToPesewas(s.price), fee, pctToBps(payoutRule.pickupPercent))
+    }
+    return { total: split.pool / 100, pickup: split.pickup / 100, unload: split.unload / 100 }
   }
 
   // Group the night's orders into trips: the stops, then where to unload.
@@ -87,8 +93,9 @@ export default async function DriverDashboard() {
         tripNumber,
         orders: [],
         site: f
-          ? { name: f.name, lat: f.lat, lng: f.lng, hours: describeHours(f), notes: f.notes, status: f.status }
+          ? { name: f.name, lat: f.lat, lng: f.lng, hours: describeHours(f), notes: f.notes, status: f.status, unloadMinutes: f.avgUnloadMinutes }
           : null,
+        minutes: null,
       }
       groups.push(group)
     }
@@ -98,7 +105,7 @@ export default async function DriverDashboard() {
       status: order.status,
       sequence: stop?.sequence ?? null,
       address: quote?.address ?? 'Address not available',
-      pay: payFor(order.quoteSnapshot),
+      pay: payFor(order),
       bins: quote?.lines?.map((l) => `${l.count} × ${l.label}`).join(', ') ?? null,
       lat: order.latitude,
       lng: order.longitude,
@@ -113,6 +120,26 @@ export default async function DriverDashboard() {
   }
   // Number trips 1, 2, 3... across the whole night, even if they came from separate approvals.
   groups.forEach((g, i) => (g.tripNumber = i + 1))
+
+  // About how long each unfinished trip takes: from where the driver is (live GPS if recent, else home),
+  // through the stops still to collect, to the site and unloading. The next trip starts from that site.
+  const liveFresh =
+    driverProfile.currentLat != null &&
+    driverProfile.currentLng != null &&
+    driverProfile.lastLocationAt != null &&
+    now.getTime() - driverProfile.lastLocationAt.getTime() <= LIVE_LOCATION_MAX_AGE_MINUTES * 60000
+  let here: Point | null = liveFresh
+    ? { lat: driverProfile.currentLat!, lng: driverProfile.currentLng! }
+    : { lat: driverProfile.homeLat!, lng: driverProfile.homeLng! }
+  for (const g of groups) {
+    if (g.orders.every((o) => o.status === 'DISPOSAL_PENDING')) continue
+    const collect = g.orders
+      .filter((o) => o.status === 'ASSIGNED')
+      .map((o) => (o.lat != null && o.lng != null ? { lat: o.lat, lng: o.lng } : null))
+    const site = g.site?.lat != null && g.site?.lng != null ? { lat: g.site.lat, lng: g.site.lng, unloadMinutes: g.site.unloadMinutes } : null
+    g.minutes = Math.round(tripMinutes(here, collect, site))
+    if (site) here = site
+  }
 
   const mapPoints: RoutePoint[] = []
   let stopNo = 0

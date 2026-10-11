@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { parseGps, readJson } from '@/lib/validate'
 import { parseOrderInput, quoteFromBooking } from '@/lib/pricing'
+import { getAcceptHazardous } from '@/lib/settings'
 
 const MAX_UNPAID_DRAFTS = 20
 
@@ -25,10 +26,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Please check your order details' }, { status: 400 })
   }
 
+  if (input?.hazardous && !(await getAcceptHazardous())) {
+    return NextResponse.json(
+      { error: "We can't collect hazardous waste yet (batteries, chemicals, paint, medical waste). Please keep it out of your bins." },
+      { status: 400 }
+    )
+  }
+
   const drafts = await prisma.order.count({ where: { customerId: user.id, status: 'DRAFT' } })
   if (drafts >= MAX_UNPAID_DRAFTS) {
     return NextResponse.json(
-      { error: 'You have too many unpaid draft orders. Please delete some from My Orders first.' },
+      { error: 'You have too many unpaid bookings. Please delete some under "Not paid" in My orders first.' },
       { status: 400 }
     )
   }

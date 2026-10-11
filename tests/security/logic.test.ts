@@ -1,6 +1,7 @@
 // F1, F4, F5 and other security rules, tested without a database.
 import { describe, expect, it } from 'vitest'
-import { OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt, PAYOUT_CHANGE_HOLD_HOURS, summarizeWallet } from '@/lib/wallet'
+import { OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt, PAYOUT_CHANGE_HOLD_HOURS } from '@/lib/wallet'
+import { computeWallet } from '@/lib/earnings'
 import { LIVE_REFUND_STATUSES, needsSecondApprover, REFUND_APPROVAL_THRESHOLD_GHS, refundable } from '@/lib/refunds'
 import { pickupFlags } from '@/lib/plausibility'
 import { isValidEvidencePath } from '@/lib/storage'
@@ -26,8 +27,15 @@ describe('F5: withdrawals waiting for a second approver', () => {
     expect(OPEN_WITHDRAWAL_STATUSES).toContain('CONFIRMING')
   })
   it('still hold the money in the balance', () => {
-    const w = summarizeWallet([100], [{ amount: 60, status: 'CONFIRMING' }])
-    expect(w).toEqual({ earned: 100, paidOut: 0, pending: 60, available: 40 })
+    const cleared = new Date('2026-10-01T00:00:00Z')
+    const w = computeWallet(
+      [{ orderId: 'o', type: 'driver_payout_disposal', amountPesewas: 10_000, clearsAt: cleared, createdAt: cleared }],
+      [{ amountPesewas: 6_000, status: 'CONFIRMING' }],
+      new Map(),
+      new Date('2026-10-04T00:00:00Z'),
+      null
+    )
+    expect(w).toMatchObject({ earned: 10_000, paidOut: 0, inFlight: 6_000, available: 4_000 })
   })
 })
 

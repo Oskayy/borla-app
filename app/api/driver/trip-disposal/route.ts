@@ -6,6 +6,7 @@ import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
 import { distanceInMeters } from '@/lib/geo'
 import { releaseDisposal } from '@/lib/disposal-release'
+import { getShiftSettings } from '@/lib/settings'
 import { notifyCustomersCompleted } from '@/lib/customer-updates'
 import { caught } from '@/lib/errors'
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   const photoPath = body?.photoPath
   const gps = parseGps(body)
   if (!isUuid(routeId) || !Number.isInteger(tripNumber) || tripNumber < 1 || !gps.ok) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
 
   const route = await prisma.route.findUnique({
@@ -65,8 +66,7 @@ export async function POST(req: NextRequest) {
     inside = distanceM <= site.geofenceRadiusM + GPS_TOLERANCE_M
   }
 
-  const rule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' } })
-  if (!rule) return NextResponse.json({ error: 'No active payout rule' }, { status: 500 })
+  const settings = await getShiftSettings()
 
   try {
     const result = await prisma.$transaction(
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
             orders: onBoard,
             fromStatus: 'PICKED_UP',
             driverId: user.id,
-            disposalPercent: rule.disposalPercent,
+            settings,
             facilityId: site!.id,
             method: 'geofence',
             actorId: user.id,
@@ -129,6 +129,10 @@ export async function POST(req: NextRequest) {
     if (e?.code === 'P2002') return NextResponse.json({ success: true, note: 'Already processed' })
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'This trip was just updated. Please refresh.' }, { status: 409 })
+    }
+    if (e?.message === 'BAD_PRICE' || e?.message === 'NO_PAYOUT_RULE') {
+      console.error('[trip-disposal] cannot work out the pay:', e.message)
+      return NextResponse.json({ error: "Pay for this trip can't be worked out right now. Please call Trashit support." }, { status: 409 })
     }
     console.error('[trip-disposal] failed:', e)
     return NextResponse.json({ error: 'Could not confirm unloading. Please try again.' }, { status: 500 })

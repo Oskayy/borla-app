@@ -161,6 +161,11 @@ export async function reassignOrder(orderId: string, actorId: string | null): Pr
     now
   )
   const address = (order.quoteSnapshot as { address?: string } | null)?.address ?? 'An order'
+  // Hazardous orders are always planned by hand.
+  if (orderWasteKind(order.quoteSnapshot) === 'hazardous') {
+    pick.driver = null
+    pick.reason = 'Hazardous waste is planned by hand'
+  }
 
   if (!pick.driver) {
     await prisma.auditLog.create({

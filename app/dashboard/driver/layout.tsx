@@ -81,7 +81,7 @@ export default async function DriverLayout({ children }: { children: React.React
                   ? profile.approvalNote ?? 'See what to fix, then send it again.'
                   : profile.submittedAt
                     ? "You'll get stops once Trashit approves you. You can set up your account meanwhile."
-                    : 'Add your Ghana Card, photo and vehicle photo, then send them for review.'}
+                    : 'Add your Ghana Card number, plate, vehicle photo and a photo of you, then send them for review.'}
               </span>
             </span>
             <ChevronRight aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-3" />

@@ -17,13 +17,18 @@ export default async function DriverSecurityPage() {
       <BackToAccount />
       <h1 className="mb-5 text-[clamp(1.5rem,3vw,1.9rem)] font-bold tracking-[-0.025em]">Sign-in and security</h1>
       <AccountGroup title="Sign-in">
-        <AccountRow href="/reset-password" icon={KeyRound} title="Change password" />
+        <AccountRow
+          href="/reset-password"
+          icon={KeyRound}
+          title="Change password"
+          desc="Pick a new password. Other phones signed in to your account are signed out."
+        />
         <AccountRow
           href="/account/security"
           icon={ShieldCheck}
           title="Two-factor authentication"
           value={has2fa ? 'On' : 'Off'}
-          info="Asks for a code from an authenticator app when you sign in, so a stolen password isn't enough."
+          desc="Also asks for a 6-digit code from an app on your phone when you sign in, so a stolen password isn't enough."
         />
       </AccountGroup>
     </div>

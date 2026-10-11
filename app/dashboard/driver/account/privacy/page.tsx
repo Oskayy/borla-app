@@ -11,7 +11,7 @@ export default function DriverPrivacyPage() {
         <AccountRow href="/terms" icon={ScrollText} title="Terms of service" />
       </AccountGroup>
       <p className="mt-4 px-1 text-sm text-ink-3">
-        Your Ghana Card and documents are stored privately and seen only by the Trashit team who approve drivers. Earnings records are kept
+        Your Ghana Card number and photos are stored privately and seen only by the Trashit team who approve drivers. Earnings records are kept
         for accounting. A way to ask for a copy of your data, or to close your account, will appear here.
       </p>
     </div>

@@ -5,6 +5,14 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { receiptNumber } from '@/lib/receipt-pdf'
 import { parsePeriod, statementCsv, type StatementData } from '@/lib/statement'
 import { buildStatementPdf } from '@/lib/statement-pdf'
+import { ATTEMPT_TYPE, CLAWBACK_TYPE, DRIVER_LEDGER_TYPES, PICKUP_TYPE, UNLOAD_TYPE } from '@/lib/earnings'
+
+const KIND: Record<string, 'pickup' | 'unload' | 'attempt' | 'clawback'> = {
+  [PICKUP_TYPE]: 'pickup',
+  [UNLOAD_TYPE]: 'unload',
+  [ATTEMPT_TYPE]: 'attempt',
+  [CLAWBACK_TYPE]: 'clawback',
+}
 
 const WITHDRAWAL_STATUS: Record<string, string> = {
   REQUESTED: 'Waiting for approval',
@@ -32,7 +40,7 @@ export async function GET(req: NextRequest) {
   const [user, earnings, withdrawals] = await Promise.all([
     prisma.user.findUnique({ where: { id: auth.user.id }, select: { name: true } }),
     prisma.ledgerEntry.findMany({
-      where: { driverId: auth.user.id, type: { in: ['driver_payout_pickup', 'driver_payout_disposal'] }, createdAt: { gte: from, lt: to } },
+      where: { driverId: auth.user.id, type: { in: DRIVER_LEDGER_TYPES }, createdAt: { gte: from, lt: to } },
       orderBy: { createdAt: 'asc' },
       select: { type: true, amount: true, createdAt: true, orderId: true, order: { select: { quoteSnapshot: true } } },
     }),
@@ -50,7 +58,7 @@ export async function GET(req: NextRequest) {
       date: e.createdAt,
       orderRef: receiptNumber(e.orderId),
       address: (e.order?.quoteSnapshot as { address?: string } | null)?.address ?? '',
-      kind: e.type === 'driver_payout_pickup' ? 'pickup' : 'unload',
+      kind: KIND[e.type] ?? 'unload',
       amount: e.amount,
     })),
     withdrawals: withdrawals.map((w) => ({

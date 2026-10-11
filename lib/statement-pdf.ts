@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import { dateLabel, dateTimeLabel } from '@/lib/format'
 import { safe } from '@/lib/receipt-pdf'
-import { statementTotals, type StatementData } from '@/lib/statement'
+import { EARNING_KIND_LABELS, statementTotals, type StatementData } from '@/lib/statement'
 
 // A driver's earnings statement (week, month or year) as an A4 PDF; runs onto more pages when it's long.
 
@@ -72,6 +72,8 @@ export async function buildStatementPdf(d: StatementData): Promise<Uint8Array> {
     ['Stops paid', String(t.stops)],
     ['Pickup shares', ghs(t.pickup)],
     ['Unload shares', ghs(t.unload)],
+    ...(t.attempt > 0 ? ([['Wasted trips', ghs(t.attempt)]] as [string, string][]) : []),
+    ...(t.takenBack > 0 ? ([['Taken back after refunds', `- ${ghs(t.takenBack)}`]] as [string, string][]) : []),
   ]
   for (const [k, v] of summary) {
     text(k, LEFT, y, 11, regular, MUTED)
@@ -107,9 +109,9 @@ export async function buildStatementPdf(d: StatementData): Promise<Uint8Array> {
     for (const e of d.earnings) {
       room(16)
       text(dateLabel(e.date), COL_DATE, y, 9)
-      text(e.kind === 'pickup' ? 'Pickup' : 'Unload', COL_WHAT, y, 9)
+      text(EARNING_KIND_LABELS[e.kind].replace(' share', ''), COL_WHAT, y, 9)
       page.drawText(fit(`${e.orderRef}  ${e.address}`, RIGHT - 70 - COL_ADDR, 9), { x: COL_ADDR, y, size: 9, font: regular, color: INK })
-      textRight(ghs(e.amount), RIGHT, y, 9)
+      textRight(e.kind === 'clawback' ? `- ${ghs(e.amount)}` : ghs(e.amount), RIGHT, y, 9)
       y -= 16
     }
   }

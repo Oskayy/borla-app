@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, CreditCard, MapPinOff, Phone, Undo2 } from 'lucide-react'
 import { BUTTON_DANGER, BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 import { dateTimeLabel } from '@/lib/format'
+import { ATTEMPT_FEE_BPS } from '@/lib/money-split'
 
 export interface ExceptionItem {
   kind: 'flagged' | 'payment' | 'gps'
@@ -172,9 +173,17 @@ function SettleRefund({ id }: { id: string }) {
   )
 }
 
+// The attempt fee for a failed pickup that was the customer's fault (same sums as the server, lib/money-split.ts).
+function attemptPreview(price: number) {
+  const p = Math.round(price * 100)
+  const fee = Math.floor((p * ATTEMPT_FEE_BPS) / 10_000)
+  return { fee: fee / 100, refund: (p - fee) / 100 }
+}
+
 export default function ExceptionsClient({ items, refunds, canRefund }: { items: ExceptionItem[]; refunds: RefundRow[]; canRefund: boolean }) {
   const [open, setOpen] = useState<string | null>(null)
-  const [mode, setMode] = useState<'retry' | 'close' | 'refund' | 'review'>('retry')
+  const [mode, setMode] = useState<'retry' | 'close' | 'refund' | 'review' | 'attempt_fee'>('retry')
+  const [driverFault, setDriverFault] = useState(false)
   const [note, setNote] = useState('')
   const [amount, setAmount] = useState('')
   const [paymentId, setPaymentId] = useState('')
@@ -192,6 +201,7 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
     setPaymentId(pay?.id ?? '')
     setAmount(pay ? pay.refundable.toFixed(2) : '')
     setCancelToo(item.kind === 'flagged')
+    setDriverFault(false)
   }
 
   async function submit(item: ExceptionItem) {
@@ -203,7 +213,7 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
         res = await fetch(`/api/admin/orders/${item.orderId}/refund`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: Number(amount), reason: note, cancel: cancelToo, paymentId: paymentId || undefined }),
+          body: JSON.stringify({ amount: Number(amount), reason: note, cancel: cancelToo, paymentId: paymentId || undefined, driverFault }),
         })
       } else {
         const action = mode === 'review' ? (item.kind === 'gps' ? 'gps_reviewed' : 'payment_reviewed') : mode
@@ -229,6 +239,10 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                 : `Refund of GHS ${Number(data.refunded ?? 0).toFixed(2)} started.`
               : mode === 'retry'
               ? `Back in the queue for the night of ${data.night}.`
+              : mode === 'attempt_fee'
+              ? `Driver paid GHS ${Number(data.driverShare ?? 0).toFixed(2)} for the trip. ${
+                  data.awaitingApproval ? 'The refund waits for a colleague to approve it.' : `Refund of GHS ${Number(data.refund ?? 0).toFixed(2)} started.`
+                }`
               : 'Done.',
         },
       }))
@@ -332,6 +346,11 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                             <button type="button" className={BUTTON_QUIET} onClick={() => start(item, 'close')}>
                               Close, no refund
                             </button>
+                            {canRefundThis && item.status === 'FAILED_PICKUP' && item.price != null && (
+                              <button type="button" className={BUTTON_QUIET} onClick={() => start(item, 'attempt_fee')}>
+                                Customer&apos;s fault: attempt fee
+                              </button>
+                            )}
                           </>
                         )}
                         {kind !== 'flagged' && (
@@ -354,6 +373,11 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                           {mode === 'close' && 'The order is cancelled with no refund. The customer is told, with your note.'}
                           {mode === 'review' && 'Takes this off the list. Nothing else changes.'}
                           {mode === 'refund' && 'Sends money back to the account the customer paid with, through Paystack.'}
+                          {mode === 'attempt_fee' &&
+                            item.price != null &&
+                            `The bin wasn't out, the gate was locked or the pin was wrong. Trashit keeps GHS ${attemptPreview(item.price).fee.toFixed(2)} (${
+                              ATTEMPT_FEE_BPS / 100
+                            }%) for the wasted trip and pays the driver from it; GHS ${attemptPreview(item.price).refund.toFixed(2)} goes back to the customer and the order is cancelled.`}
                         </p>
                         {mode === 'refund' && (
                           <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -384,6 +408,22 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                               <input type="checkbox" checked={cancelToo} onChange={(e) => setCancelToo(e.target.checked)} className="size-4 accent-[var(--color-ops)]" />
                               Also cancel the order
                             </label>
+                            {item.driverName && (
+                              <label className="flex min-h-11 items-start gap-2 text-[15px]">
+                                <input
+                                  type="checkbox"
+                                  checked={driverFault}
+                                  onChange={(e) => setDriverFault(e.target.checked)}
+                                  className="mt-1 size-4 accent-[var(--color-danger)]"
+                                />
+                                <span>
+                                  The driver was at fault
+                                  <span className="block text-sm text-ink-3">
+                                    Takes back what {item.driverName.split(/\s+/)[0]} earned on this order, up to the refund, once it&apos;s sent.
+                                  </span>
+                                </span>
+                              </label>
+                            )}
                           </div>
                         )}
                         <label className="mt-3 block">
@@ -399,15 +439,25 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                           <button
                             type="button"
                             onClick={() =>
-                              mode !== 'refund' ||
-                              confirm(`Refund GHS ${Number(amount || 0).toFixed(2)} to the customer${cancelToo ? ' and cancel the order' : ''}?`)
+                              (mode !== 'refund' && mode !== 'attempt_fee') ||
+                              confirm(
+                                mode === 'attempt_fee' && item.price != null
+                                  ? `Keep GHS ${attemptPreview(item.price).fee.toFixed(2)} for the wasted trip, pay the driver from it, and refund GHS ${attemptPreview(item.price).refund.toFixed(2)}?`
+                                  : `Refund GHS ${Number(amount || 0).toFixed(2)} to the customer${cancelToo ? ' and cancel the order' : ''}${driverFault ? ', taking back the driver\'s pay' : ''}?`
+                              )
                                 ? submit(item)
                                 : undefined
                             }
                             disabled={busy || note.trim().length < 3}
-                            className={mode === 'refund' ? BUTTON_DANGER : BUTTON_PRIMARY}
+                            className={mode === 'refund' || mode === 'attempt_fee' ? BUTTON_DANGER : BUTTON_PRIMARY}
                           >
-                            {busy ? 'Saving…' : mode === 'refund' ? `Refund GHS ${Number(amount || 0).toFixed(2)}` : 'Confirm'}
+                            {busy
+                              ? 'Saving…'
+                              : mode === 'refund'
+                              ? `Refund GHS ${Number(amount || 0).toFixed(2)}`
+                              : mode === 'attempt_fee' && item.price != null
+                              ? `Refund GHS ${attemptPreview(item.price).refund.toFixed(2)}, pay the driver`
+                              : 'Confirm'}
                           </button>
                           <button type="button" onClick={() => setOpen(null)} disabled={busy} className={BUTTON_QUIET}>
                             Cancel

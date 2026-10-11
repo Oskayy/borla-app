@@ -4,7 +4,7 @@ import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
-import { getAcceptMinutes, getAutoDispatch, getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
+import { getAcceptHazardous, getAcceptMinutes, getAutoDispatch, getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
 import { MAX_ACCEPT_MINUTES, MIN_ACCEPT_MINUTES } from '@/lib/offers'
 import { inRange } from '@/lib/numbers'
 import { parseClock, toClock, validateShiftSettings, type ShiftSettings } from '@/lib/shift'
@@ -51,12 +51,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Please choose whether to assign orders automatically' }, { status: 400 })
   }
   const autoDispatch: boolean = body.autoDispatch
+  if (typeof body?.acceptHazardous !== 'boolean') {
+    return NextResponse.json({ error: 'Please choose whether to accept hazardous waste' }, { status: 400 })
+  }
+  const acceptHazardous: boolean = body.acceptHazardous
 
-  const [current, currentTrips, currentAccept, currentAuto] = await Promise.all([
+  const [current, currentTrips, currentAccept, currentAuto, currentHazardous] = await Promise.all([
     getShiftSettings(),
     getMaxTripsPerNight(),
     getAcceptMinutes(),
     getAutoDispatch(),
+    getAcceptHazardous(),
   ])
   const next: ShiftSettings = {
     timezone: current.timezone,
@@ -70,8 +75,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.operatingSettings.upsert({
     where: { id: 1 },
-    create: { id: 1, ...next, maxTripsPerNight: trips, acceptMinutes, autoDispatch },
-    update: { ...next, maxTripsPerNight: trips, acceptMinutes, autoDispatch },
+    create: { id: 1, ...next, maxTripsPerNight: trips, acceptMinutes, autoDispatch, acceptHazardous },
+    update: { ...next, maxTripsPerNight: trips, acceptMinutes, autoDispatch, acceptHazardous },
   })
 
   const fmt = (s: ShiftSettings) =>
@@ -80,8 +85,8 @@ export async function POST(req: NextRequest) {
     auth.user.id,
     'SHIFT_SETTINGS_CHANGED',
     null,
-    `${fmt(current)}, ${currentTrips} trip(s), ${currentAccept} min to accept, auto-assign ${currentAuto ? 'on' : 'off'} -> ` +
-      `${fmt(next)}, ${trips} trip(s), ${acceptMinutes} min to accept, auto-assign ${autoDispatch ? 'on' : 'off'}`
+    `${fmt(current)}, ${currentTrips} trip(s), ${currentAccept} min to accept, auto-assign ${currentAuto ? 'on' : 'off'}, hazardous ${currentHazardous ? 'on' : 'off'} -> ` +
+      `${fmt(next)}, ${trips} trip(s), ${acceptMinutes} min to accept, auto-assign ${autoDispatch ? 'on' : 'off'}, hazardous ${acceptHazardous ? 'on' : 'off'}`
   )
 
   return NextResponse.json({ success: true, settings: next })

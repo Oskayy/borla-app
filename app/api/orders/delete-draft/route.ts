@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   const { user } = auth
 
   const orderId = (await readJson(req))?.orderId
-  if (!isUuid(orderId)) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  if (!isUuid(orderId)) return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (order.status !== 'DRAFT') {
-    return NextResponse.json({ error: 'Only unpaid draft orders can be deleted' }, { status: 400 })
+    return NextResponse.json({ error: 'Only bookings that are not paid yet can be deleted.' }, { status: 400 })
   }
 
   // Delete evidence rows first (foreign key), then the order itself.

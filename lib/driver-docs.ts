@@ -5,10 +5,11 @@ export const DRIVER_DOCS_BUCKET = 'driver-documents' // private: only the server
 export const MAX_DOC_BYTES = 5 * 1024 * 1024 // 5 MB (photos are shrunk on the phone first)
 export const APPROVAL_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPS_MANAGER', 'COMPLIANCE']
 
-export const DOC_TYPES: { code: string; label: string; hint: string; required: boolean }[] = [
-  { code: 'ghana_card', label: 'Ghana Card', hint: 'A clear photo of the front of your Ghana Card', required: true },
+// The Ghana Card is not photographed: drivers type its number (lib/ghana-card.ts), and their plate number too.
+// `setup` documents are added on the profile setup page (vehicle photo); the rest on the verification page.
+export const DOC_TYPES: { code: string; label: string; hint: string; required: boolean; setup?: boolean }[] = [
   { code: 'profile_photo', label: 'Photo of you', hint: 'Your face, clearly visible, no sunglasses', required: true },
-  { code: 'vehicle_photo', label: 'Your vehicle', hint: 'The whole vehicle, with the number plate if it has one', required: true },
+  { code: 'vehicle_photo', label: 'Your vehicle', hint: 'The whole vehicle, clearly visible', required: true, setup: true },
   { code: 'drivers_licence', label: "Driver's licence", hint: 'If you have one', required: false },
 ]
 

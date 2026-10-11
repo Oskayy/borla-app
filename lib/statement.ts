@@ -5,7 +5,7 @@ export interface StatementEarning {
   date: Date
   orderRef: string // short order reference, e.g. "TR-3F2A9C1E"
   address: string
-  kind: 'pickup' | 'unload'
+  kind: 'pickup' | 'unload' | 'attempt' | 'clawback' // clawback: taken back after a refund (a positive amount, subtracted)
   amount: number
 }
 
@@ -119,11 +119,21 @@ export function periodQuery(p: Period): string {
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
+export const EARNING_KIND_LABELS: Record<StatementData['earnings'][number]['kind'], string> = {
+  pickup: 'Pickup share',
+  unload: 'Unload share',
+  attempt: 'Wasted trip',
+  clawback: 'Taken back',
+}
+
 export function statementTotals(d: StatementData) {
   const pickup = round2(d.earnings.filter((e) => e.kind === 'pickup').reduce((s, e) => s + e.amount, 0))
   const unload = round2(d.earnings.filter((e) => e.kind === 'unload').reduce((s, e) => s + e.amount, 0))
+  const attempt = round2(d.earnings.filter((e) => e.kind === 'attempt').reduce((s, e) => s + e.amount, 0))
+  const takenBack = round2(d.earnings.filter((e) => e.kind === 'clawback').reduce((s, e) => s + e.amount, 0))
   const sent = round2(d.withdrawals.filter((w) => w.status === 'Sent').reduce((s, w) => s + w.amount, 0))
-  return { pickup, unload, earned: round2(pickup + unload), sent, stops: new Set(d.earnings.map((e) => e.orderRef)).size }
+  const stops = new Set(d.earnings.filter((e) => e.kind !== 'clawback').map((e) => e.orderRef)).size
+  return { pickup, unload, attempt, takenBack, earned: round2(pickup + unload + attempt - takenBack), sent, stops }
 }
 
 // One CSV cell. Text that a spreadsheet would run as a formula (= + - @, tab, CR) gets a leading apostrophe.
@@ -139,7 +149,8 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 export function statementCsv(d: StatementData): string {
   const rows: (string | number)[][] = [['Date', 'Type', 'Order', 'Address or wallet', 'Reference', 'Status', 'Amount (GHS)']]
   for (const e of d.earnings) {
-    rows.push([isoDate(e.date), e.kind === 'pickup' ? 'Pickup share' : 'Unload share', e.orderRef, e.address, '', 'Earned', e.amount])
+    const back = e.kind === 'clawback'
+    rows.push([isoDate(e.date), EARNING_KIND_LABELS[e.kind], e.orderRef, e.address, '', back ? 'Taken back' : 'Earned', back ? -e.amount : e.amount])
   }
   for (const w of d.withdrawals) {
     rows.push([isoDate(w.date), 'Withdrawal', '', w.wallet, w.reference, w.status, -w.amount])

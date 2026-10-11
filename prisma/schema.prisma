@@ -83,6 +83,7 @@ model DriverProfile {
   vehicleTypeRef   VehicleType? @relation(fields: [vehicleTypeId], references: [id])
   radiusKm         Float?    // how far from their position this driver will take orders
   vehiclePlate     String?
+  ghanaCardNumber  String?   @unique // GHA-123456789-0; drivers type it, no photo of the card is kept
   isActive         Boolean   @default(true)
   zoneId           String?
   zone             Zone?     @relation(fields: [zoneId], references: [id])
@@ -207,6 +208,7 @@ model OperatingSettings {
   maxTripsPerNight        Int      @default(3)    // round trips (collect -> unload) one driver can do in a shift
   acceptMinutes           Int      @default(15)   // time a driver has to accept a stop before it goes to another driver
   autoDispatch            Boolean  @default(true) // from shift start, assign waiting orders to the best drivers automatically
+  acceptHazardous         Boolean  @default(false) // customers can book hazardous waste (needs a site that takes it); planned by hand
   updatedAt               DateTime @updatedAt
 }
 
@@ -233,6 +235,16 @@ model Order {
   assignedNoticeAt DateTime? // customer was told a driver is assigned (cleared on rollover)
   cancelledAt   DateTime?
   cancelReason  String?
+  // The price split, worked out once when payment is confirmed (lib/money-split.ts), in whole pesewas and
+  // basis points. Later rule changes only affect new orders. Null on orders paid before this existed
+  // (worked out at their first payout instead).
+  pricePesewas       Int?
+  platformFeePesewas Int?
+  pickupSharePesewas Int?
+  unloadSharePesewas Int?
+  feeBps             Int?
+  pickupBps          Int?
+  splitFrozenAt      DateTime?
   latitude    Float?
   longitude   Float?
   driverAcceptedAt DateTime? // the assigned driver accepted this stop (cleared on reassignment)
@@ -355,9 +367,12 @@ model LedgerEntry {
   amount      Float
   driverId    String?  // for driver payouts: the driver who earned it
   idempotencyKey String @unique
+  amountPesewas Int?     // the same amount in whole pesewas (the source of truth for new money maths)
+  clearsAt    DateTime?  // driver earnings: when they become withdrawable (null = waiting for the unload or ops)
   createdAt   DateTime @default(now())
 
   @@index([driverId])
+  @@index([driverId, type])
 }
 
 model Dispute {
@@ -525,6 +540,7 @@ model Refund {
   cancelOrder     Boolean   @default(false) // also cancel the order once the refund is sent
   approvedBy      String?   // large staff refunds: the second person who approved it
   approvedAt      DateTime?
+  driverFault     Boolean   @default(false) // ops recorded the driver as at fault: their shares of the order are taken back
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

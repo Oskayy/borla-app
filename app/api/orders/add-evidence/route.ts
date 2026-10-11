@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const gps = parseGps(body)
 
   if (!isUuid(orderId) || !isValidEvidencePath(photoPath, orderId) || !gps.ok) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
 
   const order = await prisma.order.findUnique({

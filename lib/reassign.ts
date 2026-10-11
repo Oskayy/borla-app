@@ -3,6 +3,27 @@
 
 import { distanceInMeters } from './geo'
 import { assessDriver, driverPosition, nightCapacity, tripCapacity, type DispatchDriver, type DispatchOrder, type DriverFit } from './dispatch'
+import { DEFAULT_UNLOAD_MINUTES, driveMinutes, STOP_MINUTES } from './trip-time'
+
+// Rough extra minutes one more stop costs a driver: a detour there and back from where they are, plus collecting.
+// An order that doesn't fit the open trip also costs a new trip and an unload.
+function addedMinutes(d: DispatchDriver, order: DispatchOrder, shiftRunning: boolean, now: Date, newTrip: boolean): number {
+  const p = driverPosition(d, shiftRunning, now)
+  const detour = p && order.latitude != null && order.longitude != null ? 2 * driveMinutes(p, { lat: order.latitude, lng: order.longitude }) : 0
+  return detour + STOP_MINUTES + (newTrip ? DEFAULT_UNLOAD_MINUTES : 0)
+}
+
+// Whether a driver still has a trip and the time for one more stop tonight.
+export function hasRoomTonight(d: DispatchDriver, order: DispatchOrder, shiftRunning: boolean, now: Date): boolean {
+  const perNight = Math.max(1, d.tripsPerNight ?? 1)
+  const used = d.tripsUsed ?? 0
+  // Litres on their open trip: what's on board that hasn't filled a whole trip yet.
+  const openTrip = tripCapacity(d) > 0 ? d.loadLitres % tripCapacity(d) : 0
+  const fitsOpenTrip = used > 0 && d.loadLitres > 0 && openTrip + order.litres <= tripCapacity(d)
+  if (!fitsOpenTrip && used >= perNight) return false
+  if (d.minutesLeft != null && addedMinutes(d, order, shiftRunning, now, !fitsOpenTrip) > d.minutesLeft) return false
+  return true
+}
 
 export interface Replacement {
   driver: DispatchDriver | null
@@ -22,7 +43,7 @@ export function pickReplacement(
   const options = drivers
     .filter((d) => !blocked.has(d.id))
     .map((d) => ({ driver: d, fit: assessDriver(d, [order], shiftRunning, now) }))
-    .filter((x) => x.fit.eligible)
+    .filter((x) => x.fit.eligible && hasRoomTonight(x.driver, order, shiftRunning, now))
 
   if (options.length === 0) {
     const others = drivers.filter((d) => !blocked.has(d.id))
@@ -31,7 +52,7 @@ export function pickReplacement(
         ? 'No other drivers'
         : shiftRunning && others.every((d) => !assessDriver(d, [order], shiftRunning, now).counts)
         ? 'No other drivers online'
-        : 'No other driver in range with room'
+        : 'No other driver in range with room or time left'
     return { driver: null, fit: null, reason }
   }
 

@@ -3,6 +3,7 @@ import { createRefund } from '@/lib/paystack'
 import { LIVE_REFUND_STATUSES, needsSecondApprover, REFUND_APPROVAL_THRESHOLD_GHS, REFUND_ROLES, refundable, refundStatusFromPaystack } from '@/lib/refunds'
 import { notifyUser, notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
+import { clawbackFor, CLAWBACK_TYPE, EARNING_TYPES } from '@/lib/earnings'
 
 export interface RefundOutcome {
   ok: boolean
@@ -21,6 +22,7 @@ export async function refundOrder(args: {
   cancel: boolean
   paymentId?: string // a specific payment (e.g. a duplicate payment); default: the order's successful payment
   staffApproval?: boolean // a staff refund: at or above REFUND_APPROVAL_THRESHOLD_GHS it waits for a second approver
+  driverFault?: boolean // ops recorded the driver as at fault: their shares of this order are taken back once refunded
 }): Promise<RefundOutcome> {
   const order = await prisma.order.findUnique({
     where: { id: args.orderId },
@@ -56,7 +58,16 @@ export async function refundOrder(args: {
         if (amount > available) throw new Error(`TOO_MUCH:${available.toFixed(2)}`)
         const status = args.staffApproval === true && needsSecondApprover(amount) ? 'AWAITING_APPROVAL' : 'PENDING'
         return tx.refund.create({
-          data: { orderId: order.id, paymentId: payment.id, amount, reason: args.reason, requestedBy: args.actorId, cancelOrder: args.cancel, status },
+          data: {
+            orderId: order.id,
+            paymentId: payment.id,
+            amount,
+            reason: args.reason,
+            requestedBy: args.actorId,
+            cancelOrder: args.cancel,
+            status,
+            driverFault: args.driverFault === true && !!order.driverId,
+          },
           select: { id: true, amount: true, status: true },
         })
       },
@@ -241,15 +252,51 @@ export async function cancelOrder(orderId: string, actorId: string, reason: stri
   }
 }
 
-// Paystack confirmed the money went back: update the payment and the ledger (once).
+// Paystack confirmed the money went back: update the payment and the ledger (once). If ops recorded the driver
+// as at fault, the driver's shares of this order are taken back (up to the refund; lib/earnings.ts).
 export async function markRefundProcessed(refundId: string): Promise<void> {
-  const refund = await prisma.refund.findUnique({ where: { id: refundId } })
+  const refund = await prisma.refund.findUnique({ where: { id: refundId }, include: { order: { select: { driverId: true } } } })
   if (!refund) return
+  let clawedBack = 0
   try {
     await prisma.$transaction(async (tx) => {
+      const refundPesewas = Math.round(refund.amount * 100)
       await tx.ledgerEntry.create({
-        data: { orderId: refund.orderId, type: 'refund', amount: refund.amount, idempotencyKey: `refund-${refund.id}` },
+        data: { orderId: refund.orderId, type: 'refund', amount: refund.amount, amountPesewas: refundPesewas, idempotencyKey: `refund-${refund.id}` },
       })
+      const driverId = refund.order.driverId
+      if (refund.driverFault && driverId) {
+        const rows = await tx.ledgerEntry.findMany({
+          where: { orderId: refund.orderId, driverId, type: { in: [...EARNING_TYPES, CLAWBACK_TYPE] } },
+          select: { type: true, amount: true, amountPesewas: true },
+        })
+        const pesewas = (r: { amount: number; amountPesewas: number | null }) => r.amountPesewas ?? Math.round(r.amount * 100)
+        const earned =
+          rows.filter((r) => r.type !== CLAWBACK_TYPE).reduce((s, r) => s + pesewas(r), 0) -
+          rows.filter((r) => r.type === CLAWBACK_TYPE).reduce((s, r) => s + pesewas(r), 0)
+        clawedBack = clawbackFor(refundPesewas, true, earned)
+        if (clawedBack > 0) {
+          await tx.ledgerEntry.create({
+            data: {
+              orderId: refund.orderId,
+              type: CLAWBACK_TYPE,
+              amount: clawedBack / 100,
+              amountPesewas: clawedBack,
+              driverId,
+              idempotencyKey: `clawback-${refund.id}`,
+            },
+          })
+          await tx.auditLog.create({
+            data: {
+              orderId: refund.orderId,
+              actorId: null,
+              fromState: 'REFUND',
+              toState: 'REFUND',
+              reason: `DRIVER PAY TAKEN BACK: GHS ${(clawedBack / 100).toFixed(2)} (driver at fault)`,
+            },
+          })
+        }
+      }
       const p = await tx.payment.update({ where: { id: refund.paymentId }, data: { refundedAmount: { increment: refund.amount } } })
       await tx.payment.update({
         where: { id: p.id },
@@ -262,5 +309,13 @@ export async function markRefundProcessed(refundId: string): Promise<void> {
     if (e?.code !== 'P2002') throw err
     // Already in the ledger: make sure the refund row says so too.
     await prisma.refund.update({ where: { id: refund.id }, data: { status: 'PROCESSED' } })
+    return
+  }
+  if (clawedBack > 0 && refund.order.driverId) {
+    await notifyUser(refund.order.driverId, {
+      title: 'Pay taken back',
+      body: `GHS ${(clawedBack / 100).toFixed(2)} was taken back for a pickup that was refunded to the customer. If you think this is wrong, contact Trashit.`,
+      url: '/dashboard/driver/earnings',
+    })
   }
 }

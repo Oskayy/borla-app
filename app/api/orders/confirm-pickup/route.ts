@@ -5,7 +5,8 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, evidenceFileHash, isValidEvidencePath } from '@/lib/storage'
 import { PICKUP_CHECK_MARKER, pickupFlags } from '@/lib/plausibility'
-import { driverPoolFromSnapshot } from '@/lib/pricing-core'
+import { ensureSplit } from '@/lib/order-split-server'
+import { PICKUP_TYPE } from '@/lib/earnings'
 import { distanceInMeters, GEOFENCE_THRESHOLD_METERS } from '@/lib/geo'
 import { notifyCustomerCollected } from '@/lib/customer-updates'
 import { caught } from '@/lib/errors'
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   const accuracy = typeof body?.gpsAccuracy === 'number' && Number.isFinite(body.gpsAccuracy) && body.gpsAccuracy >= 0 ? body.gpsAccuracy : null
 
   if (!isUuid(orderId) || !gps.ok) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
   if (!isValidEvidencePath(photoPath, orderId)) {
     return NextResponse.json({ error: 'A valid photo is required to confirm pickup' }, { status: 400 })
@@ -45,15 +46,6 @@ export async function POST(req: NextRequest) {
 
   if (!(await evidenceFileExists(photoPath))) {
     return NextResponse.json({ error: 'Photo upload not found. Please retake the photo and try again.' }, { status: 400 })
-  }
-
-  const rule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' } })
-  if (!rule) return NextResponse.json({ error: 'No active payout rule' }, { status: 500 })
-
-  // Drivers share the price after Trashit's platform fee (the "driver pool").
-  const driverPool = driverPoolFromSnapshot(order.quoteSnapshot)
-  if (driverPool === null) {
-    return NextResponse.json({ error: 'This order has an invalid price' }, { status: 400 })
   }
 
   // `flagged` (shown to the driver) is only the distance from the pin, as before. The other checks below
@@ -92,7 +84,7 @@ export async function POST(req: NextRequest) {
     photoUsedElsewhere: !!reused,
   })
 
-  const payoutAmount = Math.round(driverPool * rule.pickupPercent) / 100
+  let payoutPesewas = 0
   const idempotencyKey = `pickup-${orderId}`
   const auditReason = checks.length
     ? `Driver confirmed pickup with photo evidence (${PICKUP_CHECK_MARKER}: ${checks.join('; ')})`
@@ -119,8 +111,12 @@ export async function POST(req: NextRequest) {
           capturedAt: now,
         },
       })
+      // The pickup share, from the split frozen at payment. It can't be withdrawn until the load is unloaded
+      // and the clearing period has passed (lib/earnings.ts).
+      const split = await ensureSplit(tx, orderId)
+      payoutPesewas = split.pickup
       await tx.ledgerEntry.create({
-        data: { orderId, type: 'driver_payout_pickup', amount: payoutAmount, idempotencyKey, driverId: user.id },
+        data: { orderId, type: PICKUP_TYPE, amount: split.pickup / 100, amountPesewas: split.pickup, idempotencyKey, driverId: user.id, clearsAt: null },
       })
       await tx.auditLog.create({
         data: { orderId, actorId: user.id, fromState: 'ASSIGNED', toState: 'PICKED_UP', reason: auditReason },
@@ -132,10 +128,14 @@ export async function POST(req: NextRequest) {
     if (e?.message === 'STATE_CHANGED') {
       return NextResponse.json({ error: 'This order was just updated. Please refresh.' }, { status: 409 })
     }
+    if (e?.message === 'BAD_PRICE' || e?.message === 'NO_PAYOUT_RULE') {
+      console.error('[confirm-pickup] cannot work out the pay:', e.message, orderId)
+      return NextResponse.json({ error: "This stop's pay can't be worked out right now. Please call Trashit support before collecting." }, { status: 409 })
+    }
     console.error('[confirm-pickup] failed:', e)
     return NextResponse.json({ error: 'Could not confirm pickup. Please try again.' }, { status: 500 })
   }
 
   await notifyCustomerCollected(orderId)
-  return NextResponse.json({ success: true, payoutAmount, flagged, distanceMeters })
+  return NextResponse.json({ success: true, payoutAmount: payoutPesewas / 100, flagged, distanceMeters })
 }

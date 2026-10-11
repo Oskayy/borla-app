@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getEarningsHistory, getWalletSummary } from '@/lib/wallet-server'
 import { MIN_WITHDRAWAL_GHS, OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
 import { MOMO_PROVIDERS } from '@/lib/phone'
+import { ATTEMPT_TYPE, CLAWBACK_TYPE, CLEARING_HOURS, PICKUP_TYPE } from '@/lib/earnings'
 import { dateLabel, dateTimeLabel } from '@/lib/format'
 import Link from 'next/link'
 import { BUTTON_QUIET, Card, CardTitle, PageHeader } from '@/components/ui'
@@ -20,6 +21,23 @@ const WITHDRAWAL_LABELS: Record<string, { text: string; cls: string }> = {
   PAID: { text: 'Sent', cls: 'text-ops-deep' },
   FAILED: { text: 'Failed, money back in your balance', cls: 'text-danger' },
   REJECTED: { text: 'Not approved, money back in your balance', cls: 'text-danger' },
+}
+
+const accraTime = (d: Date) =>
+  d.toLocaleString('en-GB', { timeZone: 'Africa/Accra', weekday: 'short', hour: 'numeric', minute: '2-digit', hour12: true })
+
+// Where one earning stands (outside the component: reads the clock).
+function earningState(e: { type: string; clearsAt: Date | null }): string {
+  if (e.type === CLAWBACK_TYPE) return 'Taken back after a refund'
+  if (!e.clearsAt) return 'Clears after you unload'
+  return e.clearsAt.getTime() <= Date.now() ? 'Available' : `Clears ${accraTime(e.clearsAt)}`
+}
+
+const EARNING_LABELS: Record<string, string> = {
+  [PICKUP_TYPE]: 'Pickup share',
+  driver_payout_disposal: 'Unload share',
+  [ATTEMPT_TYPE]: 'Paid for a wasted trip',
+  [CLAWBACK_TYPE]: 'Taken back',
 }
 
 // When the safety pause after a wallet change ends, as Accra time (or null). Outside the component: reads the clock.
@@ -64,10 +82,16 @@ export default async function DriverEarningsPage() {
         <div className="rounded-card bg-surface p-5 ring-1 ring-action/40 sm:col-span-1">
           <p className="text-sm text-ink-3">Available to withdraw</p>
           <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight text-action">GHS {wallet.available.toFixed(2)}</p>
+          {wallet.reserve > 0 && (
+            <p className="mt-0.5 text-sm text-ink-3">GHS {wallet.reserve.toFixed(2)} kept back for your first 30 days</p>
+          )}
         </div>
         <div className="rounded-card bg-surface p-5 ring-1 ring-line">
-          <p className="text-sm text-ink-3">Earned in total</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight">GHS {wallet.earned.toFixed(2)}</p>
+          <p className="text-sm text-ink-3">Clearing</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight">GHS {wallet.clearing.toFixed(2)}</p>
+          <p className="mt-0.5 text-sm text-ink-3">
+            {wallet.nextClearAt ? `Next amount available ${accraTime(wallet.nextClearAt)}` : `Available ${CLEARING_HOURS} h after the shift ends and you've unloaded`}
+          </p>
         </div>
         <div className="rounded-card bg-surface p-5 ring-1 ring-line">
           <p className="text-sm text-ink-3">Sent to your MoMo</p>
@@ -75,6 +99,13 @@ export default async function DriverEarningsPage() {
           {wallet.pending > 0 && <p className="mt-0.5 text-sm text-action-deep">GHS {wallet.pending.toFixed(2)} on its way</p>}
         </div>
       </div>
+
+      {wallet.owed > 0 && (
+        <p role="status" className="mt-4 rounded-card bg-danger-wash p-4 text-[15px] text-ink ring-1 ring-danger/30">
+          GHS {wallet.owed.toFixed(2)} was taken back after a refund. It comes out of your next earnings before anything new is available. Nothing is
+          taken from your MoMo wallet.
+        </p>
+      )}
 
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
         {/* One card: withdraw, and the wallet the money goes to. */}
@@ -167,10 +198,12 @@ export default async function DriverEarningsPage() {
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{(e.order?.quoteSnapshot as { address?: string } | null)?.address ?? 'Order'}</span>
                   <span className="block text-sm text-ink-3">
-                    {e.type === 'driver_payout_pickup' ? 'Pickup share' : 'Unload share'} · {dateTimeLabel(e.createdAt)}
+                    {EARNING_LABELS[e.type] ?? 'Earning'} · {dateTimeLabel(e.createdAt)} · {earningState(e)}
                   </span>
                 </span>
-                <span className="shrink-0 font-semibold tabular-nums text-action-deep">+ GHS {e.amount.toFixed(2)}</span>
+                <span className={`shrink-0 font-semibold tabular-nums ${e.type === CLAWBACK_TYPE ? 'text-danger' : 'text-action-deep'}`}>
+                  {e.type === CLAWBACK_TYPE ? '−' : '+'} GHS {e.amount.toFixed(2)}
+                </span>
               </li>
             ))}
           </ul>

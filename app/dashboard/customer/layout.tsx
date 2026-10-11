@@ -4,6 +4,7 @@ import { Bell, Headphones, MapPin } from 'lucide-react'
 import ThemeToggle from '@/components/ThemeToggle'
 import Logo from '@/components/Logo'
 import { BottomTabs, SidebarNav } from '@/components/customer/CustomerNav'
+import ResumeBooking from '@/components/customer/ResumeBooking'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { SUPPORT, supportHref } from '@/lib/support'
@@ -99,6 +100,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
       </div>
 
       <BottomTabs />
+      <ResumeBooking />
     </div>
   )
 }

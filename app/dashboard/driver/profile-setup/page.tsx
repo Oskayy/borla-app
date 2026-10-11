@@ -5,6 +5,7 @@ import DriverProfileSetupForm from '@/components/DriverProfileSetupForm'
 import { Card, PageHeader } from '@/components/ui'
 import VehicleChangeCard from '@/components/driver/VehicleChangeCard'
 import { VEHICLE_CHANGE_DOC, vehicleChangeStage } from '@/lib/vehicle-change'
+import { driverPhotoUrls } from '@/lib/driver-photos'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,7 @@ export default async function DriverProfileSetupPage() {
       select: {
         vehicleTypeId: true,
         vehiclePlate: true,
+        ghanaCardNumber: true,
         radiusKm: true,
         zoneId: true,
         homeAddress: true,
@@ -41,6 +43,9 @@ export default async function DriverProfileSetupPage() {
       },
     }),
   ])
+  const approved = profile?.approvalStatus === 'APPROVED'
+  // Before approval the vehicle photo is part of this form.
+  const vehiclePhoto = approved ? null : (await driverPhotoUrls(user.id, ['vehicle_photo'])).vehicle_photo
   const changePhotos = profile?.pendingVehicleTypeId
     ? await prisma.driverDocument.count({ where: { driverId: user.id, type: VEHICLE_CHANGE_DOC } })
     : 0
@@ -77,7 +82,8 @@ export default async function DriverProfileSetupPage() {
           zones={zones}
           vehicleTypes={vehicleTypes}
           initial={profile}
-          approved={profile?.approvalStatus === 'APPROVED'}
+          approved={approved}
+          vehiclePhotoUrl={vehiclePhoto}
         />
       </Card>
     </div>

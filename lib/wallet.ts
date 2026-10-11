@@ -1,5 +1,4 @@
-// Driver earnings and withdrawals. Pure functions so they can be tested.
-// Amounts are in cedis; sums are done in pesewas to avoid rounding drift.
+// Driver withdrawals. Pure functions so they can be tested. Balances are worked out in lib/earnings.ts.
 
 export const MIN_WITHDRAWAL_GHS = 10 // placeholder: smallest amount a driver can withdraw
 export const MAX_WITHDRAWAL_GHS = 5000 // placeholder: largest single withdrawal
@@ -24,30 +23,6 @@ export function payoutHoldEndsAt(changedAt: Date | null | undefined, now: Date):
 
 export function toPesewas(ghs: number): number {
   return Math.round(ghs * 100)
-}
-
-export interface WalletSummary {
-  earned: number // all earnings ever
-  paidOut: number // withdrawals sent
-  pending: number // withdrawals requested or being sent
-  available: number // can be withdrawn now
-}
-
-export function summarizeWallet(
-  earnings: number[],
-  withdrawals: { amount: number; status: string }[]
-): WalletSummary {
-  const earned = earnings.reduce((s, a) => s + toPesewas(a), 0)
-  const paid = withdrawals.filter((w) => w.status === 'PAID').reduce((s, w) => s + toPesewas(w.amount), 0)
-  const pending = withdrawals
-    .filter((w) => OPEN_WITHDRAWAL_STATUSES.includes(w.status))
-    .reduce((s, w) => s + toPesewas(w.amount), 0)
-  return {
-    earned: earned / 100,
-    paidOut: paid / 100,
-    pending: pending / 100,
-    available: Math.max(0, earned - paid - pending) / 100,
-  }
 }
 
 // Checks a withdrawal request. Returns an error message, or '' if it's fine.

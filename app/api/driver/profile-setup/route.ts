@@ -7,6 +7,8 @@ import { inRange } from '@/lib/numbers'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { DRIVER_DOCS_BUCKET } from '@/lib/driver-docs'
 import { planVehicleChange, VEHICLE_CHANGE_DOC } from '@/lib/vehicle-change'
+import { parseGhanaCard, parsePlate } from '@/lib/ghana-card'
+import { caught } from '@/lib/errors'
 
 // Saves the driver's vehicle, home base (where they start each night) and working radius.
 // An approved driver's change of vehicle type waits for ops (lib/vehicle-change.ts); everything else saves now.
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const body = await readJson(req)
   const vehicleTypeId = body?.vehicleTypeId
-  const vehiclePlate = body?.vehiclePlate ? cleanText(body.vehiclePlate, 20) : null
+  const vehiclePlate = parsePlate(body?.vehiclePlate)
   const homeAddress = body?.homeAddress ? cleanText(body.homeAddress, 200) : null
   const zoneId = body?.zoneId ? body.zoneId : null
   const homeLat = body?.homeLat
@@ -32,8 +34,11 @@ export async function POST(req: NextRequest) {
   const vehicle = await prisma.vehicleType.findFirst({ where: { id: vehicleTypeId, active: true } })
   if (!vehicle) return NextResponse.json({ error: 'That vehicle is not available' }, { status: 400 })
 
-  if ((body?.vehiclePlate && !vehiclePlate) || (body?.homeAddress && !homeAddress)) {
-    return NextResponse.json({ error: 'Please check your plate number and address' }, { status: 400 })
+  if (!vehiclePlate) {
+    return NextResponse.json({ error: 'Please enter your vehicle number plate, e.g. GT 1234-24' }, { status: 400 })
+  }
+  if (body?.homeAddress && !homeAddress) {
+    return NextResponse.json({ error: 'Please check your address' }, { status: 400 })
   }
 
   // The home base is needed to plan each night's routes, so it is now required.
@@ -51,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (zoneId !== null) {
-    if (!isUuid(zoneId)) return NextResponse.json({ error: 'Invalid zone' }, { status: 400 })
+    if (!isUuid(zoneId)) return NextResponse.json({ error: 'Please choose a zone from the list.' }, { status: 400 })
     const zone = await prisma.zone.findFirst({ where: { id: zoneId, active: true } })
     if (!zone) return NextResponse.json({ error: 'That zone is not available' }, { status: 400 })
   }
@@ -62,6 +67,19 @@ export async function POST(req: NextRequest) {
   })
   if (!current) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
 
+  // Before approval: the Ghana Card number and a photo of the vehicle are required. After approval they are locked.
+  const approved = current.approvalStatus === 'APPROVED'
+  let ghanaCardNumber: string | undefined
+  if (!approved) {
+    const card = parseGhanaCard(body?.ghanaCardNumber)
+    if (!card) {
+      return NextResponse.json({ error: 'Please enter your Ghana Card number, e.g. GHA-123456789-0' }, { status: 400 })
+    }
+    ghanaCardNumber = card
+    const photos = await prisma.driverDocument.count({ where: { driverId: auth.user.id, type: 'vehicle_photo' } })
+    if (photos === 0) return NextResponse.json({ error: 'Please add a photo of your vehicle' }, { status: 400 })
+  }
+
   const plan = planVehicleChange({
     approved: current.approvalStatus === 'APPROVED',
     currentVehicleId: current.vehicleTypeId,
@@ -69,7 +87,7 @@ export async function POST(req: NextRequest) {
     requestedRadiusKm: radiusKm,
     currentMaxRadiusKm: current.vehicleTypeRef?.maxRadiusKm ?? null,
   })
-  const place = { vehiclePlate, zoneId, homeAddress, homeLat, homeLng }
+  const place = { vehiclePlate, zoneId, homeAddress, homeLat, homeLng, ...(ghanaCardNumber ? { ghanaCardNumber } : {}) }
 
   if (plan.kind === 'pending') {
     // Keep working on today's vehicle; the new one waits for a photo and ops approval.
@@ -90,19 +108,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, vehicleChange: 'pending' })
   }
 
-  await prisma.driverProfile.update({
-    where: { userId: auth.user.id },
-    data: {
-      ...place,
-      vehicleTypeId: vehicle.id,
-      vehicleType: vehicle.name, // kept in step for older screens that read the name
-      radiusKm,
-      // Choosing today's vehicle again cancels a change that was waiting.
-      pendingVehicleTypeId: null,
-      pendingRadiusKm: null,
-      pendingVehicleAt: null,
-    },
-  })
+  try {
+    await prisma.driverProfile.update({
+      where: { userId: auth.user.id },
+      data: {
+        ...place,
+        vehicleTypeId: vehicle.id,
+        vehicleType: vehicle.name, // kept in step for older screens that read the name
+        radiusKm,
+        // Choosing today's vehicle again cancels a change that was waiting.
+        pendingVehicleTypeId: null,
+        pendingRadiusKm: null,
+        pendingVehicleAt: null,
+      },
+    })
+  } catch (err) {
+    if (caught(err)?.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'That Ghana Card number is already on another driver account. Contact Trashit if this is wrong.' },
+        { status: 409 }
+      )
+    }
+    throw err
+  }
   if (current.pendingVehicleTypeId) await removeChangePhotos(auth.user.id)
 
   return NextResponse.json({ success: true })

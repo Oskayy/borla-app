@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { parseGps, readJson } from '@/lib/validate'
 import { parseOrderInput, quoteFromBooking } from '@/lib/pricing'
+import { getAcceptHazardous } from '@/lib/settings'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['CUSTOMER'])
@@ -18,6 +19,13 @@ export async function POST(req: NextRequest) {
   const gps = parseGps(body)
   if (!input || !gps.ok) {
     return NextResponse.json({ error: 'Please choose at least one bin and check your order details' }, { status: 400 })
+  }
+
+  if (input?.hazardous && !(await getAcceptHazardous())) {
+    return NextResponse.json(
+      { error: "We can't collect hazardous waste yet (batteries, chemicals, paint, medical waste). Please keep it out of your bins." },
+      { status: 400 }
+    )
   }
 
     const result = await quoteFromBooking(auth.user.id, body, input, gps.lat, gps.lng)

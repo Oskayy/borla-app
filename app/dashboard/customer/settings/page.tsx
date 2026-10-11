@@ -10,12 +10,15 @@ import DeleteAccount from '@/components/customer/DeleteAccount'
 
 export const dynamic = 'force-dynamic'
 
-// A settings row: icon, title, and an optional short value on the right (no hint text underneath).
-function Row({ href, icon: Icon, title, value }: { href: string; icon: typeof KeyRound; title: string; value?: string }) {
+// A settings row: icon, title, an optional short value on the right, and (for real settings) a line saying what it does.
+function Row({ href, icon: Icon, title, value, desc }: { href: string; icon: typeof KeyRound; title: string; value?: string; desc?: string }) {
   return (
     <Link href={href} className="press -mx-2 flex min-h-12 items-center gap-3 rounded-control p-2 hover:bg-canvas">
       <Icon aria-hidden className="size-5 shrink-0 text-ink-2" />
-      <span className="min-w-0 flex-1 font-medium">{title}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">{title}</span>
+        {desc && <span className="block text-sm text-ink-3">{desc}</span>}
+      </span>
       {value && <span className="shrink-0 text-sm text-ink-3">{value}</span>}
       <ChevronRight aria-hidden className="size-4 text-ink-3" />
     </Link>
@@ -37,22 +40,26 @@ export default async function SettingsPage() {
         <Card>
           <CardTitle>Sign-in and security</CardTitle>
           <div className="grid gap-1">
-            <Row href="/reset-password" icon={KeyRound} title="Change password" />
+            <Row
+              href="/reset-password"
+              icon={KeyRound}
+              title="Change password"
+              desc="Pick a new password. Other phones signed in to your account are signed out."
+            />
             <Row
               href="/account/security"
               icon={ShieldCheck}
               title="Two-factor authentication"
               value={has2fa ? 'On' : 'Off'}
+              desc="Also asks for a 6-digit code from an app on your phone when you sign in. Optional, and safer."
             />
           </div>
         </Card>
 
         <Card>
           <CardTitle>Alerts on this device</CardTitle>
-          <p className="mb-4 text-sm text-ink-2">Hear when your driver is assigned and when your bins are collected, even with Trashit closed.</p>
-          <div className="empty:hidden">
-            <EnableAlerts compact message="Alerts are off on this device." />
-          </div>
+          <p className="mb-4 text-sm text-ink-2">Hear when a driver is assigned and when your bins are collected, even with Trashit closed.</p>
+          <EnableAlerts explain message="Alerts are off on this phone." />
           <div className="mt-3 empty:hidden">
             <InstallPrompt />
           </div>

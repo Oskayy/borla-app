@@ -7,6 +7,7 @@ import { isRateLimited, recordAttempt, getClientIp } from '@/lib/rate-limit'
 import { cleanText, readJson } from '@/lib/validate'
 import { siteUrl } from '@/lib/site-url'
 import { caught } from '@/lib/errors'
+import { friendlyAuthError } from '@/lib/friendly-errors'
 
 // Only these two roles can ever be created from the public signup form.
 const SELF_SERVICE_ROLES = ['CUSTOMER', 'DRIVER']
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
   if (authError || !data.user) {
     await recordAttempt(ip, 'signup', false)
-    return NextResponse.json({ error: authError?.message || 'Signup failed' }, { status: 400 })
+    return NextResponse.json({ error: friendlyAuthError(authError, 'We could not create your account. Please try again.') }, { status: 400 })
   }
 
   // With email confirmation on, Supabase answers a sign-up for an email that already has an account with a

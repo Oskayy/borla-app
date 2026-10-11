@@ -9,12 +9,17 @@ export async function POST() {
   const auth = await requireAuth(['DRIVER'])
   if (!auth.ok) return auth.response
 
-  const profile = await prisma.driverProfile.findUnique({ where: { userId: auth.user.id }, select: { approvalStatus: true } })
+  const profile = await prisma.driverProfile.findUnique({
+    where: { userId: auth.user.id },
+    select: { approvalStatus: true, ghanaCardNumber: true, vehiclePlate: true },
+  })
   if (!profile) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
   if (profile.approvalStatus === 'APPROVED') return NextResponse.json({ success: true })
 
   const docs = await prisma.driverDocument.findMany({ where: { driverId: auth.user.id }, select: { type: true } })
   const missing = missingDocs(docs.map((d: { type: string }) => d.type))
+  if (!profile.ghanaCardNumber) missing.unshift('your Ghana Card number (on the setup page)')
+  if (!profile.vehiclePlate) missing.push('your number plate (on the setup page)')
   if (missing.length > 0) return NextResponse.json({ error: `Please add: ${missing.join(', ')}` }, { status: 400 })
 
   await prisma.driverProfile.update({

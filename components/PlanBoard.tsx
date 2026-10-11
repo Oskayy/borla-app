@@ -8,6 +8,7 @@ import { assessDriver, driverPosition, nightCapacity, type DispatchDriver } from
 import type { MapRoute } from '@/components/ops/AssignMap'
 import { AlertTriangle, CheckCircle2, Flag, Map as MapIcon, RotateCcw, XCircle } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import { durationLabel } from '@/lib/trip-time'
 
 // The map only loads in the browser, after the rest of the board (it's the heaviest part of the page).
 const AssignMap = dynamic(() => import('@/components/ops/AssignMap'), {
@@ -212,6 +213,11 @@ export default function PlanBoard({
         <span className="tabular-nums text-ink-3">
           {o.litres} L{o.litresEstimated ? ' (estimated)' : ''}
         </span>
+        {o.wasteKind === 'hazardous' && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-danger-wash px-2 py-0.5 text-xs font-semibold text-danger">
+            <AlertTriangle aria-hidden className="size-3" /> Hazardous
+          </span>
+        )}
         {o.isLate && <span className="rounded-full bg-canvas px-2 py-0.5 text-xs font-semibold text-ink-2 ring-1 ring-line">Late booking</span>}
         {(o.rolloverCount ?? 0) > 0 && (
           <span className="rounded-full bg-danger-wash px-2 py-0.5 text-xs font-semibold text-danger">
@@ -363,8 +369,24 @@ export default function PlanBoard({
                 </h3>
                 <p className="mt-0.5 text-sm text-ink-3">
                   {d.vehicleName ?? 'Vehicle'} · {p.orderIds.length} {p.orderIds.length === 1 ? 'stop' : 'stops'} · {p.trips.length}{' '}
-                  {p.trips.length === 1 ? 'trip' : 'trips'} · about {p.distanceKm} km
+                  {p.trips.length === 1 ? 'trip' : 'trips'} · about {p.distanceKm} km · {durationLabel(p.minutes)}
                 </p>
+                {d.minutesLeft != null && (
+                  <div className="mt-3 max-w-md">
+                    <div className="flex justify-between text-xs text-ink-3">
+                      <span>Time tonight{(d.tripsUsed ?? 0) > 0 && ` (after ${d.tripsUsed} ${d.tripsUsed === 1 ? 'trip' : 'trips'} already assigned)`}</span>
+                      <span className="tabular-nums">
+                        {durationLabel(p.minutes).replace('about ', '')} of {durationLabel(Math.max(0, d.minutesLeft)).replace('about ', '')}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-line" aria-hidden>
+                      <span
+                        className={`block h-full rounded-full ${p.minutes > d.minutesLeft ? 'bg-danger' : 'bg-ops'}`}
+                        style={{ width: `${Math.min(100, d.minutesLeft > 0 ? (p.minutes / d.minutesLeft) * 100 : 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="mt-3 max-w-md">
                   <div className="flex justify-between text-xs text-ink-3">
                     <span>
@@ -417,7 +439,10 @@ export default function PlanBoard({
               return (
                 <div key={t.tripNumber} className="mt-5">
                   <p className="text-sm font-semibold text-ink-2">
-                    Trip {t.tripNumber} <span className="font-normal tabular-nums text-ink-3">· {t.litres} L</span>
+                    Trip {t.tripNumber}{' '}
+                    <span className="font-normal tabular-nums text-ink-3">
+                      · {t.litres} L · {durationLabel(t.minutes)}
+                    </span>
                   </p>
                   <ol className="mt-1.5 divide-y divide-line border-y border-line">
                     {t.orderIds.map((id, i) => {
@@ -503,8 +528,9 @@ export default function PlanBoard({
       </div>
 
       <p className="text-sm text-ink-3">
-        Tap a driver to see their route on the map. In each “Move” list, drivers under “Can take it” could take that order on its own. Moving orders re-checks radius, capacity and
-        online status; a driver’s card turns red if their plan breaks a rule.
+        Tap a driver to see their route on the map. In each “Move” list, drivers under “Can take it” could take that order on its own. Moving orders re-checks radius, capacity,
+        online status, trips and shift time; a driver’s card turns red if their plan breaks a rule. Times are estimates: night driving, about 4 min a
+        stop, and each site’s unload time. Hazardous orders are never planned automatically: give them a driver by hand.
       </p>
     </div>
   )

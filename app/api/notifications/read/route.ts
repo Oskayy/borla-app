@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response
   const ids = (await readJson(req))?.ids
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 50 || !ids.every(isUuid)) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
   await prisma.notification.updateMany({ where: { id: { in: ids }, userId: auth.user.id, readAt: null }, data: { readAt: new Date() } })
   return NextResponse.json({ success: true })

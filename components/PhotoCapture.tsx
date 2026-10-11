@@ -38,7 +38,7 @@ export default function PhotoCapture({ onCapture, label = "Take Photo", buttonCl
       },
       (err) => {
         setGettingLocation(false);
-        setError("Couldn't get your location (" + err.message + "). Photo will be uploaded without GPS.");
+        setError(err.code === err.PERMISSION_DENIED ? "Location is off for Trashit, so the photo is sent without it. That's fine." : "Couldn't get your location, so the photo is sent without it. That's fine.");
         onCapture(file, null, null);
       },
       { enableHighAccuracy: true, timeout: 10000 }

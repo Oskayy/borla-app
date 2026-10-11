@@ -7,9 +7,13 @@
 //     whose planned stops are closest to it, so each driver gets a tight cluster. Ties go to the emptier driver.
 //  3. Each driver's stops are put in a sensible driving order (nearest next stop), then split into trips
 //     that fill the vehicle to about 90% before a disposal run.
+//  4. An order only goes to a driver if their whole night still fits: no more trips than they have left,
+//     and no longer than the time left in the shift (lib/trip-time.ts). Otherwise the next-closest driver is tried.
+//  5. Hazardous orders are never planned automatically: ops plan them by hand.
 
 import { distanceInMeters } from './geo'
 import { assessDriver, driverPosition, nightCapacity, tripCapacity, type DispatchDriver, type DispatchOrder } from './dispatch'
+import { durationLabel, STOP_MINUTES, tripMinutes } from './trip-time'
 
 export type WasteKind = 'general' | 'recyclable' | 'hazardous'
 
@@ -28,6 +32,7 @@ export interface PlanSite {
   lng: number
   acceptedWaste: string[]
   usable: boolean
+  unloadMinutes?: number // average time to unload here
 }
 
 export interface PlannedTrip {
@@ -37,6 +42,7 @@ export interface PlannedTrip {
   siteId: string | null // where this load is unloaded
   siteName: string | null
   siteProblem: string | null // e.g. no open site takes hazardous waste
+  minutes: number // estimated time for the trip: drive, collect, drive to the site, unload
 }
 
 export interface DriverPlan {
@@ -45,6 +51,7 @@ export interface DriverPlan {
   trips: PlannedTrip[]
   litres: number // litres in this plan (on top of anything already assigned)
   distanceKm: number // rough straight-line length of the route, from the start point
+  minutes: number // estimated time for all the trips
   problems: string[] // rule breaks after manual edits (empty when the plan passes every check)
 }
 
@@ -134,7 +141,7 @@ export function orderStops(start: { lat: number; lng: number } | null, orders: P
 // The first trip is shorter if the driver already has orders on board.
 export function splitIntoTrips(stops: PlanOrder[], perTrip: number, alreadyLoaded: number): PlannedTrip[] {
   const trips: PlannedTrip[] = []
-  const blank = (n: number): PlannedTrip => ({ tripNumber: n, orderIds: [], litres: 0, siteId: null, siteName: null, siteProblem: null })
+  const blank = (n: number): PlannedTrip => ({ tripNumber: n, orderIds: [], litres: 0, siteId: null, siteName: null, siteProblem: null, minutes: 0 })
   let current: PlannedTrip = blank(1)
   let room = perTrip > 0 ? Math.max(0, perTrip - (alreadyLoaded % perTrip)) : Infinity
   for (const o of stops) {
@@ -162,6 +169,20 @@ function routeLength(start: { lat: number; lng: number } | null, stops: PlanOrde
   return Math.round(total * 10) / 10
 }
 
+// Trip and time limits for a driver's plan: [] when it fits in what's left of their night.
+export function limitProblems(d: DispatchDriver, trips: number, minutes: number): string[] {
+  const out: string[] = []
+  const perNight = Math.max(1, d.tripsPerNight ?? 1)
+  const left = Math.max(0, perNight - (d.tripsUsed ?? 0))
+  if (trips > left) {
+    out.push(left === 0 ? `No trips left tonight (all ${perNight} used)` : `Needs ${trips} trips, only ${left} left tonight`)
+  }
+  if (d.minutesLeft != null && minutes > d.minutesLeft) {
+    out.push(`Needs ${durationLabel(minutes)}, only ${durationLabel(Math.max(0, d.minutesLeft))} left in the shift`)
+  }
+  return out
+}
+
 // Builds one driver's plan from a chosen set of orders, and lists any rule breaks (used after manual edits).
 export function buildDriverPlan(
   driver: DispatchDriver,
@@ -177,13 +198,23 @@ export function buildDriverPlan(
   // End each trip at the best site for its load, measured from the trip's last stop.
   const byId = new Map(orders.map((o) => [o.id, o]))
   let lastPoint = start ? { lat: start.lat, lng: start.lng } : null
+  let minutes = 0
   for (const t of trips) {
+    const tripStart = lastPoint
     const tripOrders = t.orderIds.map((id) => byId.get(id)!)
     for (const o of tripOrders) if (o.latitude != null && o.longitude != null) lastPoint = { lat: o.latitude, lng: o.longitude }
     const { site, problem } = chooseSite(tripOrders, sites, lastPoint)
     t.siteId = site?.id ?? null
     t.siteName = site?.name ?? null
     t.siteProblem = problem
+    t.minutes = Math.round(
+      tripMinutes(
+        tripStart,
+        tripOrders.map((o) => (o.latitude != null && o.longitude != null ? { lat: o.latitude, lng: o.longitude } : null)),
+        site ? { lat: site.lat, lng: site.lng, unloadMinutes: site.unloadMinutes } : null
+      )
+    )
+    minutes += t.minutes
     if (site) lastPoint = { lat: site.lat, lng: site.lng } // the next trip starts from the site
   }
   const fit = orders.length > 0 ? assessDriver(driver, orders, shiftRunning, now) : null
@@ -193,7 +224,8 @@ export function buildDriverPlan(
     trips,
     litres: orders.reduce((s, o) => s + o.litres, 0),
     distanceKm: routeLength(start ? { lat: start.lat, lng: start.lng } : null, stops),
-    problems: fit && !fit.eligible ? fit.reasons : [],
+    minutes,
+    problems: [...(fit && !fit.eligible ? fit.reasons : []), ...(orders.length > 0 ? limitProblems(driver, trips.length, minutes) : [])],
   }
 }
 
@@ -206,6 +238,8 @@ export function proposePlan(
 ): Plan {
   // Who could take each order on its own?
   const candidates = new Map<string, DispatchDriver[]>()
+  const manual = orders.filter((o) => o.wasteKind === 'hazardous')
+  orders = orders.filter((o) => o.wasteKind !== 'hazardous')
   for (const o of orders) {
     const declined = new Set(o.declinedBy ?? [])
     candidates.set(o.id, drivers.filter((d) => !declined.has(d.id) && assessDriver(d, [o], shiftRunning, now).eligible))
@@ -220,7 +254,9 @@ export function proposePlan(
 
   const assigned = new Map<string, PlanOrder[]>() // driverId -> orders
   const used = new Map<string, number>() // driverId -> litres planned
-  const unassigned: Plan['unassigned'] = []
+  const planMinutes = new Map<string, number>() // driverId -> estimated minutes of the plan so far
+  const misses = new Map<string, number>() // driverId -> orders in a row that didn't fit their night
+  const unassigned: Plan['unassigned'] = manual.map((o) => ({ orderId: o.id, reason: 'Hazardous waste: plan it by hand' }))
 
   for (const o of sorted) {
     const options = candidates.get(o.id)!
@@ -238,8 +274,8 @@ export function proposePlan(
       continue
     }
 
-    let best: DispatchDriver | null = null
-    let bestScore = Infinity
+    // Score every driver with room, then take the closest whose night still fits (trips and time).
+    const scored: { d: DispatchDriver; score: number }[] = []
     for (const d of options) {
       const room = nightCapacity(d) - d.loadLitres - (used.get(d.id) ?? 0)
       if (o.litres > room) continue
@@ -255,14 +291,30 @@ export function proposePlan(
           ? 0
           : Math.min(...points.map((p) => km(p.lat, p.lng, o.latitude!, o.longitude!)))
       const tieBreak = (d.loadLitres + (used.get(d.id) ?? 0)) / Math.max(1, nightCapacity(d)) / 100
-      if (score + tieBreak < bestScore) {
-        bestScore = score + tieBreak
+      scored.push({ d, score: score + tieBreak })
+    }
+    scored.sort((a, b) => a.score - b.score)
+
+    let best: DispatchDriver | null = null
+    for (const { d } of scored) {
+      // Cheap skips first: a driver whose night is already full, or who missed several orders in a row (keeps big nights fast).
+      if (d.minutesLeft != null && (planMinutes.get(d.id) ?? 0) + STOP_MINUTES > d.minutesLeft) continue
+      if ((misses.get(d.id) ?? 0) >= 3) continue
+      const trial = buildDriverPlan(d, [...(assigned.get(d.id) ?? []), o], shiftRunning, now, sites)
+      if (limitProblems(d, trial.trips.length, trial.minutes).length === 0) {
         best = d
+        planMinutes.set(d.id, trial.minutes)
+        misses.set(d.id, 0)
+        break
       }
+      misses.set(d.id, (misses.get(d.id) ?? 0) + 1)
     }
 
     if (!best) {
-      unassigned.push({ orderId: o.id, reason: 'Drivers in range are full for tonight' })
+      unassigned.push({
+        orderId: o.id,
+        reason: scored.length > 0 ? 'Drivers in range have no time or trips left tonight' : 'Drivers in range are full for tonight',
+      })
       continue
     }
     assigned.set(best.id, [...(assigned.get(best.id) ?? []), o])

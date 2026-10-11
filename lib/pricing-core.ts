@@ -178,11 +178,3 @@ export function calculatePrice(
   }
 }
 
-// The amount drivers share for an order. Orders created before the platform fee existed
-// have no driverPool in their snapshot, so the whole price goes to the driver as before.
-export function driverPoolFromSnapshot(snapshot: unknown): number | null {
-  const s = snapshot as { price?: unknown; driverPool?: unknown } | null
-  if (typeof s?.driverPool === 'number' && Number.isFinite(s.driverPool) && s.driverPool >= 0) return s.driverPool
-  if (typeof s?.price === 'number' && Number.isFinite(s.price) && s.price > 0) return s.price
-  return null
-}

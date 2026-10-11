@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const orderIds = body?.orderIds
   if (!Array.isArray(orderIds) || orderIds.length === 0 || orderIds.length > MAX_ORDERS || !orderIds.every(isUuid)) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
   const ids: string[] = Array.from(new Set(orderIds as string[]))
 

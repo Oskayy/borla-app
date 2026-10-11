@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BellRing } from 'lucide-react'
+import { BellOff, BellRing, CheckCircle2 } from 'lucide-react'
 import { useClientValue } from '@/lib/use-client-value'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -20,7 +20,16 @@ const DEFAULT_MESSAGE = 'Turn on alerts so your phone rings when stops are added
 
 // "Turn on alerts": lets Trashit ring this phone or computer (new stops for drivers, plan ready for ops,
 // pickup moved for customers), even with the app closed.
-export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = false }: { message?: string; compact?: boolean }) {
+// `explain` (settings screens): always show the current state in words, what it does, and how to change it.
+export default function EnableAlerts({
+  message = DEFAULT_MESSAGE,
+  compact = false,
+  explain = false,
+}: {
+  message?: string
+  compact?: boolean
+  explain?: boolean
+}) {
   // What the browser rules out before we ask anything (read on the client only).
   const support = useClientValue<'ok' | 'unsupported' | 'blocked'>(() => {
     if (!VAPID_PUBLIC_KEY || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
@@ -77,6 +86,40 @@ export default function EnableAlerts({ message = DEFAULT_MESSAGE, compact = fals
     } catch {
       setError('Could not turn on alerts. Please try again.')
       setState('off')
+    }
+  }
+
+  if (explain) {
+    const row = (icon: React.ReactNode, title: string, text: string) => (
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 shrink-0">{icon}</span>
+        <p className="text-[15px]">
+          <span className="block font-semibold text-ink">{title}</span>
+          <span className="block text-ink-2">{text}</span>
+        </p>
+      </div>
+    )
+    if (state === 'checking') return <p className="text-sm text-ink-3">Checking this phone…</p>
+    if (state === 'on') {
+      return row(
+        <CheckCircle2 aria-hidden className="size-5 text-customer" />,
+        'On for this phone',
+        "You'll get alerts even when Trashit is closed. To stop them, turn off notifications for Trashit in your phone's settings."
+      )
+    }
+    if (state === 'blocked') {
+      return row(
+        <BellOff aria-hidden className="size-5 text-danger" />,
+        'Blocked on this phone',
+        "Notifications for Trashit were turned off on this phone. To get alerts, allow notifications for Trashit in your phone's or browser's settings, then come back here."
+      )
+    }
+    if (state === 'unsupported') {
+      return row(
+        <BellOff aria-hidden className="size-5 text-ink-3" />,
+        "This browser can't show alerts",
+        'Updates still appear in Trashit when you open it. On iPhone, add Trashit to your home screen first, then open it from there.'
+      )
     }
   }
 

@@ -26,10 +26,10 @@ export async function POST(req: NextRequest) {
   const photoPath = body?.photoPath ? body.photoPath : null
 
   if (!isUuid(orderId) || !ISSUE_TYPES.includes(issueType) || !gps.ok) {
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    return NextResponse.json({ error: "Something didn't go through. Please refresh the page and try again." }, { status: 400 })
   }
   if (photoPath !== null && !isValidEvidencePath(photoPath, orderId)) {
-    return NextResponse.json({ error: 'Invalid photo' }, { status: 400 })
+    return NextResponse.json({ error: 'Please take the photo again.' }, { status: 400 })
   }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })

@@ -27,6 +27,8 @@ export interface DispatchDriver {
   lastLocationAt: Date | string | null
   loadLitres: number // litres already assigned and not yet unloaded
   tripsPerNight?: number // round trips the driver can do in a shift (default 1)
+  tripsUsed?: number // trips already on the driver's routes tonight, finished or not
+  minutesLeft?: number | null // estimated shift minutes left after the work already assigned (null = no time limit)
   vehicleName?: string | null
 }
 
