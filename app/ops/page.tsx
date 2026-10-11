@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AlertTriangle, BadgeCheck, CheckCircle2, ChevronRight, Flag, Moon, Route, Star, Undo2, Wallet, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, CheckCircle2, ChevronRight, Flag, Landmark, Moon, Route, Star, Undo2, Wallet, type LucideIcon } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
@@ -31,6 +31,7 @@ const QUEUE_ROWS: (Omit<Attention, 'count'> & { queue: QueueKey })[] = [
   { key: 'approvals', queue: 'approvals', title: (n) => `${n} driver ${n === 1 ? 'approval' : 'approvals'}`, hint: 'New drivers and vehicle changes waiting for a decision.', href: '/ops/driver-approvals', icon: BadgeCheck },
   { key: 'lowRatings', queue: 'lowRatings', title: (n) => `${n} low ${n === 1 ? 'rating' : 'ratings'}`, hint: 'Customers gave 2 stars or fewer.', href: '/ops/ratings', icon: Star },
   { key: 'withdrawals', queue: 'withdrawals', title: (n) => `${n} ${n === 1 ? 'withdrawal' : 'withdrawals'} open`, hint: 'Driver payouts to approve, confirm or check.', href: '/ops/withdrawals', icon: Wallet },
+  { key: 'finance', queue: 'finance', title: (n) => `${n} money ${n === 1 ? 'item' : 'items'} to check`, hint: 'Settlements to confirm in the bank, or a daily money check that found a difference.', href: '/ops/finance', icon: Landmark },
 ]
 
 // Reads the clock: outside the component so the render stays pure.

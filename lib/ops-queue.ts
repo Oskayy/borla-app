@@ -40,7 +40,7 @@ async function loadQueueCounts(role: string): Promise<QueueCounts> {
       .filter((l) => l.queue && canOpen(l, role))
       .map((l) => l.queue as QueueKey)
   )
-  const counts: QueueCounts = { unloads: 0, exceptions: 0, approvals: 0, lowRatings: 0, withdrawals: 0, needsDriver: 0 }
+  const counts: QueueCounts = { unloads: 0, exceptions: 0, approvals: 0, lowRatings: 0, withdrawals: 0, needsDriver: 0, finance: 0 }
   if (allowed.size === 0) return counts
 
   const night = dbDate(planningShiftDate(new Date(), await getShiftSettings()))
@@ -59,7 +59,9 @@ async function loadQueueCounts(role: string): Promise<QueueCounts> {
       (SELECT count(*) FROM "DriverProfile" WHERE "approvalStatus" = 'PENDING' AND "submittedAt" IS NOT NULL) AS "approvals",
       (SELECT count(*) FROM "DriverProfile" WHERE "pendingVehicleAt" IS NOT NULL) AS "vehicleChanges",
       (SELECT count(*) FROM "OrderRating" WHERE stars <= ${LOW_RATING} AND "reviewedAt" IS NULL) AS "lowRatings",
-      (SELECT count(*) FROM "Withdrawal" WHERE status = ANY(${OPEN_WITHDRAWAL_STATUSES})) AS "withdrawals"
+      (SELECT count(*) FROM "Withdrawal" WHERE status = ANY(${OPEN_WITHDRAWAL_STATUSES})) AS "withdrawals",
+      (SELECT count(*) FROM "ReconciliationRun" WHERE ok = false AND "reviewedAt" IS NULL) AS "moneyChecks",
+      (SELECT count(*) FROM "PaystackSettlement" WHERE "confirmedAt" IS NULL AND status = 'success') AS "settlements"
   `
   const n = (k: string) => Number(row?.[k] ?? 0)
   const all: QueueCounts = {
@@ -69,6 +71,7 @@ async function loadQueueCounts(role: string): Promise<QueueCounts> {
     approvals: n('approvals') + n('vehicleChanges'),
     lowRatings: n('lowRatings'),
     withdrawals: n('withdrawals'),
+    finance: n('moneyChecks') + n('settlements'),
   }
   for (const key of allowed) counts[key] = all[key]
   return counts

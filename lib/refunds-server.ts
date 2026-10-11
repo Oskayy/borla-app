@@ -3,7 +3,9 @@ import { createRefund } from '@/lib/paystack'
 import { LIVE_REFUND_STATUSES, needsSecondApprover, REFUND_APPROVAL_THRESHOLD_GHS, REFUND_ROLES, refundable, refundStatusFromPaystack } from '@/lib/refunds'
 import { notifyUser, notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
-import { clawbackFor, CLAWBACK_TYPE, EARNING_TYPES } from '@/lib/earnings'
+import { CLAWBACK_TYPE } from '@/lib/earnings'
+import { orderPosition, postJournal } from '@/lib/journal-server'
+import { allocateRefund, refundLines } from '@/lib/accounts'
 
 export interface RefundOutcome {
   ok: boolean
@@ -264,17 +266,21 @@ export async function markRefundProcessed(refundId: string): Promise<void> {
       await tx.ledgerEntry.create({
         data: { orderId: refund.orderId, type: 'refund', amount: refund.amount, amountPesewas: refundPesewas, idempotencyKey: `refund-${refund.id}` },
       })
+      // Who pays for it (lib/accounts.ts): shares nobody earned yet, then the driver if at fault, then the
+      // platform fee, then Trashit's own money.
       const driverId = refund.order.driverId
-      if (refund.driverFault && driverId) {
-        const rows = await tx.ledgerEntry.findMany({
-          where: { orderId: refund.orderId, driverId, type: { in: [...EARNING_TYPES, CLAWBACK_TYPE] } },
-          select: { type: true, amount: true, amountPesewas: true },
-        })
-        const pesewas = (r: { amount: number; amountPesewas: number | null }) => r.amountPesewas ?? Math.round(r.amount * 100)
-        const earned =
-          rows.filter((r) => r.type !== CLAWBACK_TYPE).reduce((s, r) => s + pesewas(r), 0) -
-          rows.filter((r) => r.type === CLAWBACK_TYPE).reduce((s, r) => s + pesewas(r), 0)
-        clawedBack = clawbackFor(refundPesewas, true, earned)
+      const position = await orderPosition(tx, refund.orderId, driverId)
+      const allocation = allocateRefund({ refund: refundPesewas, ...position, driverAtFault: refund.driverFault && !!driverId })
+      await postJournal(tx, {
+        key: `refund-${refund.id}`,
+        event: 'refund',
+        orderId: refund.orderId,
+        driverId,
+        lines: refundLines(refund.orderId, driverId, refundPesewas, allocation),
+        memo: allocation.loss > 0 ? `Trashit covers GHS ${(allocation.loss / 100).toFixed(2)} itself` : null,
+      })
+      if (driverId) {
+        clawedBack = allocation.clawback
         if (clawedBack > 0) {
           await tx.ledgerEntry.create({
             data: {

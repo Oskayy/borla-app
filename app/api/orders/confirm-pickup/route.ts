@@ -7,6 +7,8 @@ import { evidenceFileExists, evidenceFileHash, isValidEvidencePath } from '@/lib
 import { PICKUP_CHECK_MARKER, pickupFlags } from '@/lib/plausibility'
 import { ensureSplit } from '@/lib/order-split-server'
 import { PICKUP_TYPE } from '@/lib/earnings'
+import { postJournal } from '@/lib/journal-server'
+import { earnedLines } from '@/lib/accounts'
 import { distanceInMeters, GEOFENCE_THRESHOLD_METERS } from '@/lib/geo'
 import { notifyCustomerCollected } from '@/lib/customer-updates'
 import { caught } from '@/lib/errors'
@@ -118,6 +120,7 @@ export async function POST(req: NextRequest) {
       await tx.ledgerEntry.create({
         data: { orderId, type: PICKUP_TYPE, amount: split.pickup / 100, amountPesewas: split.pickup, idempotencyKey, driverId: user.id, clearsAt: null },
       })
+      await postJournal(tx, { key: idempotencyKey, event: 'earned', orderId, driverId: user.id, lines: earnedLines(orderId, user.id, split.pickup) })
       await tx.auditLog.create({
         data: { orderId, actorId: user.id, fromState: 'ASSIGNED', toState: 'PICKED_UP', reason: auditReason },
       })

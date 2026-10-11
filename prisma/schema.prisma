@@ -511,6 +511,8 @@ model Withdrawal {
   momoProvider  String
   momoName      String
   reference     String    @unique // our transfer reference (also sent to Paystack)
+  source        String    @default("request") // request (asked by the driver, sent by Finance) | cashout (Cash out now) | sweep (daily payout)
+  feePesewas    Int       @default(0) // transfer fee the driver pays (extra cash-outs); the amount sent is amount minus this
   transferCode  String?   // Paystack's transfer code
   method        String?   // "paystack" | "manual"
   note          String?   // reason for rejection/failure, or the manual payment reference
@@ -558,4 +560,74 @@ model DriverDocument {
   createdAt DateTime @default(now())
 
   @@index([driverId, type])
+}
+
+// Double-entry ledger (lib/accounts.ts). Every money event is a journal whose postings add up to zero
+// (the database refuses one that doesn't). Rows are never changed or deleted; mistakes get a correcting journal.
+model Journal {
+  id        String    @id @default(uuid())
+  key       String    @unique // the event's idempotency key, so it is recorded once
+  event     String    // payment | payment_fee | earned | fee_income | refund | payout | payout_reversed | top_up | settlement
+  orderId   String?
+  driverId  String?
+  memo      String?
+  createdBy String?   // staff member, for entries made by hand (top-ups, settlements)
+  createdAt DateTime  @default(now())
+  postings  Posting[]
+
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+model Posting {
+  id        String   @id @default(uuid())
+  journalId String
+  journal   Journal  @relation(fields: [journalId], references: [id])
+  account   String   // lib/accounts.ts ACCOUNTS
+  amount    Int      // pesewas: debit +, credit -
+  orderId   String?  // per-order account (customer funds held)
+  driverId  String?  // per-driver account (driver payable)
+  createdAt DateTime @default(now())
+
+  @@index([journalId])
+  @@index([account, orderId])
+  @@index([account, driverId])
+}
+
+// Paystack settlements to the bank, so Finance can confirm each one arrived (lib/reconcile-server.ts).
+model PaystackSettlement {
+  id              String    @id @default(uuid())
+  paystackId      String    @unique
+  settledAt       DateTime
+  amountPesewas   Int       // what Paystack says it sent to the bank
+  status          String    // Paystack's status, e.g. success | pending
+  receivedPesewas Int?      // what Finance saw arrive
+  confirmedBy     String?
+  confirmedAt     DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+// The morning check of the Paystack balance before the daily payout (lib/treasury.ts).
+model TreasuryCheck {
+  id             String   @id @default(uuid())
+  day            String   @unique // YYYY-MM-DD, Accra
+  drivers        Int      // drivers due a payout
+  duePesewas     Int
+  feesPesewas    Int
+  bufferPesewas  Int
+  balancePesewas Int?     // the Paystack balance at the time (null if Paystack didn't answer)
+  topUpPesewas   Int      // what Finance needs to add
+  createdAt      DateTime @default(now())
+}
+
+// The daily reconciliation against Paystack and the ledger (lib/reconcile.ts).
+model ReconciliationRun {
+  id         String    @id @default(uuid())
+  day        String    @unique // the day checked, YYYY-MM-DD
+  ok         Boolean
+  results    Json
+  reviewedBy String?
+  reviewedAt DateTime?
+  reviewNote String?
+  createdAt  DateTime  @default(now())
 }

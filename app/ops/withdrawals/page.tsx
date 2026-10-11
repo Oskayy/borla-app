@@ -48,13 +48,15 @@ export default async function WithdrawalsPage() {
     paidAt: w.paidAt ? w.paidAt.toISOString() : null,
     totalEarned: balances.get(w.driverId) ?? null,
     markedByMe: w.markedPaidBy === dbUser.id,
+    source: w.source,
+    fee: w.feePesewas / 100,
   })
 
   return (
     <div className="max-w-4xl">
       <PageHeader
         title="Withdrawals"
-        lead="Drivers ask for their earnings to be sent to their mobile money wallet. Send pays through Paystack from your Paystack balance. If Paystack transfers aren't on for your account yet, pay from your MoMo business wallet and use Mark paid with the transaction ID; a different finance user then confirms it."
+        lead="Drivers are paid automatically every morning; large payouts, wallets changed in the last 24 hours, and cash-outs Paystack couldn't cover wait here. Send pays through Paystack from your Paystack balance. If Paystack transfers aren't on for your account yet, pay from your MoMo business wallet and use Mark paid with the transaction ID; a different finance user then confirms it."
       />
       <WithdrawalsClient open={open.map(toRow)} recent={recent.map(toRow)} />
     </div>

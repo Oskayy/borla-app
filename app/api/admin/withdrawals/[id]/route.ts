@@ -5,8 +5,9 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { cleanText, isUuid, readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
 import { PAYOUT_ROLES } from '@/lib/wallet-server'
-import { createMomoRecipient, initiateTransfer, verifyTransfer } from '@/lib/paystack'
+import { verifyTransfer } from '@/lib/paystack'
 import { notifyUser, notifyUsers } from '@/lib/notify'
+import { markWithdrawalPaid, sendClaimedWithdrawal } from '@/lib/payouts-server'
 
 // Finance acts on a withdrawal request:
 //   send       -> sends the money to the driver's MoMo wallet through Paystack
@@ -46,13 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!v.ok) return NextResponse.json({ error: `Couldn't check with Paystack: ${v.error}. Try again shortly.` }, { status: 502 })
     const s = v.data?.status
     if (s === 'success') {
-      await prisma.withdrawal.updateMany({ where: { id, status: 'PROCESSING' }, data: { status: 'PAID', paidAt: new Date(), note: null } })
-      await notifyUser(w.driverId, {
-        title: 'Earnings sent',
-        body: `GHS ${w.amount.toFixed(2)} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
-        url: '/dashboard/driver/earnings',
-        sms: `Trashit: GHS ${w.amount.toFixed(2)} has been sent to your MoMo wallet ${w.momoNumber}.`,
-      })
+      await markWithdrawalPaid(id, ['PROCESSING'], { transferCode: typeof v.data?.transfer_code === 'string' ? v.data.transfer_code : undefined })
       return NextResponse.json({ success: true, status: 'PAID' })
     }
     if (['failed', 'reversed', 'abandoned', 'rejected', 'blocked'].includes(s)) {
@@ -79,18 +74,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await logAdminAction(auth.user.id, 'WITHDRAWAL_MANUAL_DISPUTED', id, `${amountLabel}, reference ${w.note}: ${note}`)
       return NextResponse.json({ success: true, status: 'REQUESTED' })
     }
-    const moved = await prisma.withdrawal.updateMany({
-      where: { id, status: 'CONFIRMING', markedPaidBy: w.markedPaidBy },
-      data: { status: 'PAID', reviewedBy: auth.user.id, reviewedAt: new Date(), paidAt: w.markedPaidAt ?? new Date() },
-    })
-    if (moved.count !== 1) return NextResponse.json({ error: 'This withdrawal was just updated. Please refresh.' }, { status: 409 })
+    // Paid by hand from the bank: recorded in the ledger as a bank payment.
+    const paid = await markWithdrawalPaid(id, ['CONFIRMING'], { reviewedBy: auth.user.id, paidAt: w.markedPaidAt ?? new Date() })
+    if (!paid) return NextResponse.json({ error: 'This withdrawal was just updated. Please refresh.' }, { status: 409 })
     await logAdminAction(auth.user.id, 'WITHDRAWAL_MANUAL_CONFIRMED', id, `${amountLabel}, reference ${w.note}`)
-    await notifyUser(w.driverId, {
-      title: 'Earnings sent',
-      body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
-      url: '/dashboard/driver/earnings',
-      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}. Ref ${w.note}.`,
-    })
     return NextResponse.json({ success: true, status: 'PAID' })
   }
 
@@ -144,56 +131,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   })
   if (claimed.count !== 1) return NextResponse.json({ error: 'This withdrawal was just updated. Please refresh.' }, { status: 409 })
 
-  // Paystack clearly refused (nothing was sent): undo the claim so finance can retry or pay by hand.
-  async function backToRequested(reason: string) {
-    await prisma.withdrawal.update({ where: { id }, data: { status: 'REQUESTED', method: null, note: reason } })
-    await logAdminAction(auth.user.id, 'WITHDRAWAL_SEND_FAILED', id, `${amountLabel}: ${reason}`)
-    return NextResponse.json({ error: `Paystack could not send it: ${reason}. You can try again, or pay by hand and mark it paid.` }, { status: 502 })
+  const sent = await sendClaimedWithdrawal(id)
+  if (!sent.ok && 'error' in sent) {
+    // Paystack clearly refused (nothing was sent): it's back to REQUESTED so finance can retry or pay by hand.
+    await logAdminAction(auth.user.id, 'WITHDRAWAL_SEND_FAILED', id, `${amountLabel}: ${sent.error}`)
+    return NextResponse.json({ error: `Paystack could not send it: ${sent.error}. You can try again, or pay by hand and mark it paid.` }, { status: 502 })
   }
-
-  // The Paystack recipient for this wallet (created once per number and network).
-  const profile = await prisma.driverProfile.findUnique({
-    where: { userId: w.driverId },
-    select: { paystackRecipientCode: true, recipientFor: true },
-  })
-  const walletKey = `${w.momoProvider}:${w.momoNumber}`
-  let recipient = profile?.recipientFor === walletKey ? profile.paystackRecipientCode : null
-  if (!recipient) {
-    const r = await createMomoRecipient({ name: w.momoName, number: w.momoNumber, provider: w.momoProvider })
-    if (!r.ok) return backToRequested(r.error)
-    recipient = r.data.recipient_code as string
-    await prisma.driverProfile.update({ where: { userId: w.driverId }, data: { paystackRecipientCode: recipient, recipientFor: walletKey } })
-  }
-
-  const t = await initiateTransfer({ amountGhs: w.amount, recipient: recipient!, reference: w.reference, reason: 'Trashit driver earnings' })
-  if (!t.ok && t.uncertain) {
-    // No clear answer: the money may have gone out. Keep it "being sent" (never back to REQUESTED, where it could be
-    // paid by hand as well) until Paystack's webhook arrives or someone presses Check.
-    await prisma.withdrawal.update({ where: { id }, data: { note: `No answer from Paystack (${t.error}). Press Check in a few minutes.` } })
-    await logAdminAction(auth.user.id, 'WITHDRAWAL_SEND_UNCERTAIN', id, `${amountLabel}: ${t.error}`)
-    return NextResponse.json({ success: true, status: 'PROCESSING', paystackStatus: 'unknown' })
-  }
-  if (!t.ok) return backToRequested(t.error)
-
-  const status = t.data?.status
-  const transferCode = typeof t.data?.transfer_code === 'string' ? t.data.transfer_code : null
-  if (status === 'success') {
-    await prisma.withdrawal.update({ where: { id }, data: { status: 'PAID', transferCode, paidAt: new Date() } })
-    await notifyUser(w.driverId, {
-      title: 'Earnings sent',
-      body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
-      url: '/dashboard/driver/earnings',
-      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}.`,
-    })
-  } else {
-    await prisma.withdrawal.update({
-      where: { id },
-      data: {
-        transferCode,
-        note: status === 'otp' ? 'Paystack is waiting for an OTP. Turn off "Confirm transfers before sending" in Paystack settings.' : null,
-      },
-    })
-  }
-  await logAdminAction(auth.user.id, 'WITHDRAWAL_SENT', id, `${amountLabel} via Paystack (${status ?? 'unknown'})`)
-  return NextResponse.json({ success: true, status: status === 'success' ? 'PAID' : 'PROCESSING', paystackStatus: status })
+  await logAdminAction(auth.user.id, 'WITHDRAWAL_SENT', id, `${amountLabel} via Paystack (${sent.paystackStatus ?? 'no answer yet'})`)
+  return NextResponse.json({ success: true, status: sent.status, paystackStatus: sent.paystackStatus ?? 'unknown' })
 }

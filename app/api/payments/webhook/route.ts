@@ -9,6 +9,9 @@ import { markRefundProcessed } from '@/lib/refunds-server'
 import { notifyOps, notifyUser } from '@/lib/notify'
 import { caught } from '@/lib/errors'
 import { freezeSplitAtPayment } from '@/lib/order-split-server'
+import { postJournal } from '@/lib/journal-server'
+import { markWithdrawalPaid, markWithdrawalReversed } from '@/lib/payouts-server'
+import { estimatePaymentFee, paymentFeeLines, paymentLines } from '@/lib/accounts'
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -73,6 +76,9 @@ export async function POST(req: NextRequest) {
   }
 
   const amount = paidPesewas / 100
+  // Paystack's fee on this payment (pesewas), if the event says; otherwise estimated (and marked as such).
+  const reportedFee = Number.isInteger(data?.fees) && data.fees >= 0 ? (data.fees as number) : null
+  const fee = reportedFee ?? estimatePaymentFee(paidPesewas)
 
   // The shift is decided by when payment lands: before the planning snapshot -> tonight's planned batch,
   // snapshot to cutoff -> tonight as a late order, after the cutoff -> the next night.
@@ -95,6 +101,16 @@ export async function POST(req: NextRequest) {
 
       const quote = order.quoteSnapshot as { price?: number; platformFee?: number } | null
       const expectedPesewas = Math.round((quote?.price ?? -1) * 100)
+
+      // The money arrived whatever happens next: it is held for this order until the job is done or it is refunded.
+      await postJournal(tx, { key: `payment-${providerRef}`, event: 'payment', orderId, lines: paymentLines(orderId, paidPesewas) })
+      await postJournal(tx, {
+        key: `payment-fee-${providerRef}`,
+        event: 'payment_fee',
+        orderId,
+        lines: paymentFeeLines(orderId, fee),
+        memo: reportedFee === null ? 'Paystack fee estimated at 1.95% (not in the payment event)' : null,
+      })
 
       // Paid amount must match the order price exactly.
       if (paidPesewas !== expectedPesewas) {
@@ -130,20 +146,13 @@ export async function POST(req: NextRequest) {
 
       // Freeze the split now (price, platform fee, pickup and unload shares), so later rule changes don't
       // touch this order. If no payout rule is active it is worked out at the first payout instead; the
-      // payment is still recorded.
+      // payment is still recorded. The platform fee only becomes income when the job is finished.
       if (moved.count === 1) {
-        let platformFee: number | null = null
         try {
-          platformFee = (await freezeSplitAtPayment(tx, orderId, paidPesewas, order.quoteSnapshot)).platformFee
+          await freezeSplitAtPayment(tx, orderId, paidPesewas, order.quoteSnapshot)
         } catch (err) {
           if (caught(err)?.message !== 'NO_PAYOUT_RULE') throw err
           console.error('[webhook] No active payout rule: split not frozen at payment for', orderId)
-        }
-        // Trashit's platform fee, recorded once per order.
-        if (platformFee && platformFee > 0) {
-          await tx.ledgerEntry.create({
-            data: { orderId, type: 'platform_fee', amount: platformFee / 100, amountPesewas: platformFee, idempotencyKey: `platform-fee-${orderId}` },
-          })
         }
       }
 
@@ -194,22 +203,16 @@ async function handleTransfer(name: string, data: any) {
   if (w.status === 'PAID' && (name !== 'transfer.reversed' || w.method === 'manual')) return
 
   if (name === 'transfer.success') {
-    await prisma.withdrawal.update({
-      where: { id: w.id },
-      data: { status: 'PAID', paidAt: new Date(), transferCode: data?.transfer_code ?? w.transferCode, note: null },
-    })
-    await notifyUser(w.driverId, {
-      title: 'Earnings sent',
-      body: `${amountLabel} was sent to your ${w.momoProvider} wallet ${w.momoNumber}.`,
-      url: '/dashboard/driver/earnings',
-      sms: `Trashit: ${amountLabel} has been sent to your MoMo wallet ${w.momoNumber}.`,
-    })
+    await markWithdrawalPaid(w.id, ['PROCESSING', 'REQUESTED'], { transferCode: typeof data?.transfer_code === 'string' ? data.transfer_code : undefined })
   } else if (['transfer.failed', 'transfer.reversed', 'transfer.abandoned', 'transfer.rejected', 'transfer.blocked'].includes(name)) {
-    // Failed money goes back into the driver's balance (FAILED withdrawals don't count against it).
-    await prisma.withdrawal.update({
-      where: { id: w.id },
-      data: { status: 'FAILED', note: `Paystack: ${name === 'transfer.reversed' ? 'transfer reversed' : 'transfer failed'}${data?.reason ? ` (${String(data.reason).slice(0, 100)})` : ''}` },
-    })
+    // Failed money goes back into the driver's balance (FAILED withdrawals don't count against it). A payout that
+    // had been recorded as paid is taken back out of the ledger too.
+    const note = `Paystack: ${name === 'transfer.reversed' ? 'transfer reversed' : 'transfer failed'}${data?.reason ? ` (${String(data.reason).slice(0, 100)})` : ''}`
+    if (w.status === 'PAID') {
+      if (!(await markWithdrawalReversed(w.id, note))) return
+    } else {
+      await prisma.withdrawal.update({ where: { id: w.id }, data: { status: 'FAILED', note } })
+    }
     await notifyUser(w.driverId, {
       title: 'Withdrawal failed',
       body: `We couldn't send ${amountLabel} to ${w.momoNumber}. The money is back in your Trashit balance. Please check your wallet details and try again.`,

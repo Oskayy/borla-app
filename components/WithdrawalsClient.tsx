@@ -20,8 +20,12 @@ export interface WithdrawalRow {
   paidAt: string | null
   totalEarned: number | null
   markedByMe: boolean // this user recorded the manual payment, so someone else must confirm it
+  source: string // request | cashout | sweep
+  fee: number // GHS the driver pays for the transfer (extra cash-outs), taken from the amount
 }
 
+
+const SOURCE: Record<string, string> = { request: 'Requested', cashout: 'Cash out now', sweep: 'Daily payout' }
 
 export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRow[]; recent: WithdrawalRow[] }) {
   const [active, setActive] = useState<{ id: string; action: 'mark_paid' | 'reject' | 'dispute_paid' } | null>(null)
@@ -97,7 +101,10 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                       </a>
                     )}
                   </p>
-                  <p className="mt-1 text-sm text-ink-2">To {w.momo}</p>
+                  <p className="mt-1 text-sm text-ink-2">
+                    {SOURCE[w.source] ?? 'Requested'} · to {w.momo}
+                    {w.fee > 0 && <span className="tabular-nums"> · GHS {(w.amount - w.fee).toFixed(2)} sent after the GHS {w.fee.toFixed(2)} fee</span>}
+                  </p>
                   <p className="mt-0.5 text-sm text-ink-3">
                     Asked {dateTimeLabel(w.requestedAt)}
                     {w.totalEarned != null && <span className="tabular-nums"> · earned GHS {w.totalEarned.toFixed(2)} in total</span>}

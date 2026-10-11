@@ -30,6 +30,14 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
 - Platform fee is taken off the top; the **driver pool** is paid **40% at pickup, 60% at disposal**
   (disposal released by the site geofence, or by ops review on "Unloads to Check"). `PayoutRule` table.
+  The split is **frozen on the order at payment** in whole pesewas and basis points, remainder last (`lib/money-split.ts`).
+- Driver earnings **clear 24 h** after the later of unload and shift end, unless a complaint or refund is open; pickup
+  shares wait for the unload; new drivers keep a small reserve (`lib/earnings.ts`). Refunds with **driver fault** claw back
+  their shares; customer-fault failed pickups keep a **25% attempt fee**, partly paid to the driver. Trashit absorbs
+  Paystack's 1.95%.
+- Every morning (Accra): **7am** reconciliation of yesterday + Paystack top-up check; from **10am** the daily payout sweep
+  (automatic up to GHS 1,000, minimum GHS 20, only when the Paystack balance covers it all). "Cash out now": first one
+  free each day, then GHS 1; instant up to GHS 500 (`lib/treasury.ts`). All placeholders.
 - Money safeguards: replacing a driver's MoMo wallet needs the password again and **pauses withdrawals 24 h**
   (`PAYOUT_CHANGE_HOLD_HOURS`, `lib/wallet.ts`). Manual "mark paid" withdrawals wait in `CONFIRMING` until a
   **different** finance user confirms. Staff refunds of **GHS 100+** (`REFUND_APPROVAL_THRESHOLD_GHS`, placeholder,
@@ -66,8 +74,12 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   Auth check: `requireAuth([...roles])` in `lib/auth.ts` (also blocks deactivated users).
 - Customer pages `app/dashboard/customer/*`, driver pages `app/dashboard/driver/*`, ops pages `app/ops/*`, APIs `app/api/*`.
 - Dispatch/planning: `lib/planner.ts`, `lib/dispatch*.ts`, `lib/schedule.ts`, `lib/shift.ts`, `components/PlanBoard.tsx`.
-- Money: `lib/wallet*.ts` (balance = ledger earnings with `driverId` minus withdrawals REQUESTED/PROCESSING/PAID),
-  `lib/refunds*.ts`, `lib/paystack.ts`. Money writes use Serializable transactions and idempotency keys.
+- Money: **double-entry ledger** (`Journal`/`Posting`, `lib/accounts.ts`, `lib/journal-server.ts`). Every money event is
+  a balanced journal written in the same transaction as the change; the database refuses unbalanced journals and any
+  update or delete (fix mistakes with a correcting journal). `LedgerEntry` stays as the operational record that driver
+  wallets read (`lib/wallet-server.ts` + `lib/earnings.ts`); the daily check compares the two. Payouts:
+  `lib/payouts-server.ts`; treasury and sweep: `lib/treasury*.ts`; reconciliation: `lib/reconcile*.ts`; Finance page
+  `/ops/finance`. Also `lib/refunds*.ts`, `lib/paystack.ts`. Money writes use Serializable transactions and idempotency keys.
 - Rate limiting: `lib/rate-limit.ts` (login, signup, reset, withdrawals and others).
 
 ### Environment variable names (values are in `.env`, never read it)

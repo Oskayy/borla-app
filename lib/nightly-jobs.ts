@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getAcceptMinutes, getAutoDispatch, getShiftSettings } from '@/lib/settings'
-import { addDays, formatClock } from '@/lib/shift'
+import { addDays, formatClock, localParts } from '@/lib/shift'
 import { dbDate, lastEndedShiftDate, runningShiftDate, snapshotWindowDate } from '@/lib/schedule'
 import { loadDispatchDrivers, loadPlanSites } from '@/lib/dispatch-server'
 import { orderLitres } from '@/lib/dispatch'
@@ -11,6 +11,10 @@ import { newStopsMessage } from '@/lib/offers'
 import { notifyOps, notifyUser } from '@/lib/notify'
 import { caught } from '@/lib/errors'
 import { dateLabel } from '@/lib/format'
+import { RECONCILE_MINUTES } from '@/lib/reconcile'
+import { reconcileDay, syncSettlements } from '@/lib/reconcile-server'
+import { SWEEP_MINUTES, TOPUP_CHECK_MINUTES } from '@/lib/treasury'
+import { morningTopUpCheck, runDailySweep } from '@/lib/treasury-server'
 
 // "1 order", "3 orders": for messages people read.
 const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -78,7 +82,29 @@ async function runAll(force: boolean): Promise<JobSummary> {
     if (auto) summary.autoAssigned = await autoDispatch(shiftDate)
   }
 
+  // 6. Money, on the scheduler's runs only (they call Paystack): 7am settlements, yesterday's reconciliation and the
+  //    Paystack top-up check; from 10am the daily driver payout (retried until the balance covers it).
+  if (force) await moneyJobs(now, settings.timezone, settings.shiftStartMinutes)
+
   return summary
+}
+
+async function moneyJobs(now: Date, timezone: string, shiftStartMinutes: number) {
+  const { date, minutes } = localParts(now, timezone)
+  if (minutes >= RECONCILE_MINUTES) {
+    await once(`settlements:${date}`, async () => `${await syncSettlements(now)} new settlement(s)`)
+    const yesterday = addDays(date, -1)
+    await once(`reconcile:${yesterday}`, async () => ((await reconcileDay(yesterday, timezone)).ok ? 'all checks match' : 'differences found'))
+  }
+  if (minutes >= TOPUP_CHECK_MINUTES) await once(`topup:${date}`, () => morningTopUpCheck(date))
+  // The sweep runs in the day, before the night's shift starts.
+  if (minutes >= SWEEP_MINUTES && minutes < shiftStartMinutes) {
+    await once(`sweep:${date}`, async () => {
+      const r = await runDailySweep()
+      if (!r.done) throw new Error(`SWEEP_WAITING: ${r.summary}`) // releases the lock: tried again on the next run
+      return r.summary
+    })
+  }
 }
 
 // "Tuesday 29 Sep" for a YYYY-MM-DD date.
@@ -99,7 +125,8 @@ async function once(key: string, job: () => Promise<string>): Promise<void> {
     const summary = await job()
     await prisma.jobRun.update({ where: { key }, data: { summary: summary.slice(0, 500) } })
   } catch (e) {
-    console.error(`[jobs] ${key} failed`, e)
+    // A payout sweep waiting for the Paystack balance is expected, not a failure.
+    if (!String(caught(e)?.message ?? '').startsWith('SWEEP_WAITING')) console.error(`[jobs] ${key} failed`, e)
     await prisma.jobRun.delete({ where: { key } }).catch(() => {})
   }
 }

@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
 
-export default function WithdrawForm({ available, walletLabel }: { available: number; walletLabel: string }) {
+// "Cash out now": the rest is paid automatically every morning. The first cash-out each day is free; later ones
+// pay the GHS 1 transfer fee out of the amount.
+export default function WithdrawForm({ available, walletLabel, freeToday }: { available: number; walletLabel: string; freeToday: boolean }) {
   const [amount, setAmount] = useState(available.toFixed(2))
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -24,7 +26,13 @@ export default function WithdrawForm({ available, walletLabel }: { available: nu
         setMsg({ ok: false, text: data.error || 'Could not request the withdrawal' })
         return
       }
-      setMsg({ ok: true, text: 'Requested. You’ll get a message when the money is sent.' })
+      setMsg({
+        ok: true,
+        text:
+          data.status === 'PAID' || data.status === 'PROCESSING'
+            ? 'Sent. It usually reaches your wallet within a few minutes.'
+            : 'Requested. Trashit sends it soon, and you’ll get a message when it’s on its way.',
+      })
       router.refresh()
     } catch {
       setMsg({ ok: false, text: 'Could not reach Trashit. Please try again.' })
@@ -35,7 +43,9 @@ export default function WithdrawForm({ available, walletLabel }: { available: nu
 
   return (
     <div className="grid gap-3">
-      <p className="text-sm text-ink-3">To {walletLabel}</p>
+      <p className="text-sm text-ink-3">
+        To {walletLabel}. {freeToday ? 'Your first cash-out today is free.' : 'You’ve cashed out today, so this one costs GHS 1 (taken from the amount).'}
+      </p>
       <div className="flex gap-2">
         <label htmlFor="withdraw-amount" className="sr-only">
           Amount in GHS
@@ -54,7 +64,7 @@ export default function WithdrawForm({ available, walletLabel }: { available: nu
           />
         </div>
         <button onClick={request} disabled={busy} className={`min-h-12 ${BUTTON_PRIMARY}`}>
-          {busy ? 'Requesting…' : 'Withdraw'}
+          {busy ? 'Sending…' : 'Cash out now'}
         </button>
       </div>
       {msg && (

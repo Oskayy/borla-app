@@ -6,6 +6,8 @@ import { getEarningsHistory, getWalletSummary } from '@/lib/wallet-server'
 import { MIN_WITHDRAWAL_GHS, OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
 import { MOMO_PROVIDERS } from '@/lib/phone'
 import { ATTEMPT_TYPE, CLAWBACK_TYPE, CLEARING_HOURS, PICKUP_TYPE } from '@/lib/earnings'
+import { SWEEP_MIN_PESEWAS, SWEEP_MINUTES } from '@/lib/treasury'
+import { formatClock } from '@/lib/shift'
 import { dateLabel, dateTimeLabel } from '@/lib/format'
 import Link from 'next/link'
 import { BUTTON_QUIET, Card, CardTitle, PageHeader } from '@/components/ui'
@@ -40,6 +42,13 @@ const EARNING_LABELS: Record<string, string> = {
   [CLAWBACK_TYPE]: 'Taken back',
 }
 
+// Whether the driver already used today's free cash-out (Accra day; outside the component: reads the clock).
+function cashedOutToday(ws: { source: string; status: string; requestedAt: Date }[]): boolean {
+  const day = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Africa/Accra' })
+  const today = day(new Date())
+  return ws.some((w) => w.source === 'cashout' && !['FAILED', 'REJECTED'].includes(w.status) && day(w.requestedAt) === today)
+}
+
 // When the safety pause after a wallet change ends, as Accra time (or null). Outside the component: reads the clock.
 function holdEndsLabel(changedAt: Date | null): string | null {
   const ends = payoutHoldEndsAt(changedAt, new Date())
@@ -63,6 +72,7 @@ export default async function DriverEarningsPage() {
     prisma.withdrawal.findMany({ where: { driverId: user.id }, orderBy: { requestedAt: 'desc' }, take: 20 }),
   ])
   const hasOpen = withdrawals.some((w: { status: string }) => OPEN_WITHDRAWAL_STATUSES.includes(w.status))
+  const freeToday = !cashedOutToday(withdrawals)
   const holdUntil = holdEndsLabel(profile.momoChangedAt)
   const walletInitial = { momoNumber: profile.momoNumber ?? '', momoProvider: profile.momoProvider ?? 'MTN', momoName: profile.momoName ?? '' }
   const providerName = MOMO_PROVIDERS.find((p) => p.code === profile.momoProvider)?.name ?? profile.momoProvider
@@ -111,6 +121,12 @@ export default async function DriverEarningsPage() {
         {/* One card: withdraw, and the wallet the money goes to. */}
         <Card>
           <CardTitle>Withdraw to mobile money</CardTitle>
+          {profile.momoNumber && (
+            <p className="-mt-1 mb-4 text-[15px] text-ink-2">
+              Your available balance is sent to your wallet automatically every morning at {formatClock(SWEEP_MINUTES)} (when it&apos;s GHS{' '}
+              {SWEEP_MIN_PESEWAS / 100} or more). Need it sooner? Cash out now.
+            </p>
+          )}
           {!profile.momoNumber ? (
             <>
               <p className="mb-4 text-[15px] text-ink-2">First, add the wallet your earnings go to.</p>
@@ -133,7 +149,7 @@ export default async function DriverEarningsPage() {
               ) : wallet.available < MIN_WITHDRAWAL_GHS ? (
                 <p className="text-[15px] text-ink-2">The smallest withdrawal is GHS {MIN_WITHDRAWAL_GHS}. Keep collecting!</p>
               ) : (
-                <WithdrawForm available={wallet.available} walletLabel={`${providerName} ${profile.momoNumber}`} />
+                <WithdrawForm available={wallet.available} walletLabel={`${providerName} ${profile.momoNumber}`} freeToday={freeToday} />
               )}
 
               <details className="group mt-5 border-t border-line pt-4">

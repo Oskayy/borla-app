@@ -2,6 +2,8 @@ import type { Prisma } from '@prisma/client'
 import { ensureSplit } from '@/lib/order-split-server'
 import { clearsAt, PICKUP_TYPE, shiftEndsAt, UNLOAD_TYPE } from '@/lib/earnings'
 import type { ShiftSettings } from '@/lib/shift'
+import { balance, postJournal } from '@/lib/journal-server'
+import { ACCOUNTS, earnedLines, feeIncomeLines } from '@/lib/accounts'
 
 type Tx = Prisma.TransactionClient
 
@@ -49,6 +51,25 @@ export async function releaseDisposal(
         clearsAt: clears,
       },
     })
+    await postJournal(tx, { key: `disposal-${o.id}`, event: 'earned', orderId: o.id, driverId: args.driverId, lines: earnedLines(o.id, args.driverId, split.unload) })
+    // The job is finished: what is still held for the order is Trashit's platform fee, now income. (If drivers were
+    // paid more than the customer paid, e.g. an order whose pickup was paid under older rules, the difference is
+    // recorded where Finance will see it.)
+    const left = -(await balance(tx, ACCOUNTS.customerFundsHeld, { orderId: o.id }))
+    if (left > 0) {
+      await postJournal(tx, { key: `fee-income-${o.id}`, event: 'fee_income', orderId: o.id, lines: feeIncomeLines(o.id, left) })
+    } else if (left < 0) {
+      await postJournal(tx, {
+        key: `overpaid-${o.id}`,
+        event: 'correction',
+        orderId: o.id,
+        memo: 'Drivers were paid more than the customer paid',
+        lines: [
+          { account: ACCOUNTS.reconciliationDifferences, amount: -left, orderId: o.id },
+          { account: ACCOUNTS.customerFundsHeld, amount: left, orderId: o.id },
+        ],
+      })
+    }
     // The pickup share was waiting for this unload: it clears at the same time.
     await tx.ledgerEntry.updateMany({
       where: { orderId: o.id, driverId: args.driverId, type: PICKUP_TYPE, clearsAt: null },

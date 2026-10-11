@@ -8,7 +8,7 @@ import { APPROVAL_ROLES } from './driver-docs'
 import { PAYOUT_ROLES } from './wallet-server'
 import { STAFF_ADMIN_ROLES } from './staff'
 
-export type QueueKey = 'unloads' | 'exceptions' | 'approvals' | 'lowRatings' | 'withdrawals' | 'needsDriver'
+export type QueueKey = 'unloads' | 'exceptions' | 'approvals' | 'lowRatings' | 'withdrawals' | 'needsDriver' | 'finance'
 
 export interface OpsLink {
   href: string
@@ -42,6 +42,7 @@ export const OPS_SECTIONS: { title: string; links: OpsLink[] }[] = [
   {
     title: 'Money',
     links: [
+      { href: '/ops/finance', label: 'Finance', icon: 'Landmark', roles: PAYOUT_ROLES, queue: 'finance' },
       { href: '/ops/withdrawals', label: 'Withdrawals', icon: 'Wallet', roles: PAYOUT_ROLES, queue: 'withdrawals' },
       { href: '/ops/pricing', label: 'Pricing', icon: 'Tags', roles: MONEY_RULES },
       { href: '/ops/payouts', label: 'Payout rules', icon: 'Percent', roles: MONEY_RULES },

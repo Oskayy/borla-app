@@ -11,6 +11,8 @@ import { REFUND_ROLES } from '@/lib/refunds'
 import { ensureSplit } from '@/lib/order-split-server'
 import { attemptSplit } from '@/lib/money-split'
 import { ATTEMPT_TYPE, clearsAt, shiftEndsAt } from '@/lib/earnings'
+import { postJournal } from '@/lib/journal-server'
+import { earnedLines, feeIncomeLines } from '@/lib/accounts'
 import { notifyUser } from '@/lib/notify'
 import { EXCEPTION_ROLES } from '@/lib/exceptions'
 import { caught } from '@/lib/errors'
@@ -125,6 +127,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             },
           })
         }
+        await postJournal(tx, {
+          key: `attempt-${id}`,
+          event: 'attempt',
+          orderId: id,
+          driverId,
+          lines: [...earnedLines(id, driverId, s.driverShare), ...feeIncomeLines(id, s.platformShare)],
+        })
         await tx.auditLog.create({
           data: {
             orderId: id,

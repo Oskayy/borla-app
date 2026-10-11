@@ -94,3 +94,68 @@ export async function createRefund(args: { transaction: string; amountGhs: numbe
     customer_note: args.customerNote.slice(0, 200),
   })
 }
+
+// The Paystack balance that driver payouts come from, in pesewas (null if Paystack didn't answer).
+export async function getBalancePesewas(): Promise<number | null> {
+  const r = await call('GET', '/balance')
+  if (!r.ok || !Array.isArray(r.data)) return null
+  const ghs = r.data.find((b: { currency?: string }) => b?.currency === 'GHS')
+  return Number.isInteger(ghs?.balance) ? (ghs.balance as number) : null
+}
+
+export interface PaystackTransaction {
+  reference: string
+  amount: number // pesewas
+  fees: number | null // pesewas
+  paidAt: string | null
+}
+
+// Successful customer payments between two times (all pages). null if Paystack didn't answer.
+export async function listSuccessfulTransactions(from: Date, to: Date): Promise<PaystackTransaction[] | null> {
+  const out: PaystackTransaction[] = []
+  for (let page = 1; page <= 50; page++) {
+    const q = new URLSearchParams({ perPage: '100', page: String(page), status: 'success', from: from.toISOString(), to: to.toISOString() })
+    const r = await call('GET', `/transaction?${q}`)
+    if (!r.ok || !Array.isArray(r.data)) return null
+    for (const t of r.data) {
+      if (t?.currency && t.currency !== 'GHS') continue
+      out.push({
+        reference: String(t.reference),
+        amount: Number(t.amount),
+        fees: Number.isInteger(t.fees) ? t.fees : null,
+        paidAt: typeof t.paid_at === 'string' ? t.paid_at : null,
+      })
+    }
+    if (r.data.length < 100) break
+  }
+  return out
+}
+
+export interface PaystackSettlementRow {
+  id: string
+  status: string
+  amount: number // pesewas Paystack sends to the bank (after its fees and any refunds deducted)
+  settledAt: string | null
+}
+
+// Settlements to the bank between two dates. null if Paystack didn't answer.
+export async function listSettlements(from: Date, to: Date): Promise<PaystackSettlementRow[] | null> {
+  const out: PaystackSettlementRow[] = []
+  for (let page = 1; page <= 20; page++) {
+    const q = new URLSearchParams({ perPage: '100', page: String(page), from: from.toISOString(), to: to.toISOString() })
+    const r = await call('GET', `/settlement?${q}`)
+    if (!r.ok || !Array.isArray(r.data)) return null
+    for (const s of r.data) {
+      const amount = Number.isInteger(s?.effective_amount) ? s.effective_amount : Number(s?.total_amount)
+      if (!Number.isFinite(amount)) continue
+      out.push({
+        id: String(s.id),
+        status: String(s.status ?? 'unknown'),
+        amount,
+        settledAt: typeof s.settlement_date === 'string' ? s.settlement_date : null,
+      })
+    }
+    if (r.data.length < 100) break
+  }
+  return out
+}
