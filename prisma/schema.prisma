@@ -150,6 +150,7 @@ model Facility {
   acceptedWaste    String[] @default(["general", "recyclable"]) // general | recyclable | hazardous
   status           String   @default("OPEN") // OPEN | CLOSED | FULL, switched by ops during the shift
   avgUnloadMinutes Int      @default(15)
+  tippingFee       Float    @default(0) // GHS a driver pays to tip here (recorded only; not reimbursed yet)
   notes            String?
   active           Boolean  @default(true)
   createdAt        DateTime @default(now())
@@ -210,6 +211,11 @@ model OperatingSettings {
   autoDispatch            Boolean  @default(true) // from shift start, assign waiting orders to the best drivers automatically
   acceptHazardous         Boolean  @default(false) // customers can book hazardous waste (needs a site that takes it); planned by hand
   paystackTransfers       Boolean  @default(false) // Paystack can send driver payouts (needs a Registered Business account); off = Finance pays by hand
+  // Tax (lib/tax.ts): every rate 0 until the accountant confirms them.
+  vatPercent              Float    @default(0)
+  nhilPercent             Float    @default(0)
+  getfundPercent          Float    @default(0)
+  withholdingPercent      Float    @default(0) // withheld from driver payouts
   updatedAt               DateTime @updatedAt
 }
 
@@ -217,6 +223,13 @@ model PayoutRule {
   id              String   @id @default(uuid())
   pickupPercent   Float    // e.g. 40
   disposalPercent Float    // e.g. 60
+  // Step 7 (lib/money-split.ts): how surcharges and the recyclable discount are shared, and the distance bonus.
+  lateSurchargeDriverPercent        Float @default(100) // share of the late-order surcharge that goes to drivers
+  hazardSurchargeDriverPercent      Float @default(100) // share of the hazardous surcharge that goes to drivers
+  recyclableDiscountPlatformPercent Float @default(100) // share of the recyclable discount Trashit's fee absorbs
+  distanceFreeKm                    Float @default(3)   // no bonus within this distance of the driver's home base
+  distanceBonusPerKm                Float @default(1)   // GHS per km beyond it (0 = no bonus)
+  distanceBonusCap                  Float @default(10)  // GHS, most a stop can earn
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
 }
@@ -246,6 +259,8 @@ model Order {
   feeBps             Int?
   pickupBps          Int?
   splitFrozenAt      DateTime?
+  distanceBonusPesewas  Int?    // fixed when the order is assigned, for that driver; paid with the unload share
+  distanceBonusDriverId String?
   latitude    Float?
   longitude   Float?
   driverAcceptedAt DateTime? // the assigned driver accepted this stop (cleared on reassignment)
@@ -514,6 +529,7 @@ model Withdrawal {
   reference     String    @unique // our transfer reference (also sent to Paystack)
   source        String    @default("request") // request (asked by the driver, sent by Finance) | cashout (Cash out now) | sweep (daily payout)
   feePesewas    Int       @default(0) // transfer fee the driver pays (extra cash-outs); the amount sent is amount minus this
+  withholdingPesewas Int  @default(0) // tax withheld from this payout (lib/tax.ts); also taken from the amount sent
   transferCode  String?   // Paystack's transfer code
   method        String?   // "paystack" | "manual"
   note          String?   // reason for rejection/failure, or the manual payment reference

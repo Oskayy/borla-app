@@ -5,19 +5,27 @@ import { postJournal } from '@/lib/journal-server'
 import { payoutLines, reverseLines } from '@/lib/accounts'
 import { checkWithdrawal, OPEN_WITHDRAWAL_STATUSES, transferReference } from '@/lib/wallet'
 import { getWalletSummary } from '@/lib/wallet-server'
+import { getTaxRates } from '@/lib/settings'
+import { withholding } from '@/lib/tax'
 
 // Driver payouts (withdrawals), shared by Finance's Send button, the daily sweep and "Cash out now".
 // Paying a withdrawal and its ledger journal happen in one transaction, so money can't leave the books twice
 // or not at all.
 
-type W = { id: string; driverId: string; amount: number; feePesewas: number; method: string | null; momoProvider: string; momoNumber: string }
+type W = { id: string; driverId: string; amount: number; feePesewas: number; withholdingPesewas: number; method: string | null; momoProvider: string; momoNumber: string }
 
 const lines = (w: W) =>
-  payoutLines({ driverId: w.driverId, amount: Math.round(w.amount * 100), driverFee: w.feePesewas, method: w.method === 'manual' ? 'manual' : 'paystack' })
+  payoutLines({
+    driverId: w.driverId,
+    amount: Math.round(w.amount * 100),
+    driverFee: w.feePesewas,
+    withholding: w.withholdingPesewas,
+    method: w.method === 'manual' ? 'manual' : 'paystack',
+  })
 
-// What reaches the driver's wallet (an extra cash-out pays the transfer fee out of it).
-export function amountSent(w: { amount: number; feePesewas: number }): number {
-  return (Math.round(w.amount * 100) - w.feePesewas) / 100
+// What reaches the driver's wallet (an extra cash-out pays the transfer fee out of it; any tax withheld too).
+export function amountSent(w: { amount: number; feePesewas: number; withholdingPesewas?: number }): number {
+  return (Math.round(w.amount * 100) - w.feePesewas - (w.withholdingPesewas ?? 0)) / 100
 }
 
 // Marks a withdrawal PAID (if it is still in one of `from`) and records the payout in the ledger.
@@ -128,6 +136,8 @@ export async function createWithdrawal(args: {
   })
   if (!profile?.momoNumber || !profile.momoProvider || !profile.momoName) throw new Error('NO_WALLET')
   const amount = args.amountPesewas / 100
+  // Tax withheld from the payout (0 until the accountant confirms a rate).
+  const wht = withholding(args.amountPesewas, (await getTaxRates()).withholdingBps)
   return prisma.$transaction(
     async (tx) => {
       const open = await tx.withdrawal.count({ where: { driverId: args.driverId, status: { in: OPEN_WITHDRAWAL_STATUSES } } })
@@ -135,7 +145,7 @@ export async function createWithdrawal(args: {
       const wallet = await getWalletSummary(args.driverId, tx)
       const problem = checkWithdrawal(amount, wallet.available)
       if (problem) throw new Error(`INVALID:${problem}`)
-      if ((args.feePesewas ?? 0) >= args.amountPesewas) throw new Error('INVALID:The amount must be more than the GHS 1 transfer fee')
+      if ((args.feePesewas ?? 0) + wht >= args.amountPesewas) throw new Error('INVALID:The amount must be more than the GHS 1 transfer fee')
       const w = await tx.withdrawal.create({
         data: {
           driverId: args.driverId,
@@ -145,6 +155,7 @@ export async function createWithdrawal(args: {
           momoName: profile.momoName!,
           source: args.source,
           feePesewas: args.feePesewas ?? 0,
+          withholdingPesewas: wht,
           note: args.note ?? null,
           ...(args.claim ? { status: 'PROCESSING', method: 'paystack' } : {}),
           reference: `pending-${crypto.randomUUID()}`, // replaced with the real reference below

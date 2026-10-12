@@ -23,7 +23,7 @@ export default async function PayoutRulesPage() {
     <div className="grid max-w-3xl gap-8">
       <PageHeader title="Payout rules" lead="Drivers are paid part of each stop at pickup and the rest once the unload is verified. The split is fixed on each order when the customer pays, so a change here only affects orders paid after it. Earnings can be withdrawn 24 hours after the unload and the end of that night's shift." />
 
-      <PayoutRuleForm />
+      <PayoutRuleForm current={rules.find((r) => r.active) ?? null} />
 
       <section aria-labelledby="h-history">
         <SectionTitle id="h-history">History</SectionTitle>
@@ -33,6 +33,13 @@ export default async function PayoutRulesPage() {
               <span className={rule.active ? '' : 'text-ink-3'}>
                 <span className="font-semibold tabular-nums">
                   {rule.pickupPercent}% at pickup · {rule.disposalPercent}% at unload
+                </span>
+                <span className="block text-sm tabular-nums text-ink-2">
+                  Surcharges to drivers: late {rule.lateSurchargeDriverPercent}%, hazardous {rule.hazardSurchargeDriverPercent}% · Trashit absorbs{' '}
+                  {rule.recyclableDiscountPlatformPercent}% of the recyclable discount ·{' '}
+                  {rule.distanceBonusPerKm > 0
+                    ? `bonus GHS ${rule.distanceBonusPerKm}/km beyond ${rule.distanceFreeKm} km, max GHS ${rule.distanceBonusCap}`
+                    : 'no distance bonus'}
                 </span>
                 <span className="block text-sm text-ink-3">Created {dateLabel(rule.createdAt)}</span>
               </span>

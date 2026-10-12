@@ -45,5 +45,6 @@ export async function POST(req: NextRequest) {
     lateSurcharge: q.lateSurcharge,
     isLate: q.isLate,
     collectionLabel: q.collectionLabel,
+    taxLines: q.taxLines ?? [],
   })
 }

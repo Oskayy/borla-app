@@ -11,6 +11,7 @@ import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
 import { caught } from '@/lib/errors'
+import { fixDistanceBonus } from '@/lib/distance-bonus-server'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(OPS_ROLES)
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
           data: { driverId, status: 'ASSIGNED', driverAcceptedAt: null, offeredAt: new Date() },
         })
         if (claimed.count !== ids.length) throw new Error('STATE_CHANGED')
+        await fixDistanceBonus(tx, ids, driverId)
 
         const route = await tx.route.create({ data: { driverId } })
         await tx.routeStop.createMany({

@@ -47,6 +47,7 @@ export interface SiteInput {
   closesAtMinutes: number | null
   acceptedWaste: string[]
   avgUnloadMinutes: number
+  tippingFee: number // GHS a driver pays to tip here (recorded only for now)
   notes: string | null
   zoneId: string | null
   active: boolean
@@ -94,6 +95,8 @@ export function parseSiteBody(body: JsonBody): { ok: boolean; error: string; dat
 
   const unload = inRange(body?.avgUnloadMinutes, 1, 240)
   if (unload === null || !Number.isInteger(unload)) return bad('Average unload time must be 1 to 240 minutes')
+  const tippingFee = body?.tippingFee === undefined || body?.tippingFee === '' ? 0 : inRange(Number(body.tippingFee), 0, 1000)
+  if (tippingFee === null || Math.abs(tippingFee * 100 - Math.round(tippingFee * 100)) > 1e-6) return bad('Tipping fee must be GHS 0 to 1,000')
 
   const notes = body?.notes ? cleanText(body.notes, 500) : null
   if (body?.notes && !notes) return bad('Notes are too long')
@@ -115,6 +118,7 @@ export function parseSiteBody(body: JsonBody): { ok: boolean; error: string; dat
       closesAtMinutes,
       acceptedWaste: [...acceptedWaste],
       avgUnloadMinutes: unload,
+      tippingFee,
       notes,
       zoneId,
       active,

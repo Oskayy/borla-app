@@ -65,7 +65,9 @@ export default async function DriverDashboard() {
   const payoutRule = await prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true } })
   // The driver's pay for a stop: the split frozen when the customer paid (lib/money-split.ts). Orders paid before
   // splits were stored show what they'll get at pickup: the same sums from their price and the active rule.
-  const payFor = (order: Parameters<typeof storedSplit>[0] & { quoteSnapshot: unknown }) => {
+  const payFor = (
+    order: Parameters<typeof storedSplit>[0] & { quoteSnapshot: unknown; distanceBonusPesewas: number | null; distanceBonusDriverId: string | null }
+  ) => {
     let split = storedSplit(order)
     if (!split) {
       const s = order.quoteSnapshot as { price?: unknown; platformFeePercent?: unknown } | null
@@ -73,7 +75,9 @@ export default async function DriverDashboard() {
       const fee = typeof s.platformFeePercent === 'number' ? pctToBps(s.platformFeePercent) : 0
       split = splitOrder(ghsToPesewas(s.price), fee, pctToBps(payoutRule.pickupPercent))
     }
-    return { total: split.pool / 100, pickup: split.pickup / 100, unload: split.unload / 100 }
+    // The distance bonus fixed for this driver comes with the unload share.
+    const bonus = order.distanceBonusDriverId === user.id ? order.distanceBonusPesewas ?? 0 : 0
+    return { total: (split.pool + bonus) / 100, pickup: split.pickup / 100, unload: (split.unload + bonus) / 100, bonus: bonus / 100 }
   }
 
   // Group the night's orders into trips: the stops, then where to unload.

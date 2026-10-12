@@ -21,8 +21,9 @@ export const RESERVE_CAP_PESEWAS = 10_000 // never more than GHS 100 (placeholde
 export const PICKUP_TYPE = 'driver_payout_pickup'
 export const UNLOAD_TYPE = 'driver_payout_disposal'
 export const ATTEMPT_TYPE = 'driver_attempt_fee' // paid for a failed pickup that was the customer's fault
+export const BONUS_TYPE = 'driver_distance_bonus' // for a stop far from the driver's home base (step 7)
 export const CLAWBACK_TYPE = 'driver_clawback' // taken back after a refund with the driver at fault
-export const EARNING_TYPES = [PICKUP_TYPE, UNLOAD_TYPE, ATTEMPT_TYPE]
+export const EARNING_TYPES = [PICKUP_TYPE, UNLOAD_TYPE, ATTEMPT_TYPE, BONUS_TYPE]
 export const DRIVER_LEDGER_TYPES = [...EARNING_TYPES, CLAWBACK_TYPE]
 
 // When earnings for an unloaded load become available: after the unload and after the shift has ended,

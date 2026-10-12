@@ -73,6 +73,7 @@ export async function buildStatementPdf(d: StatementData): Promise<Uint8Array> {
     ['Pickup shares', ghs(t.pickup)],
     ['Unload shares', ghs(t.unload)],
     ...(t.attempt > 0 ? ([['Wasted trips', ghs(t.attempt)]] as [string, string][]) : []),
+    ...(t.bonus > 0 ? ([['Distance bonuses', ghs(t.bonus)]] as [string, string][]) : []),
     ...(t.takenBack > 0 ? ([['Taken back after refunds', `- ${ghs(t.takenBack)}`]] as [string, string][]) : []),
   ]
   for (const [k, v] of summary) {

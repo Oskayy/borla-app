@@ -20,6 +20,7 @@ export interface SiteRow {
   acceptedWaste: string[]
   status: string
   avgUnloadMinutes: number
+  tippingFee: number
   notes: string | null
   zoneId: string | null
   active: boolean
@@ -36,6 +37,7 @@ interface FormState {
   closesAt: string
   acceptedWaste: string[]
   avgUnloadMinutes: string
+  tippingFee: string
   notes: string
   zoneId: string
   active: boolean
@@ -61,6 +63,7 @@ function toForm(s?: SiteRow): FormState {
     closesAt: toClock(s?.closesAtMinutes ?? null, '07:00'),
     acceptedWaste: s?.acceptedWaste ?? ['general', 'recyclable'],
     avgUnloadMinutes: String(s?.avgUnloadMinutes ?? 15),
+    tippingFee: String(s?.tippingFee ?? 0),
     notes: s?.notes ?? '',
     zoneId: s?.zoneId ?? '',
     active: s?.active ?? true,
@@ -235,6 +238,18 @@ export default function DisposalSitesClient({
                 className={`${FIELD} mt-1.5 tabular-nums`}
               />
             </label>
+            <label className="block">
+              <span className={label}>Tipping fee drivers pay here (GHS)</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.tippingFee}
+                onChange={(e) => set('tippingFee', e.target.value)}
+                className={`${FIELD} mt-1.5 tabular-nums`}
+              />
+              <span className="mt-1 block text-xs text-ink-3">Recorded only for now; drivers aren&apos;t reimbursed yet.</span>
+            </label>
           </div>
 
           <label className="mt-4 flex min-h-11 items-center gap-2 text-[15px] font-medium">
@@ -333,7 +348,7 @@ export default function DisposalSitesClient({
                     </p>
                     <p className="mt-0.5 text-sm text-ink-3">
                       {s.hoursLabel} · accepts {s.acceptedWaste.map((w) => WASTE_LABELS[w] ?? w).join(', ').toLowerCase()} · geofence {s.geofenceRadiusM} m ·
-                      unload about {s.avgUnloadMinutes} min
+                      unload about {s.avgUnloadMinutes} min{s.tippingFee > 0 && ` · tipping fee GHS ${s.tippingFee.toFixed(2)}`}
                     </p>
                     {s.lat == null && <p className="mt-1 text-sm font-medium text-danger">Not on the map yet</p>}
                     {!s.coversShift && s.active && (

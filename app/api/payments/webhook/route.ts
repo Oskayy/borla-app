@@ -12,6 +12,7 @@ import { freezeSplitAtPayment } from '@/lib/order-split-server'
 import { postJournal } from '@/lib/journal-server'
 import { markWithdrawalPaid, markWithdrawalReversed } from '@/lib/payouts-server'
 import { estimatePaymentFee, paymentFeeLines, paymentLines } from '@/lib/accounts'
+import { snapshotTax } from '@/lib/tax'
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -103,7 +104,9 @@ export async function POST(req: NextRequest) {
       const expectedPesewas = Math.round((quote?.price ?? -1) * 100)
 
       // The money arrived whatever happens next: it is held for this order until the job is done or it is refunded.
-      await postJournal(tx, { key: `payment-${providerRef}`, event: 'payment', orderId, lines: paymentLines(orderId, paidPesewas) })
+      // Tax in a correctly paid price is owed to the tax office (an unexpected amount is all held until reviewed).
+      const tax = paidPesewas === expectedPesewas ? snapshotTax(order.quoteSnapshot) : 0
+      await postJournal(tx, { key: `payment-${providerRef}`, event: 'payment', orderId, lines: paymentLines(orderId, paidPesewas, tax) })
       await postJournal(tx, {
         key: `payment-fee-${providerRef}`,
         event: 'payment_fee',

@@ -1,0 +1,22 @@
+-- Payment flow rewrite, step 7: surcharge and discount sharing, distance bonus, site fees, tax.
+ALTER TABLE "PayoutRule"
+  ADD COLUMN "lateSurchargeDriverPercent" DOUBLE PRECISION NOT NULL DEFAULT 100,
+  ADD COLUMN "hazardSurchargeDriverPercent" DOUBLE PRECISION NOT NULL DEFAULT 100,
+  ADD COLUMN "recyclableDiscountPlatformPercent" DOUBLE PRECISION NOT NULL DEFAULT 100,
+  ADD COLUMN "distanceFreeKm" DOUBLE PRECISION NOT NULL DEFAULT 3,
+  ADD COLUMN "distanceBonusPerKm" DOUBLE PRECISION NOT NULL DEFAULT 1,
+  ADD COLUMN "distanceBonusCap" DOUBLE PRECISION NOT NULL DEFAULT 10;
+
+ALTER TABLE "Order"
+  ADD COLUMN "distanceBonusPesewas" INTEGER,
+  ADD COLUMN "distanceBonusDriverId" TEXT;
+
+ALTER TABLE "Facility" ADD COLUMN "tippingFee" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+ALTER TABLE "OperatingSettings"
+  ADD COLUMN "vatPercent" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  ADD COLUMN "nhilPercent" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  ADD COLUMN "getfundPercent" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  ADD COLUMN "withholdingPercent" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+ALTER TABLE "Withdrawal" ADD COLUMN "withholdingPesewas" INTEGER NOT NULL DEFAULT 0;

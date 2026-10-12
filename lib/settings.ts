@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { DEFAULT_SHIFT_SETTINGS, type ShiftSettings } from '@/lib/shift'
+import { NO_TAX, type TaxRates } from '@/lib/tax'
 
 // The operating window lives in the database (one row, id = 1) so ops can change it
 // without a code change. Falls back to the defaults if the row is missing.
@@ -48,6 +49,20 @@ export async function getPaystackTransfers(): Promise<boolean> {
     return row?.paystackTransfers ?? false
   } catch {
     return false
+  }
+}
+
+// Tax rates (lib/tax.ts), in basis points. All 0 until the accountant confirms them (or if they can't be read).
+export async function getTaxRates(): Promise<TaxRates & { withholdingBps: number }> {
+  try {
+    const row = await prisma.operatingSettings.findUnique({
+      where: { id: 1 },
+      select: { vatPercent: true, nhilPercent: true, getfundPercent: true, withholdingPercent: true },
+    })
+    const bps = (p: number | undefined) => Math.max(0, Math.min(10_000, Math.round((p ?? 0) * 100)))
+    return { vatBps: bps(row?.vatPercent), nhilBps: bps(row?.nhilPercent), getfundBps: bps(row?.getfundPercent), withholdingBps: bps(row?.withholdingPercent) }
+  } catch {
+    return { ...NO_TAX, withholdingBps: 0 }
   }
 }
 

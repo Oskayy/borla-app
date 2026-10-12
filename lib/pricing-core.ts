@@ -10,6 +10,7 @@
 //   platform fee = price × platformFeePercent
 //   driver pool  = price − platform fee
 import type { JsonBody } from './validate'
+import { NO_TAX, taxLines, taxTotal, type TaxRates } from './tax'
 
 export const WASTE_TYPES = ['general', 'recyclable'] as const
 export type WasteType = (typeof WASTE_TYPES)[number]
@@ -73,7 +74,10 @@ export interface PriceBreakdown {
   recyclableDiscount: number
   hazardSurcharge: number
   lateSurcharge: number
-  price: number
+  price: number // what the customer pays, tax included
+  netPrice?: number // before tax (absent on orders priced before tax existed: same as price)
+  taxLines?: { code: string; label: string; percent: number; amount: number }[]
+  taxTotal?: number
   platformFeePercent: number
   platformFee: number
   driverPool: number
@@ -122,7 +126,8 @@ export function calculatePrice(
   rule: RuleForQuote,
   zone: ZoneForQuote,
   input: OrderInput,
-  isLate: boolean
+  isLate: boolean,
+  tax: TaxRates = NO_TAX
 ): PriceResult {
   const lines: QuoteLine[] = []
 
@@ -150,8 +155,12 @@ export function calculatePrice(
   const hazardSurcharge = input.hazardous ? round2(rule.hazardSurcharge) : 0
   const lateSurcharge = isLate ? round2(rule.lateSurcharge) : 0
 
-  const price = round2(Math.max(0, subtotal - recyclableDiscount + hazardSurcharge + lateSurcharge))
-  const platformFee = round2(price * (rule.platformFeePercent / 100))
+  const netPrice = round2(Math.max(0, subtotal - recyclableDiscount + hazardSurcharge + lateSurcharge))
+  // Tax on top of the price (lib/tax.ts; every rate 0 until confirmed).
+  const taxes = taxLines(Math.round(netPrice * 100), tax)
+  const taxTotalGhs = taxTotal(taxes) / 100
+  const price = round2(netPrice + taxTotalGhs)
+  const platformFee = round2(netPrice * (rule.platformFeePercent / 100))
 
   return {
     ok: true,
@@ -171,9 +180,12 @@ export function calculatePrice(
       hazardSurcharge,
       lateSurcharge,
       price,
+      netPrice,
+      taxLines: taxes.map((t) => ({ code: t.code, label: t.label, percent: t.bps / 100, amount: t.amount / 100 })),
+      taxTotal: taxTotalGhs,
       platformFeePercent: rule.platformFeePercent,
       platformFee,
-      driverPool: round2(price - platformFee),
+      driverPool: round2(netPrice - platformFee),
     },
   }
 }

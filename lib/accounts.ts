@@ -17,6 +17,8 @@ export const ACCOUNTS = {
   transferFees: 'transfer_fees', // cost: Paystack's fee on driver payouts (after any part the driver paid)
   refundLosses: 'refund_losses', // cost: refunds Trashit covers from its own money
   reconciliationDifferences: 'reconciliation_differences', // a settlement that didn't match what arrived in the bank
+  taxPayable: 'tax_payable', // owed: VAT and levies collected on prices (lib/tax.ts)
+  withholdingPayable: 'withholding_tax_payable', // owed: tax withheld from driver payouts
   openingBalances: 'opening_balances', // what the bank or Paystack balance already held when the ledger started (or at a switch to live)
 } as const
 
@@ -43,12 +45,14 @@ export function isBalanced(lines: Line[]): boolean {
 
 const drop = (lines: Line[]) => lines.filter((l) => l.amount !== 0)
 
-// Customer pays P: Paystack holds it for us, and it is held for that order until the job is done.
-export function paymentLines(orderId: string, price: number): Line[] {
-  return [
+// Customer pays P: Paystack holds it for us, and it is held for that order until the job is done. Any tax in it is
+// owed to the tax office, not held for the job.
+export function paymentLines(orderId: string, price: number, tax = 0): Line[] {
+  return drop([
     { account: ACCOUNTS.paystackClearing, amount: price },
-    { account: ACCOUNTS.customerFundsHeld, amount: -price, orderId },
-  ]
+    { account: ACCOUNTS.customerFundsHeld, amount: -(price - tax), orderId },
+    { account: ACCOUNTS.taxPayable, amount: -tax, orderId },
+  ])
 }
 
 // Paystack keeps its fee out of what it settles to us.
@@ -111,9 +115,11 @@ export function allocateRefund(args: {
   return { fromUnearned, clawback, feeFromHeld, feeReversed, loss: left }
 }
 
-// The refund leaves Paystack back to the customer, covered as allocated above.
-export function refundLines(orderId: string, driverId: string | null, refund: number, a: RefundAllocation): Line[] {
+// The refund leaves Paystack back to the customer, covered as allocated above. `taxReversed`: the tax on the refunded
+// part, no longer owed to the tax office.
+export function refundLines(orderId: string, driverId: string | null, refund: number, a: RefundAllocation, taxReversed = 0): Line[] {
   return drop([
+    { account: ACCOUNTS.taxPayable, amount: taxReversed, orderId },
     { account: ACCOUNTS.customerFundsHeld, amount: a.fromUnearned + a.feeFromHeld, orderId },
     { account: ACCOUNTS.driverPayable, amount: a.clawback, driverId, orderId },
     { account: ACCOUNTS.platformFeeIncome, amount: a.feeReversed, orderId },
@@ -124,17 +130,21 @@ export function refundLines(orderId: string, driverId: string | null, refund: nu
 
 // A payout reaches the driver's wallet. `driverFee`: the part of the transfer fee the driver paid (an extra
 // cash-out), taken from the amount sent. Manual payouts come from the bank and have no Paystack fee.
-export function payoutLines(args: { driverId: string; amount: number; driverFee: number; method: 'paystack' | 'manual' }): Line[] {
+// `withholding`: tax withheld from the payout, owed to the tax office and taken from the amount sent.
+export function payoutLines(args: { driverId: string; amount: number; driverFee: number; method: 'paystack' | 'manual'; withholding?: number }): Line[] {
+  const wht = args.withholding ?? 0
   if (args.method === 'manual') {
-    return [
+    return drop([
       { account: ACCOUNTS.driverPayable, amount: args.amount, driverId: args.driverId },
-      { account: ACCOUNTS.bank, amount: -args.amount },
-    ]
+      { account: ACCOUNTS.withholdingPayable, amount: -wht },
+      { account: ACCOUNTS.bank, amount: -(args.amount - wht) },
+    ])
   }
-  const sent = args.amount - args.driverFee
+  const sent = args.amount - args.driverFee - wht
   return drop([
     { account: ACCOUNTS.driverPayable, amount: args.amount, driverId: args.driverId },
     { account: ACCOUNTS.transferFees, amount: TRANSFER_FEE_PESEWAS - args.driverFee },
+    { account: ACCOUNTS.withholdingPayable, amount: -wht },
     { account: ACCOUNTS.paystackBalance, amount: -(sent + TRANSFER_FEE_PESEWAS) },
   ])
 }

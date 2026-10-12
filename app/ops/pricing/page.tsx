@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui'
 import { SectionTitle } from '@/components/ops/kit'
 import RuleActions from '@/components/ops/RuleActions'
 import { dateLabel } from '@/lib/format'
+import TaxForm from '@/components/ops/TaxForm'
 
 export default async function PricingRulesPage() {
   const supabase = await createClient()
@@ -17,7 +18,7 @@ export default async function PricingRulesPage() {
     redirect('/ops')
   }
 
-  const [rules, sizes] = await Promise.all([
+  const [rules, sizes, tax] = await Promise.all([
     prisma.pricingRule.findMany({
       orderBy: { createdAt: 'desc' },
       include: { binPrices: { include: { binSize: true } } },
@@ -26,6 +27,10 @@ export default async function PricingRulesPage() {
       where: { active: true },
       orderBy: { sortOrder: 'asc' },
       select: { code: true, label: true, litres: true },
+    }),
+    prisma.operatingSettings.findUnique({
+      where: { id: 1 },
+      select: { vatPercent: true, nhilPercent: true, getfundPercent: true, withholdingPercent: true },
     }),
   ])
 
@@ -37,6 +42,8 @@ export default async function PricingRulesPage() {
       />
 
       <PricingRuleForm sizes={sizes} />
+
+      <TaxForm current={tax ?? { vatPercent: 0, nhilPercent: 0, getfundPercent: 0, withholdingPercent: 0 }} />
 
       <section aria-labelledby="h-price-history">
         <SectionTitle id="h-price-history">History</SectionTitle>

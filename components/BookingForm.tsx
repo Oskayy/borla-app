@@ -37,6 +37,7 @@ interface Quote {
   lateSurcharge: number
   isLate: boolean
   collectionLabel: string
+  taxLines?: { code: string; label: string; percent: number; amount: number }[]
 }
 
 const MAX_PER_SIZE = 20
@@ -579,6 +580,14 @@ function BookingFormInner({
                       <dd className="tabular-nums">+ GHS {quote.lateSurcharge.toFixed(2)}</dd>
                     </div>
                   )}
+                  {(quote.taxLines ?? []).map((t) => (
+                    <div key={t.code} className="flex justify-between gap-3">
+                      <dt className="text-ink-2">
+                        {t.label} ({t.percent}%)
+                      </dt>
+                      <dd className="tabular-nums">+ GHS {t.amount.toFixed(2)}</dd>
+                    </div>
+                  ))}
                   <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-line pt-3">
                     <dt className="font-semibold">Total</dt>
                     <dd className="text-2xl font-bold tabular-nums tracking-tight">GHS {quote.price.toFixed(2)}</dd>

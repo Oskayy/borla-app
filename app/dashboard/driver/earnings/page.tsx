@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getEarningsHistory, getWalletSummary } from '@/lib/wallet-server'
 import { MIN_WITHDRAWAL_GHS, OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
 import { MOMO_PROVIDERS } from '@/lib/phone'
-import { ATTEMPT_TYPE, CLAWBACK_TYPE, CLEARING_HOURS, PICKUP_TYPE } from '@/lib/earnings'
+import { ATTEMPT_TYPE, BONUS_TYPE, CLAWBACK_TYPE, CLEARING_HOURS, PICKUP_TYPE } from '@/lib/earnings'
 import { SWEEP_MIN_PESEWAS, SWEEP_MINUTES } from '@/lib/treasury'
 import { formatClock } from '@/lib/shift'
 import { getPaystackTransfers } from '@/lib/settings'
@@ -40,6 +40,7 @@ const EARNING_LABELS: Record<string, string> = {
   [PICKUP_TYPE]: 'Pickup share',
   driver_payout_disposal: 'Unload share',
   [ATTEMPT_TYPE]: 'Paid for a wasted trip',
+  [BONUS_TYPE]: 'Distance bonus',
   [CLAWBACK_TYPE]: 'Taken back',
 }
 

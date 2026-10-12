@@ -8,6 +8,7 @@ import { newStopsMessage } from '@/lib/offers'
 import { getAcceptMinutes } from '@/lib/settings'
 import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { caught } from '@/lib/errors'
+import { fixDistanceBonus } from '@/lib/distance-bonus-server'
 
 const LOAD = new Set<string>(LOAD_STATUSES)
 
@@ -58,6 +59,7 @@ async function attachInner(
         data: { driverId: driver.id, status: 'ASSIGNED', driverAcceptedAt: null, offeredAt: new Date() },
       })
       if (claimed.count !== 1) throw new Error('STATE_CHANGED')
+      await fixDistanceBonus(tx, [order.id], driver.id)
 
       // The driver's current route (one with stops still to collect or unload), if any.
       const route = await tx.route.findFirst({

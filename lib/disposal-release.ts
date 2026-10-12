@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { ensureSplit } from '@/lib/order-split-server'
-import { clearsAt, PICKUP_TYPE, shiftEndsAt, UNLOAD_TYPE } from '@/lib/earnings'
+import { BONUS_TYPE, clearsAt, PICKUP_TYPE, shiftEndsAt, UNLOAD_TYPE } from '@/lib/earnings'
 import type { ShiftSettings } from '@/lib/shift'
 import { balance, postJournal } from '@/lib/journal-server'
 import { ACCOUNTS, earnedLines, feeIncomeLines } from '@/lib/accounts'
@@ -52,6 +52,16 @@ export async function releaseDisposal(
       },
     })
     await postJournal(tx, { key: `disposal-${o.id}`, event: 'earned', orderId: o.id, driverId: args.driverId, lines: earnedLines(o.id, args.driverId, split.unload) })
+    // The distance bonus fixed for this driver when the stop was assigned (paid from Trashit's fee).
+    const fixed = await tx.order.findUnique({ where: { id: o.id }, select: { distanceBonusPesewas: true, distanceBonusDriverId: true } })
+    if (fixed?.distanceBonusDriverId === args.driverId && (fixed.distanceBonusPesewas ?? 0) > 0) {
+      const bonus = fixed.distanceBonusPesewas!
+      total += bonus
+      await tx.ledgerEntry.create({
+        data: { orderId: o.id, type: BONUS_TYPE, amount: bonus / 100, amountPesewas: bonus, idempotencyKey: `bonus-${o.id}`, driverId: args.driverId, clearsAt: clears },
+      })
+      await postJournal(tx, { key: `bonus-${o.id}`, event: 'earned', orderId: o.id, driverId: args.driverId, lines: earnedLines(o.id, args.driverId, bonus), memo: 'Distance bonus' })
+    }
     // The job is finished: what is still held for the order is Trashit's platform fee, now income. (If drivers were
     // paid more than the customer paid, e.g. an order whose pickup was paid under older rules, the difference is
     // recorded where Finance will see it.)

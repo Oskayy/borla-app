@@ -5,12 +5,13 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { receiptNumber } from '@/lib/receipt-pdf'
 import { parsePeriod, statementCsv, type StatementData } from '@/lib/statement'
 import { buildStatementPdf } from '@/lib/statement-pdf'
-import { ATTEMPT_TYPE, CLAWBACK_TYPE, DRIVER_LEDGER_TYPES, PICKUP_TYPE, UNLOAD_TYPE } from '@/lib/earnings'
+import { ATTEMPT_TYPE, BONUS_TYPE, CLAWBACK_TYPE, DRIVER_LEDGER_TYPES, PICKUP_TYPE, UNLOAD_TYPE } from '@/lib/earnings'
 
-const KIND: Record<string, 'pickup' | 'unload' | 'attempt' | 'clawback'> = {
+const KIND: Record<string, 'pickup' | 'unload' | 'attempt' | 'bonus' | 'clawback'> = {
   [PICKUP_TYPE]: 'pickup',
   [UNLOAD_TYPE]: 'unload',
   [ATTEMPT_TYPE]: 'attempt',
+  [BONUS_TYPE]: 'bonus',
   [CLAWBACK_TYPE]: 'clawback',
 }
 

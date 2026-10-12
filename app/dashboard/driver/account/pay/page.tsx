@@ -18,7 +18,17 @@ export default async function DriverPayPage() {
   if (!user) redirect('/login')
 
   const [payout, pricing] = await Promise.all([
-    prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { pickupPercent: true, disposalPercent: true } }),
+    prisma.payoutRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: {
+        pickupPercent: true,
+        disposalPercent: true,
+        lateSurchargeDriverPercent: true,
+        hazardSurchargeDriverPercent: true,
+        recyclableDiscountPlatformPercent: true,
+        distanceFreeKm: true,
+        distanceBonusPerKm: true,
+        distanceBonusCap: true,
+      },
+    }),
     prisma.pricingRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { platformFeePercent: true } }),
   ])
   const pickup = payout?.pickupPercent ?? 40
@@ -102,6 +112,36 @@ export default async function DriverPayPage() {
           </div>
         </dl>
         <p className="mt-3 text-sm text-ink-3">The split is fixed when the customer pays, so a later change to these rules doesn&apos;t change that stop&apos;s pay.</p>
+      </Card>
+
+      <Card>
+        <h2 className="text-base font-semibold tracking-tight">Extra pay</h2>
+        <ul className="mt-3 grid gap-3 text-[15px]">
+          {payout && payout.distanceBonusPerKm > 0 && (
+            <li>
+              <span className="block font-semibold">Far stops</span>
+              <span className="block text-ink-2">
+                {money(payout.distanceBonusPerKm)} for each km beyond {payout.distanceFreeKm} km from your home base, up to {money(payout.distanceBonusCap)} a
+                stop. It&apos;s fixed when the stop is given to you, shown with the stop, and paid with the unload share.
+              </span>
+            </li>
+          )}
+          <li>
+            <span className="block font-semibold">Late and hazardous orders</span>
+            <span className="block text-ink-2">
+              You get {payout?.lateSurchargeDriverPercent ?? 100}% of the late-booking surcharge and {payout?.hazardSurchargeDriverPercent ?? 100}% of the
+              hazardous-waste surcharge, on top of your share of the price.
+            </span>
+          </li>
+          <li>
+            <span className="block font-semibold">Recyclable orders</span>
+            <span className="block text-ink-2">
+              {(payout?.recyclableDiscountPlatformPercent ?? 100) >= 100
+                ? 'The customer’s recyclable discount comes out of Trashit’s share, not yours: you’re paid as if no discount was given.'
+                : `Trashit covers ${payout?.recyclableDiscountPlatformPercent ?? 0}% of the customer’s recyclable discount; the rest comes out of the stop’s pay.`}
+            </span>
+          </li>
+        </ul>
       </Card>
 
       <Card>

@@ -15,6 +15,7 @@ export interface ReceiptData {
   recyclableDiscount: number
   hazardSurcharge: number
   lateSurcharge: number
+  taxLines?: { label: string; percent: number; amount: number }[]
   total: number
   refunds: { amount: number; status: string; createdAt: Date }[]
   status: string // customer-facing label
@@ -107,6 +108,7 @@ export async function buildReceiptPdf(d: ReceiptData): Promise<Uint8Array> {
   if (d.recyclableDiscount > 0) adjust.push(['Recyclable discount', -d.recyclableDiscount])
   if (d.hazardSurcharge > 0) adjust.push(['Hazardous items', d.hazardSurcharge])
   if (d.lateSurcharge > 0) adjust.push(['Late booking', d.lateSurcharge])
+  for (const t of d.taxLines ?? []) if (t.amount > 0) adjust.push([`${t.label} (${t.percent}%)`, t.amount])
   for (const [k, v] of adjust) {
     text(page, k, left, y, 11, regular, MUTED)
     textRight(`${v < 0 ? '- ' : '+ '}${ghs(Math.abs(v))}`, y, 11, regular, MUTED)

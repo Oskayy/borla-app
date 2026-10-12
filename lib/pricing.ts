@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getShiftSettings } from '@/lib/settings'
+import { getShiftSettings, getTaxRates } from '@/lib/settings'
 import { classifyBooking, describeCollection } from '@/lib/shift'
 import { pickZone } from '@/lib/zone-match'
 import { geocodeAddress } from '@/lib/geocode'
@@ -101,11 +101,11 @@ export async function quoteForZone(
   zone: ZoneForQuote,
   now: Date = new Date()
 ): Promise<QuoteResult> {
-  const [rule, settings] = await Promise.all([getActiveRule(), getShiftSettings()])
+  const [rule, settings, tax] = await Promise.all([getActiveRule(), getShiftSettings(), getTaxRates()])
   if (!rule) return fail(500, 'Pricing is not set up yet. Please try again later.')
 
   const booking = classifyBooking(now, settings)
-  const result = calculatePrice(rule, zone, input, booking.isLate)
+  const result = calculatePrice(rule, zone, input, booking.isLate, tax)
   if (!result.ok) return fail(400, result.error)
 
   return {

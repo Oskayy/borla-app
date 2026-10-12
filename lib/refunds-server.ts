@@ -4,7 +4,9 @@ import { LIVE_REFUND_STATUSES, needsSecondApprover, REFUND_APPROVAL_THRESHOLD_GH
 import { notifyUser, notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
 import { CLAWBACK_TYPE } from '@/lib/earnings'
-import { orderPosition, postJournal } from '@/lib/journal-server'
+import { balance, orderPosition, postJournal } from '@/lib/journal-server'
+import { ACCOUNTS } from '@/lib/accounts'
+import { snapshotTax } from '@/lib/tax'
 import { allocateRefund, refundLines } from '@/lib/accounts'
 
 export interface RefundOutcome {
@@ -257,7 +259,7 @@ export async function cancelOrder(orderId: string, actorId: string, reason: stri
 // Paystack confirmed the money went back: update the payment and the ledger (once). If ops recorded the driver
 // as at fault, the driver's shares of this order are taken back (up to the refund; lib/earnings.ts).
 export async function markRefundProcessed(refundId: string): Promise<void> {
-  const refund = await prisma.refund.findUnique({ where: { id: refundId }, include: { order: { select: { driverId: true } } } })
+  const refund = await prisma.refund.findUnique({ where: { id: refundId }, include: { order: { select: { driverId: true, quoteSnapshot: true } } } })
   if (!refund) return
   let clawedBack = 0
   try {
@@ -269,14 +271,19 @@ export async function markRefundProcessed(refundId: string): Promise<void> {
       // Who pays for it (lib/accounts.ts): shares nobody earned yet, then the driver if at fault, then the
       // platform fee, then Trashit's own money.
       const driverId = refund.order.driverId
+      // The tax on the refunded part goes back too (in proportion to the price), and is no longer owed.
+      const orderTax = snapshotTax(refund.order.quoteSnapshot)
+      const priceTotal = Math.round(((refund.order.quoteSnapshot as { price?: number } | null)?.price ?? 0) * 100)
+      const taxLeft = -(await balance(tx, ACCOUNTS.taxPayable, { orderId: refund.orderId }))
+      const taxReversed = orderTax > 0 && priceTotal > 0 ? Math.min(taxLeft, Math.round((refundPesewas * orderTax) / priceTotal)) : 0
       const position = await orderPosition(tx, refund.orderId, driverId)
-      const allocation = allocateRefund({ refund: refundPesewas, ...position, driverAtFault: refund.driverFault && !!driverId })
+      const allocation = allocateRefund({ refund: refundPesewas - taxReversed, ...position, driverAtFault: refund.driverFault && !!driverId })
       await postJournal(tx, {
         key: `refund-${refund.id}`,
         event: 'refund',
         orderId: refund.orderId,
         driverId,
-        lines: refundLines(refund.orderId, driverId, refundPesewas, allocation),
+        lines: refundLines(refund.orderId, driverId, refundPesewas, allocation, taxReversed),
         memo: allocation.loss > 0 ? `Trashit covers GHS ${(allocation.loss / 100).toFixed(2)} itself` : null,
       })
       if (driverId) {

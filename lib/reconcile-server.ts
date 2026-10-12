@@ -54,7 +54,7 @@ export async function reconcileDay(day: string, timezone: string): Promise<{ ok:
   // 3. The Paystack balance, allowing for payouts Paystack has taken but not yet confirmed.
   const [ledgerBalance, inFlightRows, balance] = await Promise.all([
     prisma.posting.aggregate({ where: { account: ACCOUNTS.paystackBalance }, _sum: { amount: true } }),
-    prisma.withdrawal.findMany({ where: { status: 'PROCESSING', method: 'paystack' }, select: { amount: true, feePesewas: true } }),
+    prisma.withdrawal.findMany({ where: { status: 'PROCESSING', method: 'paystack' }, select: { amount: true, feePesewas: true, withholdingPesewas: true } }),
     getBalancePesewas(),
   ])
   const inFlight = inFlightRows.reduce((s, w) => s + Math.round(amountSent(w) * 100) + TRANSFER_FEE_PESEWAS, 0)

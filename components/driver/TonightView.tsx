@@ -28,7 +28,7 @@ export interface TripGroup {
     status: string
     sequence: number | null
     address: string
-    pay: { total: number; pickup: number; unload: number } | null // the driver's pay for the stop (not the customer's price)
+    pay: { total: number; pickup: number; unload: number; bonus?: number } | null // the driver's pay for the stop (not the customer's price)
     bins: string | null
     lat: number | null
     lng: number | null
@@ -121,6 +121,7 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
                       <span className="text-ink-3">
                         {' '}
                         · {order.pay.pickup.toFixed(2)} at pickup, {order.pay.unload.toFixed(2)} after unload
+                        {(order.pay.bonus ?? 0) > 0 && ` (incl. ${order.pay.bonus!.toFixed(2)} distance bonus)`}
                       </span>
                     </p>
                   )}

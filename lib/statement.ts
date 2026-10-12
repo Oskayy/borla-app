@@ -5,7 +5,7 @@ export interface StatementEarning {
   date: Date
   orderRef: string // short order reference, e.g. "TR-3F2A9C1E"
   address: string
-  kind: 'pickup' | 'unload' | 'attempt' | 'clawback' // clawback: taken back after a refund (a positive amount, subtracted)
+  kind: 'pickup' | 'unload' | 'attempt' | 'bonus' | 'clawback' // clawback: taken back after a refund (a positive amount, subtracted)
   amount: number
 }
 
@@ -123,6 +123,7 @@ export const EARNING_KIND_LABELS: Record<StatementData['earnings'][number]['kind
   pickup: 'Pickup share',
   unload: 'Unload share',
   attempt: 'Wasted trip',
+  bonus: 'Distance bonus',
   clawback: 'Taken back',
 }
 
@@ -130,10 +131,11 @@ export function statementTotals(d: StatementData) {
   const pickup = round2(d.earnings.filter((e) => e.kind === 'pickup').reduce((s, e) => s + e.amount, 0))
   const unload = round2(d.earnings.filter((e) => e.kind === 'unload').reduce((s, e) => s + e.amount, 0))
   const attempt = round2(d.earnings.filter((e) => e.kind === 'attempt').reduce((s, e) => s + e.amount, 0))
+  const bonus = round2(d.earnings.filter((e) => e.kind === 'bonus').reduce((s, e) => s + e.amount, 0))
   const takenBack = round2(d.earnings.filter((e) => e.kind === 'clawback').reduce((s, e) => s + e.amount, 0))
   const sent = round2(d.withdrawals.filter((w) => w.status === 'Sent').reduce((s, w) => s + w.amount, 0))
   const stops = new Set(d.earnings.filter((e) => e.kind !== 'clawback').map((e) => e.orderRef)).size
-  return { pickup, unload, attempt, takenBack, earned: round2(pickup + unload + attempt - takenBack), sent, stops }
+  return { pickup, unload, attempt, bonus, takenBack, earned: round2(pickup + unload + attempt + bonus - takenBack), sent, stops }
 }
 
 // One CSV cell. Text that a spreadsheet would run as a formula (= + - @, tab, CR) gets a leading apostrophe.

@@ -73,9 +73,9 @@ export default async function FinancePage() {
   const own = bank + paystack + clearing - held - owed - refunding
   const opening = -total(byAccount, ACCOUNTS.openingBalances)
   // Paystack's balance minus what the ledger has, less payouts still on their way: the gap an opening balance closes.
-  const inFlight = await prisma.withdrawal.findMany({ where: { status: 'PROCESSING', method: 'paystack' }, select: { amount: true, feePesewas: true } })
+  const inFlight = await prisma.withdrawal.findMany({ where: { status: 'PROCESSING', method: 'paystack' }, select: { amount: true, feePesewas: true, withholdingPesewas: true } })
   const gap =
-    liveBalance == null ? null : liveBalance - (paystack - inFlight.reduce((s, w) => s + Math.round(w.amount * 100) - w.feePesewas + TRANSFER_FEE_PESEWAS, 0))
+    liveBalance == null ? null : liveBalance - (paystack - inFlight.reduce((s, w) => s + Math.round(w.amount * 100) - w.feePesewas - w.withholdingPesewas + TRANSFER_FEE_PESEWAS, 0))
 
   const income = -total(month, ACCOUNTS.platformFeeIncome)
   const payFees = total(month, ACCOUNTS.paymentFees)

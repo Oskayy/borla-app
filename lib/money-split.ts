@@ -41,15 +41,52 @@ export interface OrderSplit {
 }
 
 // price - platform fee = driver pool; pool split into pickup and unload. Always: pickup + unload + platformFee = price.
-export function splitOrder(price: number, feeBps: number, pickupBps: number): OrderSplit {
+// Surcharges and the recyclable discount (step 7): each split by a percentage set on the payout rule.
+//  - late and hazardous surcharges pay for the driver's extra effort: `lateDriverBps` / `hazardDriverBps` of each
+//    goes to the drivers (the rest to Trashit), instead of being split like the rest of the price;
+//  - the recyclable discount: `discountPlatformBps` of it comes out of Trashit's share, so drivers are paid as if
+//    that part of the discount hadn't been given (the work is the same).
+export interface SplitExtras {
+  lateSurcharge: number // pesewas
+  hazardSurcharge: number
+  recyclableDiscount: number
+  lateDriverBps: number
+  hazardDriverBps: number
+  discountPlatformBps: number
+}
+
+// price - platform fee = driver pool; pool split into pickup and unload. Always: pickup + unload + platformFee = price.
+// `price` is before tax (tax is never shared out).
+export function splitOrder(price: number, feeBps: number, pickupBps: number, x?: SplitExtras): OrderSplit {
   whole(price, 'PRICE')
   whole(feeBps, 'FEE')
   whole(pickupBps, 'SPLIT')
   if (feeBps > BPS || pickupBps > BPS) throw new Error('BAD_BPS')
-  const platformFee = Math.floor((price * feeBps) / BPS)
-  const pool = price - platformFee
+  let pool: number
+  if (!x) {
+    pool = price - Math.floor((price * feeBps) / BPS)
+  } else {
+    for (const [k, v] of Object.entries(x)) whole(v, k.toUpperCase())
+    if (x.lateDriverBps > BPS || x.hazardDriverBps > BPS || x.discountPlatformBps > BPS) throw new Error('BAD_BPS')
+    // What the drivers' share is worked out on: the price without surcharges, plus the part of the discount Trashit absorbs.
+    const base = Math.max(0, price - x.lateSurcharge - x.hazardSurcharge) + Math.floor((x.recyclableDiscount * x.discountPlatformBps) / BPS)
+    pool =
+      base -
+      Math.floor((base * feeBps) / BPS) +
+      Math.floor((x.lateSurcharge * x.lateDriverBps) / BPS) +
+      Math.floor((x.hazardSurcharge * x.hazardDriverBps) / BPS)
+    pool = Math.min(price, Math.max(0, pool)) // Trashit's share never goes below zero
+  }
+  const platformFee = price - pool
   const pickup = Math.floor((pool * pickupBps) / BPS)
   return { price, feeBps, pickupBps, platformFee, pool, pickup, unload: pool - pickup }
+}
+
+// Distance bonus (step 7): for a stop far from the driver's home base, a bonus per km beyond the free distance,
+// capped, and never more than Trashit's platform fee on the order (it is paid from it).
+export function distanceBonus(km: number, rule: { freeKm: number; perKmPesewas: number; capPesewas: number }, platformFee: number): number {
+  if (!Number.isFinite(km) || km <= rule.freeKm || rule.perKmPesewas <= 0) return 0
+  return Math.max(0, Math.min(Math.floor((km - rule.freeKm) * rule.perKmPesewas), rule.capPesewas, platformFee))
 }
 
 export interface AttemptSplit {

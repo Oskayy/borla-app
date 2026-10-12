@@ -14,6 +14,7 @@ import { notifyCustomersAssigned } from '@/lib/customer-updates'
 import { plannableOrderFilter } from '@/lib/schedule'
 import { getShiftSettings } from '@/lib/settings'
 import { caught } from '@/lib/errors'
+import { fixDistanceBonus } from '@/lib/distance-bonus-server'
 
 const MAX_DRIVERS_PER_REQUEST = 50
 const MAX_ORDERS_PER_DRIVER = 60
@@ -131,6 +132,7 @@ export async function POST(req: NextRequest) {
             data: { driverId, status: 'ASSIGNED', driverAcceptedAt: null, offeredAt: new Date() },
           })
           if (claimed.count !== built.orderIds.length) throw new Error('STATE_CHANGED')
+          await fixDistanceBonus(tx, built.orderIds, driverId)
 
           const route = await tx.route.create({ data: { driverId } })
           await tx.routeStop.createMany({

@@ -44,6 +44,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     recyclableDiscount?: number
     hazardSurcharge?: number
     lateSurcharge?: number
+    taxLines?: { label: string; percent: number; amount: number }[]
     lines?: { litres?: number; label: string; count: number; lineTotal?: number }[]
   }
 
@@ -59,6 +60,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     recyclableDiscount: q.recyclableDiscount ?? 0,
     hazardSurcharge: q.hazardSurcharge ?? 0,
     lateSurcharge: q.lateSurcharge ?? 0,
+    taxLines: q.taxLines ?? [],
     total: payment.amount,
     refunds: order.refunds,
     status: customerStatus(order.status).label,
