@@ -8,6 +8,7 @@ import { MOMO_PROVIDERS } from '@/lib/phone'
 import { ATTEMPT_TYPE, CLAWBACK_TYPE, CLEARING_HOURS, PICKUP_TYPE } from '@/lib/earnings'
 import { SWEEP_MIN_PESEWAS, SWEEP_MINUTES } from '@/lib/treasury'
 import { formatClock } from '@/lib/shift'
+import { getPaystackTransfers } from '@/lib/settings'
 import { dateLabel, dateTimeLabel } from '@/lib/format'
 import Link from 'next/link'
 import { BUTTON_QUIET, Card, CardTitle, PageHeader } from '@/components/ui'
@@ -66,10 +67,11 @@ export default async function DriverEarningsPage() {
   })
   if (!profile) redirect('/dashboard/driver/profile-setup')
 
-  const [wallet, history, withdrawals] = await Promise.all([
+  const [wallet, history, withdrawals, transfersOn] = await Promise.all([
     getWalletSummary(user.id),
     getEarningsHistory(user.id),
     prisma.withdrawal.findMany({ where: { driverId: user.id }, orderBy: { requestedAt: 'desc' }, take: 20 }),
+    getPaystackTransfers(),
   ])
   const hasOpen = withdrawals.some((w: { status: string }) => OPEN_WITHDRAWAL_STATUSES.includes(w.status))
   const freeToday = !cashedOutToday(withdrawals)
@@ -123,8 +125,13 @@ export default async function DriverEarningsPage() {
           <CardTitle>Withdraw to mobile money</CardTitle>
           {profile.momoNumber && (
             <p className="-mt-1 mb-4 text-[15px] text-ink-2">
-              Your available balance is sent to your wallet automatically every morning at {formatClock(SWEEP_MINUTES)} (when it&apos;s GHS{' '}
-              {SWEEP_MIN_PESEWAS / 100} or more). Need it sooner? Cash out now.
+              {transfersOn
+                ? `Your available balance is sent to your wallet automatically every morning at ${formatClock(SWEEP_MINUTES)} (when it's GHS ${
+                    SWEEP_MIN_PESEWAS / 100
+                  } or more). Need it sooner? Cash out now.`
+                : `Every morning from ${formatClock(SWEEP_MINUTES)}, Trashit sends your available balance to your wallet (when it's GHS ${
+                    SWEEP_MIN_PESEWAS / 100
+                  } or more). Need it sooner? Ask with Cash out now and Trashit sends it.`}
             </p>
           )}
           {!profile.momoNumber ? (

@@ -209,6 +209,7 @@ model OperatingSettings {
   acceptMinutes           Int      @default(15)   // time a driver has to accept a stop before it goes to another driver
   autoDispatch            Boolean  @default(true) // from shift start, assign waiting orders to the best drivers automatically
   acceptHazardous         Boolean  @default(false) // customers can book hazardous waste (needs a site that takes it); planned by hand
+  paystackTransfers       Boolean  @default(false) // Paystack can send driver payouts (needs a Registered Business account); off = Finance pays by hand
   updatedAt               DateTime @updatedAt
 }
 

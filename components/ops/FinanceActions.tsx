@@ -188,3 +188,33 @@ export function OpeningBalanceForm({ suggestedPaystack }: { suggestedPaystack: n
     </div>
   )
 }
+
+// Paystack transfers for driver payouts: on once the Paystack account can make transfers.
+export function TransfersSwitch({ on }: { on: boolean }) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const router = useRouter()
+  return (
+    <div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          const ask = on
+            ? 'Switch Paystack transfers off? Payouts will wait for Finance to pay by hand.'
+            : 'Switch Paystack transfers on? The daily payout and Cash out now will send money through Paystack straight away.'
+          if (!confirm(ask)) return
+          setBusy(true)
+          const r = await post('/api/admin/finance/transfers', { enabled: !on })
+          setBusy(false)
+          setMsg(r.ok ? null : r)
+          if (r.ok) router.refresh()
+        }}
+        className={on ? BUTTON_QUIET : BUTTON_PRIMARY}
+      >
+        {busy ? 'Saving…' : on ? 'Switch transfers off' : 'Switch transfers on'}
+      </button>
+      <Result msg={msg} />
+    </div>
+  )
+}

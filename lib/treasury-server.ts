@@ -7,6 +7,7 @@ import { planSweep, sweepTotal, topUpCheck, type PayoutCandidate } from '@/lib/t
 import { createWithdrawal, sendClaimedWithdrawal } from '@/lib/payouts-server'
 import { notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
+import { getPaystackTransfers } from '@/lib/settings'
 
 const ghs = (p: number) => `GHS ${(p / 100).toFixed(2)}`
 
@@ -54,6 +55,7 @@ async function biggestNight(now: Date): Promise<number> {
 
 // 7am: how much the Paystack balance needs for today's payouts; Finance is told the exact top-up if it's short.
 export async function morningTopUpCheck(day: string): Promise<string> {
+  if (!(await getPaystackTransfers())) return 'Paystack transfers are off: payouts are paid by hand, no top-up needed'
   const now = new Date()
   const plan = planSweep(await payoutCandidates(now))
   const total = sweepTotal(plan)
@@ -86,7 +88,12 @@ export async function morningTopUpCheck(day: string): Promise<string> {
 // finish: if the Paystack balance doesn't cover them all, nothing is sent and it tries again on the next run.
 // Returns done=false to be retried.
 export async function runDailySweep(): Promise<{ done: boolean; summary: string }> {
-  const plan = planSweep(await payoutCandidates())
+  const sweep = planSweep(await payoutCandidates())
+  // Paystack transfers switched off (Finance page): nothing is sent; every payout waits for Finance to pay by hand.
+  const transfers = await getPaystackTransfers()
+  const plan = transfers
+    ? sweep
+    : { auto: [], forFinance: [...sweep.auto.map((p) => ({ ...p, why: 'Paystack transfers are off: pay by hand' })), ...sweep.forFinance] }
   const total = sweepTotal(plan)
   if (plan.auto.length > 0) {
     const balance = await getBalancePesewas()

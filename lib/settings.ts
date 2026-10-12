@@ -40,6 +40,17 @@ export async function getAcceptHazardous(): Promise<boolean> {
   }
 }
 
+// Whether the app may send driver payouts through Paystack (Finance page switch). Off: payouts wait for Finance
+// to pay by hand. Also off if the setting can't be read (e.g. before its migration has run).
+export async function getPaystackTransfers(): Promise<boolean> {
+  try {
+    const row = await prisma.operatingSettings.findUnique({ where: { id: 1 }, select: { paystackTransfers: true } })
+    return row?.paystackTransfers ?? false
+  } catch {
+    return false
+  }
+}
+
 // Whether waiting orders are assigned automatically from shift start (ops can still approve plans earlier).
 export async function getAutoDispatch(): Promise<boolean> {
   const row = await prisma.operatingSettings.findUnique({ where: { id: 1 }, select: { autoDispatch: true } })

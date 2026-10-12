@@ -14,7 +14,8 @@ import { dateLabel } from '@/lib/format'
 import type { CheckResult } from '@/lib/reconcile'
 import { PageHeader } from '@/components/ui'
 import { AllClear, PANEL, SectionTitle } from '@/components/ops/kit'
-import { ConfirmSettlement, OpeningBalanceForm, ReviewCheck, TopUpForm } from '@/components/ops/FinanceActions'
+import { ConfirmSettlement, OpeningBalanceForm, ReviewCheck, TopUpForm, TransfersSwitch } from '@/components/ops/FinanceActions'
+import { getPaystackTransfers } from '@/lib/settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +50,7 @@ export default async function FinancePage() {
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
   if (!dbUser || !PAYOUT_ROLES.includes(dbUser.role)) redirect('/ops')
 
-  const settings = await getShiftSettings()
+  const [settings, transfersOn] = await Promise.all([getShiftSettings(), getPaystackTransfers()])
   const { today, monthStart } = periods(settings.timezone)
   const [byAccount, month, refunds, liveBalance, check, sweep, settlements, runs] = await Promise.all([
     prisma.posting.groupBy({ by: ['account'], _sum: { amount: true } }),
@@ -119,6 +120,16 @@ export default async function FinancePage() {
           {differences !== 0 && <Row label="Differences to explain" value={differences} minus />}
           <Row label="Margin" value={income - payFees - transferFees - losses - differences} strong />
         </div>
+      </section>
+
+      <section aria-labelledby="h-transfers" className={PANEL}>
+        <SectionTitle id="h-transfers">Paystack transfers: {transfersOn ? 'on' : 'off'}</SectionTitle>
+        <p className="mb-4 text-[15px] text-ink-2">
+          {transfersOn
+            ? 'Driver payouts are sent through Paystack: the daily payout at 10am and Cash out now (up to GHS 500) go out straight away, from the Paystack balance.'
+            : 'Driver payouts are not sent through Paystack. Each morning’s payouts and every Cash out now wait on the Withdrawals page; pay them from your MoMo business wallet and use Mark paid. Switch this on once Paystack upgrades the account to a Registered Business with transfers.'}
+        </p>
+        <TransfersSwitch on={transfersOn} />
       </section>
 
       <section aria-labelledby="h-payouts" className={PANEL}>

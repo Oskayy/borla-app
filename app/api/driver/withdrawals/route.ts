@@ -10,7 +10,7 @@ import { caught } from '@/lib/errors'
 import { cashOutFee, cashOutIsInstant } from '@/lib/treasury'
 import { createWithdrawal, sendClaimedWithdrawal } from '@/lib/payouts-server'
 import { getBalancePesewas } from '@/lib/paystack'
-import { getShiftSettings } from '@/lib/settings'
+import { getPaystackTransfers, getShiftSettings } from '@/lib/settings'
 import { localParts } from '@/lib/shift'
 import { zonedInstant } from '@/lib/offers'
 
@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
     where: { driverId: auth.user.id, source: 'cashout', requestedAt: { gte: today }, status: { notIn: ['FAILED', 'REJECTED'] } },
   })
   const fee = cashOutFee(cashOutsToday)
-  const instant = cashOutIsInstant(amountPesewas, fee, amountPesewas <= 50_000 ? await getBalancePesewas() : null)
+  const instant =
+    (await getPaystackTransfers()) && cashOutIsInstant(amountPesewas, fee, amountPesewas <= 50_000 ? await getBalancePesewas() : null)
 
   let created: { id: string; amount: number } | null = null
   try {

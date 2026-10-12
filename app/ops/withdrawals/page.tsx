@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { PAYOUT_ROLES, getWalletSummary } from '@/lib/wallet-server'
 import WithdrawalsClient, { type WithdrawalRow } from '@/components/WithdrawalsClient'
 import { PageHeader } from '@/components/ui'
+import { getPaystackTransfers } from '@/lib/settings'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +17,7 @@ export default async function WithdrawalsPage() {
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
   if (!dbUser || !PAYOUT_ROLES.includes(dbUser.role)) redirect('/ops')
 
+  const transfersOn = await getPaystackTransfers()
   const [open, recent] = await Promise.all([
     prisma.withdrawal.findMany({
       where: { status: { in: OPEN_WITHDRAWAL_STATUSES } },
@@ -58,7 +61,17 @@ export default async function WithdrawalsPage() {
         title="Withdrawals"
         lead="Drivers are paid automatically every morning; large payouts, wallets changed in the last 24 hours, and cash-outs Paystack couldn't cover wait here. Send pays through Paystack from your Paystack balance. If Paystack transfers aren't on for your account yet, pay from your MoMo business wallet and use Mark paid with the transaction ID; a different finance user then confirms it."
       />
-      <WithdrawalsClient open={open.map(toRow)} recent={recent.map(toRow)} />
+      {!transfersOn && (
+        <p className="mb-5 rounded-card bg-ops-wash p-4 text-[15px] text-ink ring-1 ring-ops/30">
+          Paystack transfers are switched off, so payouts aren&apos;t sent automatically and <strong>Send</strong> is unavailable. Pay each one
+          from your MoMo business wallet, then use <strong>Mark paid</strong> with the transaction ID; a different finance user confirms it.{' '}
+          <Link href="/ops/finance#h-transfers" className="font-semibold text-ops-deep underline underline-offset-2">
+            Switch transfers on
+          </Link>{' '}
+          once Paystack allows them.
+        </p>
+      )}
+      <WithdrawalsClient open={open.map(toRow)} recent={recent.map(toRow)} transfersOn={transfersOn} />
     </div>
   )
 }

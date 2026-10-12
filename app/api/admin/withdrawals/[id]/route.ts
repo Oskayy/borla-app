@@ -8,6 +8,7 @@ import { PAYOUT_ROLES } from '@/lib/wallet-server'
 import { verifyTransfer } from '@/lib/paystack'
 import { notifyUser, notifyUsers } from '@/lib/notify'
 import { markWithdrawalPaid, sendClaimedWithdrawal } from '@/lib/payouts-server'
+import { getPaystackTransfers } from '@/lib/settings'
 
 // Finance acts on a withdrawal request:
 //   send       -> sends the money to the driver's MoMo wallet through Paystack
@@ -123,6 +124,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   if (action !== 'send') return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  if (!(await getPaystackTransfers())) {
+    return NextResponse.json(
+      { error: 'Paystack transfers are switched off on the Finance page. Pay from your MoMo business wallet and use Mark paid.' },
+      { status: 409 }
+    )
+  }
 
   // Claim it first, so two people pressing Send can't pay twice.
   const claimed = await prisma.withdrawal.updateMany({

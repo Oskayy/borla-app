@@ -27,7 +27,7 @@ export interface WithdrawalRow {
 
 const SOURCE: Record<string, string> = { request: 'Requested', cashout: 'Cash out now', sweep: 'Daily payout' }
 
-export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRow[]; recent: WithdrawalRow[] }) {
+export default function WithdrawalsClient({ open, recent, transfersOn = true }: { open: WithdrawalRow[]; recent: WithdrawalRow[]; transfersOn?: boolean }) {
   const [active, setActive] = useState<{ id: string; action: 'mark_paid' | 'reject' | 'dispute_paid' } | null>(null)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -117,7 +117,8 @@ export default function WithdrawalsClient({ open, recent }: { open: WithdrawalRo
                     <button
                       type="button"
                       onClick={() => confirm(`Send GHS ${w.amount.toFixed(2)} to ${w.driverName} on ${w.momo} through Paystack? This can't be undone.`) && act(w.id, 'send')}
-                      disabled={busy === w.id}
+                      disabled={busy === w.id || !transfersOn}
+                      title={transfersOn ? undefined : 'Paystack transfers are off (Finance page): pay by hand and use Mark paid'}
                       className={BUTTON_PRIMARY}
                     >
                       <Send aria-hidden className="size-4" /> {busy === w.id ? 'Sending…' : `Send GHS ${w.amount.toFixed(2)}`}
