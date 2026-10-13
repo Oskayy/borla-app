@@ -48,8 +48,7 @@ export default function CookieConsentBanner() {
       }}
     >
       <p style={{ fontSize: 13, margin: 0, flex: '1 1 260px' }}>
-        We use strictly necessary cookies to keep you logged in, and (with your consent) optional
-        cookies to help us improve the platform. See our{' '}
+        We only use cookies to keep you signed in and to remember your choices. No tracking or ads. See our{' '}
         <Link href="/cookie-policy" style={{ color: '#E8A33D', textDecoration: 'underline' }}>
           Cookie Policy
         </Link>{' '}

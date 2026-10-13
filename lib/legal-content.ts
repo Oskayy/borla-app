@@ -291,56 +291,60 @@ export const termsSections: LegalSection[] = [
 
 export const cookiePolicySections: LegalSection[] = [
   {
-    heading: '1. What Are Cookies',
+    heading: "1. What Are Cookies",
     blocks: [
-      { type: 'p', text: 'Cookies are small text files stored on your device that help websites and apps function correctly and remember information between visits.' },
+      { type: 'p', text: "Cookies are small text files stored on your device that help websites and apps work and remember information between visits. Browsers can also keep small amounts of information in their own storage on your device (called local storage). This policy covers both." },
     ],
   },
   {
-    heading: '2. Cookies We Use',
+    heading: "2. What We Use",
     blocks: [
-      { type: 'h2', text: 'Strictly Necessary' },
+      { type: 'h2', text: "Strictly necessary" },
       { type: 'bullets', items: [
-        'Session/authentication cookies (via Supabase Auth) — required to keep you logged in and to secure your session',
+        "Sign-in cookies from Supabase, our sign-in provider: they keep you signed in and protect your session. They are removed when you sign out or when they expire.",
+        "Your cookie choice: remembers whether you chose \"Essential only\" or \"Accept all\", so we don’t ask again.",
+        "If you turn on alerts, your browser keeps a small background helper (a service worker) so alerts can reach you when the app is closed.",
       ]},
-      { type: 'h2', text: 'Functional' },
+      { type: 'h2', text: "Functional" },
+      { type: 'p', text: "These only remember choices you make, and stay on your device. We don’t use them to follow you." },
       { type: 'bullets', items: [
-        '[Any preference-related cookies to be listed, e.g. saved filters or drafts, once built]',
+        "Light or dark theme (trashit-theme).",
+        "A pickup you priced before signing in (trashit-booking-draft): the address, pin and bins, so they aren’t lost while you create an account. It is ignored after 24 hours and removed once you book.",
+        "That you closed the \"install the app\" suggestion (trashit-install-dismissed).",
+        "Drivers only: short confirmation messages after an action (trashit-flash), cleared when the tab is closed.",
       ]},
-      { type: 'h2', text: 'Analytics' },
+      { type: 'h2', text: "Analytics and advertising" },
+      { type: 'p', text: "We don’t use analytics or advertising cookies, and we don’t track you across other websites. If we add analytics in the future, we will list it here first and only use it if you choose \"Accept all\"." },
+      { type: 'h2', text: "Third parties" },
       { type: 'bullets', items: [
-        '[To be completed once an analytics provider, e.g. Google Analytics, is selected — list what it tracks]',
-      ]},
-      { type: 'h2', text: 'Third-Party' },
-      { type: 'bullets', items: [
-        'Paystack — payment session cookies during checkout',
-        'Mapbox — may set cookies related to map/geocoding functionality',
-        '[Additional third-party cookies to be listed as integrated]',
+        "Paystack: when you pay, you go to Paystack’s secure checkout page, which uses its own cookies under Paystack’s privacy policy.",
+        "Mapbox: our maps are loaded from Mapbox, which may keep a small anonymous identifier in your browser to count how often maps are used.",
+        "Google Maps: only when a driver opens directions; Google’s own policy applies there.",
       ]},
     ],
   },
   {
-    heading: '3. Do We Need Your Consent?',
+    heading: "3. Do We Need Your Consent?",
     blocks: [
-      { type: 'p', text: 'Strictly necessary cookies (such as login sessions) do not require consent, as the Platform cannot function without them. Any analytics or non-essential cookies will only be set after you provide consent via the cookie banner. [To be confirmed against applicable law — Ghana does not currently have a dedicated cookie-consent statute, but this approach follows common international best practice given third-party providers involved.]' },
+      { type: 'p', text: "Strictly necessary cookies and storage don’t need your consent, because Trashit cannot work without them. Functional storage only remembers choices you make yourself, on your own device. We would only use analytics or other non-essential cookies if you choose \"Accept all\" in the cookie banner. Ghana has no law just for cookies; we follow the Data Protection Act, 2012 (Act 843) and our Privacy Policy." },
     ],
   },
   {
-    heading: '4. Managing Cookies',
+    heading: "4. Managing Cookies",
     blocks: [
-      { type: 'p', text: 'You can control or delete cookies through your browser settings. Disabling strictly necessary cookies may prevent you from logging in or using core features of the Platform.' },
+      { type: 'p', text: "You can see, block or delete cookies and site storage in your browser settings. If you block strictly necessary cookies, you won’t be able to sign in. Deleting site storage resets your theme and cookie choice, and removes a priced pickup you haven’t booked yet. To change your cookie choice, clear this site’s data in your browser; the banner then appears again." },
     ],
   },
   {
-    heading: '5. Changes to This Policy',
+    heading: "5. Changes to This Policy",
     blocks: [
-      { type: 'p', text: '[To be completed: notice process for changes.]' },
+      { type: 'p', text: "If we start using a new kind of cookie, we will update this policy before we do and, for anything non-essential, ask you first. The date at the top shows when it last changed." },
     ],
   },
   {
-    heading: '6. Contact Us',
+    heading: "6. Contact Us",
     blocks: [
-      { type: 'p', text: 'For questions about our use of cookies, contact: [support email to be inserted].' },
+      { type: 'p', text: "For questions about our use of cookies, contact Trashit at: [support email and phone: to be added before launch]." },
     ],
   },
 ]
