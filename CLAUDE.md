@@ -135,7 +135,8 @@ dispatch stress test so far was a simulation of the planner only.
   gaps (`lib/legal-content.ts`: registered company details, privacy contact email). Minimum age is 16 for customers
   (16-17 with a parent's permission) and 18 for drivers, confirmed by a sign-up checkbox (checked on the server too; the tick is not stored). Terms are filled (drivers are
   independent contractors, liability limited to the order price, disputes: support, then mediation, then courts;
-  needs a lawyer's review before launch). Cookie and Refund policies still have placeholders.
+  needs a lawyer's review before launch). Refund and Cookie policies are filled too.
+  All four legal pages (13 Oct 2026) only lack the registered company details and the support contact.
 - Data retention (policy section 6) runs nightly (`lib/retention*.ts`, on since 13 Oct 2026): photos and order pins
   12 months, alerts 90 days, unpaid drafts 30 days. Orders, payments, payouts and the ledger are kept 6 years and are
   **never deleted automatically**. After that they are anonymised (personal details removed, amounts and the ledger
