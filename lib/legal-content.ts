@@ -53,7 +53,18 @@ export const privacyPolicySections: LegalSection[] = [
   {
     heading: '6. Data Retention',
     blocks: [
-      { type: 'p', text: '[To be completed: how long account data, photo evidence, and location data are retained, and the process for deletion requests.]' },
+      { type: 'p', text: 'We keep personal data only for as long as we need it to provide the service, settle complaints and refunds, and meet our legal duties, as the Data Protection Act, 2012 (Act 843) requires. After that it is deleted automatically.' },
+      { type: 'bullets', items: [
+        'Account details (name, phone number, email, home pin): while your account is open. They are removed as soon as you delete your account.',
+        'Photos of waste placement, pickup and unloading, and the GPS position recorded with them: 12 months after the order is finished, then deleted. If a complaint or refund on that order is still open, they are kept until it is settled.',
+        'The pin and address of each booking: 12 months after the order is finished, then removed from the order record.',
+        "Drivers' live location: only the latest position is stored, and it is replaced as the driver moves. It is removed when the driver deletes their account.",
+        "Drivers' identity, vehicle and payout details (Ghana Card number, vehicle plate, vehicle photos, documents, mobile money wallet): while the driver account is open. They are deleted when the account is deleted.",
+        'In-app alerts: 90 days.',
+        'Bookings that were never paid: 30 days.',
+        'Orders, payments, refunds, driver earnings and payouts: 6 years, because tax and accounting law requires these records. If you delete your account, they are kept without your name, phone number, email, address or full wallet number.',
+      ]},
+      { type: 'p', text: 'You can delete your account yourself in the app (customers: Settings; drivers: Account, then Privacy and data) by typing DELETE and entering your password. A pickup in progress has to finish (or be cancelled) first. Drivers first need to finish any stops on their list and cash out their earnings, and any amount owed to Trashit has to be settled. You can also ask us to delete your data using the contact details in section 11; we will respond within 30 days.' },
     ],
   },
   {

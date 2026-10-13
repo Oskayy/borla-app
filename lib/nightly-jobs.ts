@@ -15,6 +15,8 @@ import { RECONCILE_MINUTES } from '@/lib/reconcile'
 import { reconcileDay, syncSettlements } from '@/lib/reconcile-server'
 import { SWEEP_MINUTES, TOPUP_CHECK_MINUTES } from '@/lib/treasury'
 import { morningTopUpCheck, runDailySweep } from '@/lib/treasury-server'
+import { RETENTION_CLEANUP_ON } from '@/lib/retention'
+import { retentionSummary, runRetention } from '@/lib/retention-server'
 
 // "1 order", "3 orders": for messages people read.
 const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -85,6 +87,11 @@ async function runAll(force: boolean): Promise<JobSummary> {
   // 6. Money, on the scheduler's runs only (they call Paystack): 7am settlements, yesterday's reconciliation and the
   //    Paystack top-up check; from 10am the daily driver payout (retried until the balance covers it).
   if (force) await moneyJobs(now, settings.timezone, settings.shiftStartMinutes)
+
+  // 7. Once a day, delete personal data past its time (privacy policy section 6, lib/retention.ts).
+  if (force && RETENTION_CLEANUP_ON) {
+    await once(`retention:${localParts(now, settings.timezone).date}`, async () => retentionSummary(await runRetention(now, false)))
+  }
 
   return summary
 }
