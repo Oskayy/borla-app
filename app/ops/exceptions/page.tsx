@@ -24,6 +24,7 @@ export default async function ExceptionsPage() {
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
   if (!dbUser || !EXCEPTION_ROLES.includes(dbUser.role)) redirect('/dashboard')
   const canRefund = REFUND_ROLES.includes(dbUser.role)
+  const pricing = await prisma.pricingRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { attemptFeePercent: true } })
 
   const pickupCheckReasons = [{ reason: { contains: 'GPS MISMATCH' } }, { reason: { contains: PICKUP_CHECK_MARKER } }]
 
@@ -137,7 +138,7 @@ export default async function ExceptionsPage() {
           canRefund ? '' : ' Refunds need a Finance, Ops Manager or Super Admin account.'
         }`}
       />
-      <ExceptionsClient items={items} refunds={refundRows} canRefund={canRefund} />
+      <ExceptionsClient items={items} refunds={refundRows} canRefund={canRefund} attemptFeePercent={pricing?.attemptFeePercent ?? 0} />
     </div>
   )
 }

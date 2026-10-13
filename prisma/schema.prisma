@@ -169,6 +169,7 @@ model PricingRule {
   lateSurcharge            Float                 @default(0) // added to late orders (booked after the planning snapshot)
   platformFeePercent       Float                 @default(0) // Borla's share, taken before the driver 40/60 split
   separatedDiscountPercent Float                 @default(15)
+  attemptFeePercent        Float                 @default(0) // failed pickup, customer's fault: share of the price kept (0-25, lib/money-split.ts)
   active                   Boolean               @default(true)
   createdAt                DateTime              @default(now())
   binPrices                PricingRuleBinPrice[]

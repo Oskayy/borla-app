@@ -10,8 +10,14 @@
 export const BPS = 10_000
 
 // Customer's fault failed pickup (bin not out, gate locked, wrong pin): this share of the price is kept to pay
-// for the wasted trip; the rest is refunded. Placeholder (25%).
-export const ATTEMPT_FEE_BPS = 2_500
+// for the wasted trip; the rest is refunded. The percentage is a pricing rule setting (0-25%, decided Oct 2026).
+export const MAX_ATTEMPT_FEE_PERCENT = 25
+
+// The pricing rule's attempt fee as basis points, kept within 0-25%.
+export function attemptFeeBps(percent: number | null | undefined): number {
+  const p = typeof percent === 'number' && Number.isFinite(percent) ? percent : 0
+  return pctToBps(Math.min(MAX_ATTEMPT_FEE_PERCENT, Math.max(0, p)))
+}
 
 export function pctToBps(percent: number): number {
   if (!Number.isFinite(percent)) throw new Error('BAD_PERCENT')
@@ -97,7 +103,7 @@ export interface AttemptSplit {
 }
 
 // A failed pickup that was the customer's fault. Always: driverShare + platformShare + refund = price.
-export function attemptSplit(price: number, feeBps: number, attemptBps = ATTEMPT_FEE_BPS): AttemptSplit {
+export function attemptSplit(price: number, feeBps: number, attemptBps: number): AttemptSplit {
   whole(price, 'PRICE')
   const attemptFee = Math.floor((price * attemptBps) / BPS)
   const platformShare = Math.floor((attemptFee * feeBps) / BPS)

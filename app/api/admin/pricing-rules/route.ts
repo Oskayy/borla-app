@@ -5,6 +5,7 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { cleanText, readJson } from '@/lib/validate'
 import { inRange } from '@/lib/numbers'
 import { logAdminAction } from '@/lib/admin-log'
+import { MAX_ATTEMPT_FEE_PERCENT } from '@/lib/money-split'
 
 const FINANCE_ROLES = ['SUPER_ADMIN', 'FINANCE']
 
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
   const lateSurcharge = inRange(body?.lateSurcharge, 0, 1000)
   const platformFeePercent = inRange(body?.platformFeePercent, 0, 50)
   const discount = inRange(body?.separatedDiscountPercent, 0, 100)
+  const attemptFeePercent = inRange(body?.attemptFeePercent ?? 0, 0, MAX_ATTEMPT_FEE_PERCENT)
 
   if (
     !name ||
@@ -43,7 +45,8 @@ export async function POST(req: NextRequest) {
     hazardSurcharge === null ||
     lateSurcharge === null ||
     platformFeePercent === null ||
-    discount === null
+    discount === null ||
+    attemptFeePercent === null
   ) {
     return NextResponse.json({ error: 'Please check the pricing values (all fields are required)' }, { status: 400 })
   }
@@ -75,6 +78,7 @@ export async function POST(req: NextRequest) {
         lateSurcharge,
         platformFeePercent,
         separatedDiscountPercent: discount,
+        attemptFeePercent,
         active: true,
         binPrices: { create: binPrices },
       },
@@ -86,7 +90,7 @@ export async function POST(req: NextRequest) {
     auth.user.id,
     'PRICING_RULE_ACTIVATED',
     rule.id,
-    `"${name}": base ${baseFee}, bins [${binText}], per-bin ${perBinCharge}, hazard ${hazardSurcharge}, late ${lateSurcharge}, platform fee ${platformFeePercent}%, recyclable discount ${discount}%`
+    `"${name}": base ${baseFee}, bins [${binText}], per-bin ${perBinCharge}, hazard ${hazardSurcharge}, late ${lateSurcharge}, platform fee ${platformFeePercent}%, recyclable discount ${discount}%, attempt fee ${attemptFeePercent}%`
   )
 
   return NextResponse.json({ success: true, rule })

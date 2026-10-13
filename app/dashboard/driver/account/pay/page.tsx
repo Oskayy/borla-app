@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { Card } from '@/components/ui'
 import { BackToAccount } from '@/components/driver/AccountRow'
-import { attemptSplit, ATTEMPT_FEE_BPS, pctToBps, splitOrder } from '@/lib/money-split'
+import { attemptFeeBps, attemptSplit, pctToBps, splitOrder } from '@/lib/money-split'
 import { CLEARING_HOURS, NEW_DRIVER_DAYS, RESERVE_BPS, RESERVE_CAP_PESEWAS } from '@/lib/earnings'
 
 export const dynamic = 'force-dynamic'
@@ -29,14 +29,15 @@ export default async function DriverPayPage() {
         distanceBonusCap: true,
       },
     }),
-    prisma.pricingRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { platformFeePercent: true } }),
+    prisma.pricingRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { platformFeePercent: true, attemptFeePercent: true } }),
   ])
   const pickup = payout?.pickupPercent ?? 40
   const unload = payout?.disposalPercent ?? 60
   const fee = pricing?.platformFeePercent ?? 0
   // The same sums the app uses (lib/money-split.ts), on a GHS 50 example.
   const split = splitOrder(5000, pctToBps(fee), pctToBps(pickup))
-  const attempt = attemptSplit(5000, pctToBps(fee))
+  const attemptPct = attemptFeeBps(pricing?.attemptFeePercent) / 100
+  const attempt = attemptSplit(5000, pctToBps(fee), attemptFeeBps(pricing?.attemptFeePercent))
   const price = split.price / 100
   const pool = split.pool / 100
 
@@ -150,8 +151,15 @@ export default async function DriverPayPage() {
           <li>
             <span className="block font-semibold">The customer&apos;s bins weren&apos;t out, or the gate was locked</span>
             <span className="block text-ink-2">
-              Report it from the stop. If Trashit agrees it was the customer&apos;s side, you&apos;re paid for the trip: {money(attempt.driverShare / 100)} on a{' '}
-              {money(price)} stop ({ATTEMPT_FEE_BPS / 100}% of the price, less the platform fee).
+              Report it from the stop.{' '}
+              {attempt.driverShare > 0 ? (
+                <>
+                  If Trashit agrees it was the customer&apos;s side, you&apos;re paid for the trip: {money(attempt.driverShare / 100)} on a {money(price)} stop
+                  ({attemptPct}% of the price, less the platform fee).
+                </>
+              ) : (
+                <>For now the customer gets a full refund and there is no pay for the trip.</>
+              )}
             </span>
           </li>
           <li>

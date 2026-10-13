@@ -33,7 +33,9 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   The split is **frozen on the order at payment** in whole pesewas and basis points, remainder last (`lib/money-split.ts`).
 - Driver earnings **clear 24 h** after the later of unload and shift end, unless a complaint or refund is open; pickup
   shares wait for the unload; new drivers keep a small reserve (`lib/earnings.ts`). Refunds with **driver fault** claw back
-  their shares; customer-fault failed pickups keep a **25% attempt fee**, partly paid to the driver. Trashit absorbs
+  their shares; customer-fault failed pickups keep an **attempt fee of 0-25%** (Pricing page, `attemptFeePercent`; **0% since 13 Oct
+  2026**, so a full refund), partly paid to the driver; the rest is always refunded and ops "Close" only works once
+  nothing is left to refund. Trashit absorbs
   Paystack's 1.95%.
 - Every morning (Accra): **7am** reconciliation of yesterday + Paystack top-up check; from **10am** the daily payout sweep
   (automatic up to GHS 1,000, minimum GHS 20, only when the Paystack balance covers it all). "Cash out now": first one
@@ -90,7 +92,7 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 ## Open work (as of 13 Oct 2026)
 
-**State (checked 13 Oct 2026):** all migrations applied (latest `20261013120000_records_retention`); build, lint and tests
+**State (checked 13 Oct 2026):** all migrations applied (latest `20261013150000_attempt_fee_setting`); build, lint and tests
 pass; work committed and pushed. The payment flow rewrite (steps 2–7) is live. Paystack is still in **test mode**.
 The local `.env` and Vercel both use the new `sb_secret_` Supabase key. The database pooler sometimes drops a connection
 for a few seconds: if a migration or script says "Can't reach database server", wait and run it again.

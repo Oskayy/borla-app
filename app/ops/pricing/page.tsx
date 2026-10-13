@@ -62,7 +62,7 @@ export default async function PricingRulesPage() {
                 <p className="mt-1 text-[15px] tabular-nums text-ink-2">{bins || 'No bin prices'}</p>
                 <p className="mt-1 text-sm tabular-nums text-ink-3">
                   Base GHS {rule.baseFee} · per bin GHS {rule.volumeRate} · hazard GHS {rule.hazardSurcharge} · late GHS {rule.lateSurcharge} ·
-                  recyclable −{rule.separatedDiscountPercent}% · platform fee {rule.platformFeePercent}% · created {dateLabel(rule.createdAt)}
+                  recyclable −{rule.separatedDiscountPercent}% · platform fee {rule.platformFeePercent}% · attempt fee {rule.attemptFeePercent}% · created {dateLabel(rule.createdAt)}
                 </p>
               </li>
             )

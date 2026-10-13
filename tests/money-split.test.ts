@@ -1,6 +1,6 @@
 // Payment flow rewrite, steps 2-3: the frozen split, earnings states, clawbacks and the attempt fee.
 import { describe, expect, it } from 'vitest'
-import { attemptSplit, pctToBps, splitOrder, storedSplit, splitColumns } from '@/lib/money-split'
+import { attemptFeeBps, attemptSplit, pctToBps, splitOrder, storedSplit, splitColumns } from '@/lib/money-split'
 import { CLAWBACK_TYPE, clawbackFor, clearsAt, computeWallet, PICKUP_TYPE, UNLOAD_TYPE, type DriverLedgerRow } from '@/lib/earnings'
 
 const H = 3600_000
@@ -44,11 +44,11 @@ describe('order split (whole pesewas, basis points, remainder last)', () => {
 
 describe('failed pickup, customer at fault (25% attempt fee)', () => {
   it('matches the worked example: GHS 50, 20% fee', () => {
-    expect(attemptSplit(5000, 2000)).toEqual({ attemptFee: 1250, driverShare: 1000, platformShare: 250, refund: 3750 })
+    expect(attemptSplit(5000, 2000, 2500)).toEqual({ attemptFee: 1250, driverShare: 1000, platformShare: 250, refund: 3750 })
   })
   it('always adds up', () => {
     for (let p = 1; p < 20_000; p += 53) {
-      const a = attemptSplit(p, 1500)
+      const a = attemptSplit(p, 1500, 2500)
       expect(a.driverShare + a.platformShare + a.refund).toBe(p)
     }
   })
@@ -126,5 +126,16 @@ describe('earnings states', () => {
     expect(clawbackFor(5000, false, 4000)).toBe(0)
     expect(clawbackFor(5000, true, 1600)).toBe(1600)
     expect(clawbackFor(1000, true, 4000)).toBe(1000)
+  })
+})
+
+describe('attempt fee setting (0-25%)', () => {
+  it('is kept within 0 and 25%, and 0 means a full refund', () => {
+    expect(attemptFeeBps(0)).toBe(0)
+    expect(attemptFeeBps(10)).toBe(1000)
+    expect(attemptFeeBps(40)).toBe(2500)
+    expect(attemptFeeBps(-5)).toBe(0)
+    expect(attemptFeeBps(null)).toBe(0)
+    expect(attemptSplit(5000, 1500, 0)).toEqual({ attemptFee: 0, driverShare: 0, platformShare: 0, refund: 5000 })
   })
 })

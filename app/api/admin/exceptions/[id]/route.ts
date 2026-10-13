@@ -9,7 +9,8 @@ import { dbDate, planningShiftDate } from '@/lib/schedule'
 import { cancelOrder, refundOrder } from '@/lib/refunds-server'
 import { REFUND_ROLES } from '@/lib/refunds'
 import { ensureSplit } from '@/lib/order-split-server'
-import { attemptSplit } from '@/lib/money-split'
+import { attemptFeeBps, attemptSplit } from '@/lib/money-split'
+import { LIVE_REFUND_STATUSES, refundable } from '@/lib/refunds'
 import { ATTEMPT_TYPE, clearsAt, shiftEndsAt } from '@/lib/earnings'
 import { postJournal } from '@/lib/journal-server'
 import { earnedLines, feeIncomeLines } from '@/lib/accounts'
@@ -19,9 +20,11 @@ import { caught } from '@/lib/errors'
 
 // Resolves a flagged order from the Exceptions page:
 //   retry            -> back in the queue for tonight (or the coming night); a driver is assigned as usual
-//   close            -> closed with no refund (e.g. the customer wasn't ready); the order is cancelled
-//   attempt_fee      -> failed pickup that was the customer's fault: the driver is paid for the trip, the customer
-//                       gets the rest back, the order is cancelled (lib/money-split.ts attemptSplit)
+//   close            -> cancelled with nothing kept from the customer: only once no money is left to refund
+//                       (Refund Policy: Trashit never keeps more than the attempt fee)
+//   attempt_fee      -> failed pickup that was the customer's fault: Trashit keeps the pricing rule's attempt fee
+//                       (0-25%) and pays the driver from it, the customer gets the rest back, the order is cancelled
+//                       (lib/money-split.ts attemptSplit). At 0% it is a full refund.
 //   gps_reviewed     -> a GPS mismatch was checked and is fine
 //   payment_reviewed -> a payment problem was dealt with (e.g. refunded) and can leave the list
 // Refunds go through /api/admin/orders/[id]/refund.
@@ -107,12 +110,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     const settings = await getShiftSettings()
     const full = await prisma.order.findUnique({ where: { id }, select: { shiftDate: true } })
+    const rule = await prisma.pricingRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { attemptFeePercent: true } })
+    const feeBps = attemptFeeBps(rule?.attemptFeePercent)
     const driverId = order.driverId
     let split: ReturnType<typeof attemptSplit>
     try {
       split = await prisma.$transaction(async (tx) => {
         const frozen = await ensureSplit(tx, id)
-        const s = attemptSplit(frozen.price, frozen.feeBps)
+        const s = attemptSplit(frozen.price, frozen.feeBps, feeBps)
         // The driver's pay for the wasted trip: clears like any other earnings for that night.
         if (s.driverShare > 0) {
           await tx.ledgerEntry.create({
@@ -127,13 +132,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             },
           })
         }
-        await postJournal(tx, {
-          key: `attempt-${id}`,
-          event: 'attempt',
-          orderId: id,
-          driverId,
-          lines: [...earnedLines(id, driverId, s.driverShare), ...feeIncomeLines(id, s.platformShare)],
-        })
+        if (s.attemptFee > 0) {
+          await postJournal(tx, {
+            key: `attempt-${id}`,
+            event: 'attempt',
+            orderId: id,
+            driverId,
+            lines: [...earnedLines(id, driverId, s.driverShare), ...feeIncomeLines(id, s.platformShare)],
+          })
+        }
         await tx.auditLog.create({
           data: {
             orderId: id,
@@ -167,7 +174,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       data: { status: 'RESOLVED', resolution: `Attempt fee: ${note}`, resolvedBy: auth.user.id, resolvedAt: new Date() },
     })
     await logAdminAction(auth.user.id, 'EXCEPTION_ATTEMPT_FEE', id, `driver GHS ${(split.driverShare / 100).toFixed(2)}, refund GHS ${(split.refund / 100).toFixed(2)}: ${note}`)
-    await notifyUser(driverId, {
+    if (split.driverShare > 0) await notifyUser(driverId, {
       title: 'Paid for a wasted trip',
       body: `GHS ${(split.driverShare / 100).toFixed(2)} for a pickup you couldn't collect because of the customer. It clears with the rest of that night's pay.`,
       url: '/dashboard/driver/earnings',
@@ -182,11 +189,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   if (action === 'close') {
+    // Trashit never keeps more than the attempt fee (Refund Policy), so money still held must be refunded first.
+    const payments = await prisma.payment.findMany({
+      where: { orderId: id, status: { in: ['success', 'partially_refunded'] } },
+      select: { amount: true, refunds: { where: { status: { in: LIVE_REFUND_STATUSES } }, select: { amount: true } } },
+    })
+    const left = payments.reduce((sum, p) => sum + refundable(p.amount, p.refunds.map((r) => r.amount)), 0)
+    if (left > 0) {
+      return NextResponse.json(
+        { error: `GHS ${left.toFixed(2)} of the customer's payment is still held. Refund it (or use the attempt fee) instead of closing.` },
+        { status: 409 }
+      )
+    }
     await prisma.dispute.updateMany({
       where: { orderId: id, status: 'OPEN' },
       data: { status: 'RESOLVED', resolution: `Closed: ${note}`, resolvedBy: auth.user.id, resolvedAt: new Date() },
     })
-    await cancelOrder(id, auth.user.id, `Closed by ops without refund: ${note}`)
+    await cancelOrder(id, auth.user.id, `Closed by ops (nothing left to refund): ${note}`)
     await logAdminAction(auth.user.id, 'EXCEPTION_CLOSED', id, note)
     await notifyUser(order.customerId, {
       title: 'Pickup closed',

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, CreditCard, MapPinOff, Phone, Undo2 } from 'lucide-react'
 import { BUTTON_DANGER, BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 import { dateTimeLabel } from '@/lib/format'
-import { ATTEMPT_FEE_BPS } from '@/lib/money-split'
+import { attemptFeeBps } from '@/lib/money-split'
 
 export interface ExceptionItem {
   kind: 'flagged' | 'payment' | 'gps'
@@ -174,13 +174,23 @@ function SettleRefund({ id }: { id: string }) {
 }
 
 // The attempt fee for a failed pickup that was the customer's fault (same sums as the server, lib/money-split.ts).
-function attemptPreview(price: number) {
+function attemptPreview(price: number, percent: number) {
   const p = Math.round(price * 100)
-  const fee = Math.floor((p * ATTEMPT_FEE_BPS) / 10_000)
+  const fee = Math.floor((p * attemptFeeBps(percent)) / 10_000)
   return { fee: fee / 100, refund: (p - fee) / 100 }
 }
 
-export default function ExceptionsClient({ items, refunds, canRefund }: { items: ExceptionItem[]; refunds: RefundRow[]; canRefund: boolean }) {
+export default function ExceptionsClient({
+  items,
+  refunds,
+  canRefund,
+  attemptFeePercent,
+}: {
+  items: ExceptionItem[]
+  refunds: RefundRow[]
+  canRefund: boolean
+  attemptFeePercent: number
+}) {
   const [open, setOpen] = useState<string | null>(null)
   const [mode, setMode] = useState<'retry' | 'close' | 'refund' | 'review' | 'attempt_fee'>('retry')
   const [driverFault, setDriverFault] = useState(false)
@@ -343,12 +353,14 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                             <button type="button" className={BUTTON_QUIET} onClick={() => start(item, 'retry')}>
                               Try again
                             </button>
-                            <button type="button" className={BUTTON_QUIET} onClick={() => start(item, 'close')}>
-                              Close, no refund
-                            </button>
+                            {item.payments.every((p) => p.refundable <= 0) && (
+                              <button type="button" className={BUTTON_QUIET} onClick={() => start(item, 'close')}>
+                                Close (nothing to refund)
+                              </button>
+                            )}
                             {canRefundThis && item.status === 'FAILED_PICKUP' && item.price != null && (
                               <button type="button" className={BUTTON_QUIET} onClick={() => start(item, 'attempt_fee')}>
-                                Customer&apos;s fault: attempt fee
+                                {attemptFeePercent > 0 ? 'Customer\u2019s fault: attempt fee' : 'Customer\u2019s fault: full refund'}
                               </button>
                             )}
                           </>
@@ -370,14 +382,14 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                       <div className="mt-4 border-t border-line pt-4">
                         <p className="text-sm text-ink-2">
                           {mode === 'retry' && 'The order goes back into tonight’s queue (or the coming night) and is assigned to a driver as usual. The customer is told.'}
-                          {mode === 'close' && 'The order is cancelled with no refund. The customer is told, with your note.'}
+                          {mode === 'close' && 'Nothing is left to refund, so the order is just cancelled. The customer is told, with your note.'}
                           {mode === 'review' && 'Takes this off the list. Nothing else changes.'}
                           {mode === 'refund' && 'Sends money back to the account the customer paid with, through Paystack.'}
                           {mode === 'attempt_fee' &&
                             item.price != null &&
-                            `The bin wasn't out, the gate was locked or the pin was wrong. Trashit keeps GHS ${attemptPreview(item.price).fee.toFixed(2)} (${
-                              ATTEMPT_FEE_BPS / 100
-                            }%) for the wasted trip and pays the driver from it; GHS ${attemptPreview(item.price).refund.toFixed(2)} goes back to the customer and the order is cancelled.`}
+                            (attemptFeePercent > 0
+                              ? `The bin wasn't out, the gate was locked or the pin was wrong. Trashit keeps GHS ${attemptPreview(item.price, attemptFeePercent).fee.toFixed(2)} (${attemptFeePercent}%, Pricing page) for the wasted trip and pays the driver from it; GHS ${attemptPreview(item.price, attemptFeePercent).refund.toFixed(2)} goes back to the customer and the order is cancelled.`
+                              : `The bin wasn't out, the gate was locked or the pin was wrong. The attempt fee is 0% (Pricing page), so the customer gets all GHS ${item.price.toFixed(2)} back, the driver is not paid for the trip, and the order is cancelled.`)}
                         </p>
                         {mode === 'refund' && (
                           <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -442,7 +454,9 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                               (mode !== 'refund' && mode !== 'attempt_fee') ||
                               confirm(
                                 mode === 'attempt_fee' && item.price != null
-                                  ? `Keep GHS ${attemptPreview(item.price).fee.toFixed(2)} for the wasted trip, pay the driver from it, and refund GHS ${attemptPreview(item.price).refund.toFixed(2)}?`
+                                  ? attemptFeePercent > 0
+                                    ? `Keep GHS ${attemptPreview(item.price, attemptFeePercent).fee.toFixed(2)} for the wasted trip, pay the driver from it, and refund GHS ${attemptPreview(item.price, attemptFeePercent).refund.toFixed(2)}?`
+                                    : `Refund all GHS ${item.price.toFixed(2)} and cancel the order?`
                                   : `Refund GHS ${Number(amount || 0).toFixed(2)} to the customer${cancelToo ? ' and cancel the order' : ''}${driverFault ? ', taking back the driver\'s pay' : ''}?`
                               )
                                 ? submit(item)
@@ -456,7 +470,7 @@ export default function ExceptionsClient({ items, refunds, canRefund }: { items:
                               : mode === 'refund'
                               ? `Refund GHS ${Number(amount || 0).toFixed(2)}`
                               : mode === 'attempt_fee' && item.price != null
-                              ? `Refund GHS ${attemptPreview(item.price).refund.toFixed(2)}, pay the driver`
+                              ? `Refund GHS ${attemptPreview(item.price, attemptFeePercent).refund.toFixed(2)}${attemptFeePercent > 0 ? ', pay the driver' : ''}`
                               : 'Confirm'}
                           </button>
                           <button type="button" onClick={() => setOpen(null)} disabled={busy} className={BUTTON_QUIET}>

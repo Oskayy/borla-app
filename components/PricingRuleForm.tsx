@@ -32,6 +32,7 @@ export default function PricingRuleForm({ sizes }: { sizes: BinSizeOption[] }) {
   const [lateSurcharge, setLateSurcharge] = useState('0')
   const [platformFeePercent, setPlatformFeePercent] = useState('')
   const [separatedDiscountPercent, setSeparatedDiscountPercent] = useState('15')
+  const [attemptFeePercent, setAttemptFeePercent] = useState('0')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -52,6 +53,7 @@ export default function PricingRuleForm({ sizes }: { sizes: BinSizeOption[] }) {
           lateSurcharge,
           platformFeePercent,
           separatedDiscountPercent,
+          attemptFeePercent,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -124,6 +126,12 @@ export default function PricingRuleForm({ sizes }: { sizes: BinSizeOption[] }) {
               className={INPUT}
               placeholder="e.g. 15"
             />
+          </Field>
+          <Field
+            label="Attempt fee (% kept, 0 to 25)"
+            hint="When a pickup fails because of the customer (bins not out, gate locked, wrong pin). The rest is refunded; the driver is paid part of it. 0 = full refund."
+          >
+            <input type="number" min="0" max="25" step="1" value={attemptFeePercent} onChange={(e) => setAttemptFeePercent(e.target.value)} className={INPUT} />
           </Field>
         </div>
       </div>

@@ -214,7 +214,7 @@ export const termsSections: LegalSection[] = [
         "For each stop, a driver earns a share of the price after Trashit's fee: part for the pickup and the rest once the unload at a disposal site is confirmed. The split is fixed when the customer pays and shown in the app.",
         "Earnings become available to withdraw 24 hours after the later of the unload and the end of that night's shift, unless a complaint or refund about that order is still open. New drivers have a small part kept back for their first 30 days.",
         "Available earnings are paid to the driver’s mobile money wallet each morning. Drivers can also cash out sooner from the app; the first cash-out each day is free and later ones the same day cost a small fee shown before you confirm.",
-        "If a refund is given because a driver was at fault, that driver’s pay for the order is taken back from their earnings. If a pickup fails because of the customer, the driver receives part of the attempt fee.",
+        "If a refund is given because a driver was at fault, that driver’s pay for the order is taken back from their earnings. If a pickup fails because of the customer, the driver receives part of any attempt fee.",
         "The amounts, times and limits in this section can change; the app always shows the current ones. Changes do not affect stops already paid for.",
       ]},
     ],
@@ -225,7 +225,7 @@ export const termsSections: LegalSection[] = [
       { type: 'bullets', items: [
         "You can cancel a paid booking in the app at no cost until collection starts on its night (8pm). You get a full refund to the card or wallet you paid with.",
         "After collection has started, the booking can no longer be cancelled in the app. Contact us, and any refund follows the Refund Policy.",
-        "If a driver arrives and cannot collect because of something on your side (for example the waste is not out, the gate is locked or the pin is wrong), we keep an attempt fee of 25% of the price and refund the rest.",
+        "If a driver arrives and cannot collect because of something on your side (for example the waste is not out, the gate is locked or the pin is wrong), we may keep an attempt fee of up to 25% of the price and refund the rest.",
         "If we cannot collect because of something on our side, you get a full refund or a free pickup on another night, whichever you choose.",
         "Unpaid bookings can be deleted at any time.",
       ]},
@@ -349,17 +349,18 @@ export const refundPolicySections: LegalSection[] = [
   {
     heading: '1. Overview',
     blocks: [
-      { type: 'p', text: "This Refund Policy explains when and how customers may be entitled to a refund for payments made through Trashit. [To be reviewed against Ghana's consumer protection framework.]" },
+      { type: 'p', text: "This Refund Policy explains when and how customers may be entitled to a refund for payments made through Trashit. It does not take away any right you have under the law of Ghana." },
     ],
   },
   {
     heading: '2. Eligible Situations',
     blocks: [
       { type: 'bullets', items: [
-        "Pickup was not completed and marked FAILED_PICKUP due to circumstances outside the customer's control",
-        'A duplicate or erroneous charge occurred due to a technical error',
-        'Order was cancelled before a driver was assigned [insert applicable cancellation window]',
-        '[Additional eligible situations to be added]',
+        "You cancel a paid booking in the app before collection starts on its night (8pm). The refund starts straight away; you do not need to ask.",
+        "We could not collect because of something on our side (for example no driver was available, a vehicle broke down or the disposal site was closed). Your pickup moves to the next night at no cost, or, if you prefer, you get a full refund.",
+        "The pickup was marked as collected but your waste was left behind, or the driver did not follow our rules. The driver's pay for that order is taken back.",
+        "You were charged twice, or charged by mistake. These are refunded whenever you tell us, even after 7 days.",
+        "Part of your booking was not collected. You get back the share of the price for what was left.",
       ]},
     ],
   },
@@ -367,40 +368,50 @@ export const refundPolicySections: LegalSection[] = [
     heading: '3. Non-Eligible Situations',
     blocks: [
       { type: 'bullets', items: [
-        'Pickup failed due to inaccessible waste, locked gates, or inaccurate customer-provided address (see Terms & Conditions, Customer Responsibilities)',
-        'Customer simply changes their mind after a driver has been assigned and is en route',
-        '[Additional non-eligible situations to be added]',
+        "The pickup could not be done because of something on your side: the waste was not out, the gate was locked, the pin was wrong, or the waste was not what you booked (for example hidden hazardous waste). We may keep an attempt fee of up to 25% of the price, and we refund the rest. We never keep more than that.",
+        "You change your mind after collection has started on the night, but the driver has not yet arrived. We treat this the same way: up to 25% kept, the rest refunded.",
+        "Your waste was collected as booked. There is nothing to refund.",
+        "You ask more than 7 days after the collection night (except for double or mistaken charges).",
       ]},
+      { type: 'p', text: "Trashit pays the payment provider’s charges itself: you get back the full amount you paid, less any attempt fee." },
     ],
   },
   {
     heading: '4. How to Request a Refund',
     blocks: [
-      { type: 'p', text: "[To be completed: process for submitting a refund request — e.g. via the app's support/help section, expected response time, required information.]" },
+      { type: 'bullets', items: [
+        "To cancel before collection starts, open the booking in the app and tap “Cancel this pickup”. Nothing else is needed.",
+        "For anything else, contact us (section 8) within 7 days of the collection night. Tell us your order number, what went wrong and, if you can, add a photo.",
+        "We reply within 2 working days: we approve the refund, ask for more details, or explain why we cannot refund. Refunds of GHS 100 or more are checked by a second member of the team, within the same time.",
+      ]},
     ],
   },
   {
     heading: '5. Refund Method and Timeline',
     blocks: [
-      { type: 'p', text: 'Approved refunds will be issued to the original payment method via Paystack. [Insert expected processing time, e.g. 5–10 business days.]' },
+      { type: 'bullets', items: [
+        "Refunds go back to the card or mobile money wallet you paid with, through Paystack. We start them as soon as they are approved.",
+        "Mobile money refunds usually arrive within a few days. Card refunds can take up to 10 working days to show, depending on your bank.",
+        "You get an alert in the app when a refund is started. If a refund does not go through, we fix it and let you know; you do not need to ask again.",
+      ]},
     ],
   },
   {
     heading: '6. Disputed Orders',
     blocks: [
-      { type: 'p', text: '[To be completed with review timeline and escalation process.]' },
+      { type: 'p', text: "If you disagree with our decision, reply and say why. A different member of the Trashit team looks at it again and answers within 5 working days. If you still disagree, you can use the steps in section 11 of the Terms & Conditions (mediation, then the courts of Ghana)." },
     ],
   },
   {
     heading: '7. Changes to This Policy',
     blocks: [
-      { type: 'p', text: '[To be completed: notice process for changes.]' },
+      { type: 'p', text: "We may change this policy. If a change matters, we will tell you in the app (and by email if we have it) before it takes effect. A booking is always handled under the policy that applied when you paid for it." },
     ],
   },
   {
     heading: '8. Contact Us',
     blocks: [
-      { type: 'p', text: 'For refund requests or questions, contact: [support email to be inserted].' },
+      { type: 'p', text: "For refund requests or questions, contact Trashit at: [support email and phone: to be added before launch]." },
     ],
   },
 ]
