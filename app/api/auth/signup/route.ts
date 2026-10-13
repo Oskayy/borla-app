@@ -31,6 +31,13 @@ export async function POST(req: NextRequest) {
   if (!name || !phone || !email || !password || !SELF_SERVICE_ROLES.includes(role)) {
     return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
   }
+  // Minimum age (privacy policy section 9): 16 for customers (16-17 with a parent's or guardian's permission), 18 for drivers.
+  if (body?.ageConfirmed !== true) {
+    return NextResponse.json(
+      { error: role === 'DRIVER' ? 'You must be 18 or older to drive with Trashit.' : 'Please confirm your age to create an account.' },
+      { status: 400 }
+    )
+  }
   if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 })
   }

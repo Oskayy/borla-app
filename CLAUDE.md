@@ -131,7 +131,7 @@ dispatch stress test so far was a simulation of the planner only.
   map and booking pages; the inline theme script in `app/layout.tsx` will need a hash or nonce.
 - Ghana Data Protection Act 2012: register with the Data Protection Commission. Fill the remaining privacy policy
   gaps (`lib/legal-content.ts`: registered company details, privacy contact email). Minimum age is 16 for customers
-  (16-17 with a parent's permission) and 18 for drivers, but sign-up doesn't ask yet. Terms, Cookie and Refund policies
+  (16-17 with a parent's permission) and 18 for drivers, confirmed by a sign-up checkbox (checked on the server too; the tick is not stored). Terms, Cookie and Refund policies
   still have many placeholders.
 - Data retention (policy section 6) runs nightly (`lib/retention*.ts`, on since 13 Oct 2026): photos and order pins
   12 months, alerts 90 days, unpaid drafts 30 days. Orders, payments, payouts and the ledger are kept 6 years and are

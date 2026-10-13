@@ -51,6 +51,9 @@ export default function SignupPage() {
   )
   const [chosenRole, setRole] = useState<string | null>(null)
   const role = chosenRole ?? roleFromLink
+  // The age the person confirmed, per role (the wording differs, so switching role asks again). Privacy policy section 9.
+  const [ageConfirmedFor, setAgeConfirmedFor] = useState<string | null>(null)
+  const ageConfirmed = ageConfirmedFor === role
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
@@ -69,13 +72,17 @@ export default function SignupPage() {
       setError('Please meet all the password rules below before continuing')
       return
     }
+    if (!ageConfirmed) {
+      setError(role === 'DRIVER' ? 'Please confirm you are 18 or older' : 'Please confirm your age')
+      return
+    }
 
     setLoading(true)
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, email, password, role }),
+        body: JSON.stringify({ name, phone, email, password, role, ageConfirmed }),
       })
       const data = await res.json().catch(() => ({}))
       setLoading(false)
@@ -238,6 +245,21 @@ export default function SignupPage() {
             ))}
           </ul>
         </div>
+
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[15px] leading-snug text-ink">
+          <input
+            type="checkbox"
+            checked={ageConfirmed}
+            onChange={(e) => setAgeConfirmedFor(e.target.checked ? role : null)}
+            required
+            className="mt-0.5 size-5 shrink-0 accent-[var(--color-ops)]"
+          />
+          <span>
+            {role === 'DRIVER'
+              ? 'I am 18 or older.'
+              : 'I am 18 or older, or I am 16 or 17 and my parent or guardian has agreed to me using Trashit.'}
+          </span>
+        </label>
 
         <ErrorLine text={error} />
         <button type="submit" disabled={loading} className={AUTH_BUTTON}>
