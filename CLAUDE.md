@@ -24,7 +24,7 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 ## Business rules (placeholders are editable in the ops screens)
 
-- Timezone **Africa/Accra**, same for all zones. Shift **8pm–6am**; planning snapshot **6pm**;
+- Timezone **Africa/Accra**, same for all zones. Shift **8pm–6am**; planning snapshot **7pm** (live setting since 28 Sep; code default 6pm);
   late orders accepted until the **midnight** hard cutoff. Settings: `OperatingSettings` table, ops page Shift Hours.
 - Price = base by bin size (30/60/120 L, placeholders) x **per-zone multiplier**. Customers must drop an exact
   pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
