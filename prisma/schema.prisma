@@ -46,143 +46,143 @@ model User {
   role      UserRole
   createdAt DateTime @default(now())
 
-  customerProfile CustomerProfile?
-  driverProfile   DriverProfile?
-  ordersAsCustomer Order[] @relation("CustomerOrders")
-  ordersAsDriver   Order[] @relation("DriverOrders")
-  orderDeclines    OrderDecline[]
-  ratingsReceived  OrderRating[] @relation("DriverRatings")
-  driverMisses     DriverMiss[]
-  notifications    Notification[]
-  pushSubscriptions PushSubscription[]
-  withdrawals      Withdrawal[]
-  driverDocuments  DriverDocument[]
-  active             Boolean @default(true)  // false = suspended: cannot sign in or use the app
-  mustChangePassword Boolean @default(false) // staff created with a temporary password
+  customerProfile    CustomerProfile?
+  driverProfile      DriverProfile?
+  ordersAsCustomer   Order[]            @relation("CustomerOrders")
+  ordersAsDriver     Order[]            @relation("DriverOrders")
+  orderDeclines      OrderDecline[]
+  ratingsReceived    OrderRating[]      @relation("DriverRatings")
+  driverMisses       DriverMiss[]
+  notifications      Notification[]
+  pushSubscriptions  PushSubscription[]
+  withdrawals        Withdrawal[]
+  driverDocuments    DriverDocument[]
+  active             Boolean            @default(true) // false = suspended: cannot sign in or use the app
+  mustChangePassword Boolean            @default(false) // staff created with a temporary password
 }
 
 model CustomerProfile {
-  id         String @id @default(uuid())
-  userId     String @unique
-  user       User   @relation(fields: [userId], references: [id])
-  address    String // the customer's home address, as they typed it
-  zoneId     String?
-  zone       Zone?  @relation(fields: [zoneId], references: [id])
-  homeLat    Float? // the pin they placed on the map
-  homeLng    Float?
-  homeUpdatedAt DateTime?
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id])
+  address            String // the customer's home address, as they typed it
+  zoneId             String?
+  zone               Zone?     @relation(fields: [zoneId], references: [id])
+  homeLat            Float? // the pin they placed on the map
+  homeLng            Float?
+  homeUpdatedAt      DateTime?
   homePinConfirmedAt DateTime? // the customer confirmed the pin sits on their house or gate
 }
 
 model DriverProfile {
-  id               String    @id @default(uuid())
-  userId           String    @unique
-  user             User      @relation(fields: [userId], references: [id])
-  vehicleType      String?   // "Borla car" | "Aboboyaa tricycle" (display name; kept for older screens)
-  vehicleTypeId    String?
-  vehicleTypeRef   VehicleType? @relation(fields: [vehicleTypeId], references: [id])
-  radiusKm         Float?    // how far from their position this driver will take orders
-  vehiclePlate     String?
-  ghanaCardNumber  String?   @unique // GHA-123456789-0; drivers type it, no photo of the card is kept
-  isActive         Boolean   @default(true)
-  zoneId           String?
-  zone             Zone?     @relation(fields: [zoneId], references: [id])
-  homeAddress      String?
-  homeLat          Float?
-  homeLng          Float?
-  currentLat       Float?
-  currentLng       Float?
-  lastLocationAt   DateTime?
-  isOnline         Boolean   @default(false) // driver pressed "Go online"
-  wentOnlineAt     DateTime?
-  onlineOverrideUntil DateTime? // ops let this driver work outside shift hours until this time
-  approvalStatus   String    @default("PENDING") // PENDING | APPROVED | REJECTED
-  approvalNote     String?   // why a driver was rejected, shown to them
-  submittedAt      DateTime? // documents sent for review
-  reviewedAt       DateTime?
-  reviewedBy       String?
-  momoNumber       String?   // where earnings are paid (mobile money)
-  momoProvider     String?   // Paystack telco code: MTN | VOD | ATL
-  momoName         String?   // name on the MoMo wallet
+  id                    String       @id @default(uuid())
+  userId                String       @unique
+  user                  User         @relation(fields: [userId], references: [id])
+  vehicleType           String? // "Borla car" | "Aboboyaa tricycle" (display name; kept for older screens)
+  vehicleTypeId         String?
+  vehicleTypeRef        VehicleType? @relation(fields: [vehicleTypeId], references: [id])
+  radiusKm              Float? // how far from their position this driver will take orders
+  vehiclePlate          String?
+  ghanaCardNumber       String?      @unique // GHA-123456789-0; drivers type it, no photo of the card is kept
+  isActive              Boolean      @default(true)
+  zoneId                String?
+  zone                  Zone?        @relation(fields: [zoneId], references: [id])
+  homeAddress           String?
+  homeLat               Float?
+  homeLng               Float?
+  currentLat            Float?
+  currentLng            Float?
+  lastLocationAt        DateTime?
+  isOnline              Boolean      @default(false) // driver pressed "Go online"
+  wentOnlineAt          DateTime?
+  onlineOverrideUntil   DateTime? // ops let this driver work outside shift hours until this time
+  approvalStatus        String       @default("PENDING") // PENDING | APPROVED | REJECTED
+  approvalNote          String? // why a driver was rejected, shown to them
+  submittedAt           DateTime? // documents sent for review
+  reviewedAt            DateTime?
+  reviewedBy            String?
+  momoNumber            String? // where earnings are paid (mobile money)
+  momoProvider          String? // Paystack telco code: MTN | VOD | ATL
+  momoName              String? // name on the MoMo wallet
   paystackRecipientCode String? // Paystack transfer recipient for the number above
-  recipientFor     String?   // "<provider>:<number>" the recipient code was made for
-  momoChangedAt    DateTime? // when the wallet above last replaced an earlier one; withdrawals wait 24 h after
-  workNights       Int[]     @default([0, 1, 2, 3, 4, 5, 6]) // nights the driver works (0 = Sunday, by the shift's start date)
-  nightsOff        String[]  @default([]) // single nights off, as shift dates (YYYY-MM-DD)
+  recipientFor          String? // "<provider>:<number>" the recipient code was made for
+  momoChangedAt         DateTime? // when the wallet above last replaced an earlier one; withdrawals wait 24 h after
+  workNights            Int[]        @default([0, 1, 2, 3, 4, 5, 6]) // nights the driver works (0 = Sunday, by the shift's start date)
+  nightsOff             String[]     @default([]) // single nights off, as shift dates (YYYY-MM-DD)
   // A change of vehicle type by an approved driver waits for ops approval; until then the current vehicle is used.
-  pendingVehicleTypeId String?   // the vehicle type asked for
-  pendingRadiusKm      Float?    // the radius asked for with it (within the new vehicle's limit)
-  pendingVehicleAt     DateTime? // when the driver sent it for approval (with a photo of the new vehicle)
-  vehicleChangeNote    String?   // why ops sent the change back, shown to the driver
+  pendingVehicleTypeId  String? // the vehicle type asked for
+  pendingRadiusKm       Float? // the radius asked for with it (within the new vehicle's limit)
+  pendingVehicleAt      DateTime? // when the driver sent it for approval (with a photo of the new vehicle)
+  vehicleChangeNote     String? // why ops sent the change back, shown to the driver
 }
 
 model Zone {
-  id            String            @id @default(uuid())
-  name          String
-  city          String            // Accra | Kumasi | Tema
-  centerLat     Float?
-  centerLng     Float?
-  radiusKm      Float             @default(3)
-  coveredAreas  String[]          @default([])
-  active        Boolean           @default(true)
+  id              String            @id @default(uuid())
+  name            String
+  city            String // Accra | Kumasi | Tema
+  centerLat       Float?
+  centerLng       Float?
+  radiusKm        Float             @default(3)
+  coveredAreas    String[]          @default([])
+  active          Boolean           @default(true)
   // Price multiplier for pickups in this zone. Only Super Admin / Finance may change it.
-  priceMultiplier Float           @default(1.0)
-  createdAt     DateTime          @default(now())
-  customers     CustomerProfile[]
-  orders        Order[]
-  facilities    Facility[]
-  drivers       DriverProfile[]
+  priceMultiplier Float             @default(1.0)
+  createdAt       DateTime          @default(now())
+  customers       CustomerProfile[]
+  orders          Order[]
+  facilities      Facility[]
+  drivers         DriverProfile[]
 }
 
 // A disposal site (landfill or transfer station) where drivers unload.
 model Facility {
-  id        String   @id @default(uuid())
-  name      String
-  zoneId    String?  // optional: a site can serve several zones
-  zone      Zone?    @relation(fields: [zoneId], references: [id])
-  address   String?
-  lat       Float?
-  lng       Float?
-  geofenceRadiusM  Int      @default(150)  // disposal photos must be taken within this distance
-  open24Hours      Boolean  @default(true)
-  opensAtMinutes   Int?     // minutes after local midnight, e.g. 1140 = 19:00 (used when not 24 hours)
-  closesAtMinutes  Int?     // may be earlier than opensAt for overnight hours
-  acceptedWaste    String[] @default(["general", "recyclable"]) // general | recyclable | hazardous
-  status           String   @default("OPEN") // OPEN | CLOSED | FULL, switched by ops during the shift
-  avgUnloadMinutes Int      @default(15)
-  tippingFee       Float    @default(0) // GHS a driver pays to tip here (recorded only; not reimbursed yet)
+  id               String                 @id @default(uuid())
+  name             String
+  zoneId           String? // optional: a site can serve several zones
+  zone             Zone?                  @relation(fields: [zoneId], references: [id])
+  address          String?
+  lat              Float?
+  lng              Float?
+  geofenceRadiusM  Int                    @default(150) // disposal photos must be taken within this distance
+  open24Hours      Boolean                @default(true)
+  opensAtMinutes   Int? // minutes after local midnight, e.g. 1140 = 19:00 (used when not 24 hours)
+  closesAtMinutes  Int? // may be earlier than opensAt for overnight hours
+  acceptedWaste    String[]               @default(["general", "recyclable"]) // general | recyclable | hazardous
+  status           String                 @default("OPEN") // OPEN | CLOSED | FULL, switched by ops during the shift
+  avgUnloadMinutes Int                    @default(15)
+  tippingFee       Float                  @default(0) // GHS a driver pays to tip here (recorded only; not reimbursed yet)
   notes            String?
-  active           Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @default(now()) @updatedAt
-  verifications FacilityVerification[]
-  routeTrips    RouteTrip[]
+  active           Boolean                @default(true)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @default(now()) @updatedAt
+  verifications    FacilityVerification[]
+  routeTrips       RouteTrip[]
 }
 
 model PricingRule {
-  id            String   @id @default(uuid())
-  name          String
-  baseFee       Float    // flat fee per order
-  volumeRate    Float    // per-bin charge, added to every bin whatever its size
-  zoneMultiplier Float   @default(1.0) // DEPRECATED: multipliers now live on each Zone. Kept so old rules stay readable.
-  hazardSurcharge Float  @default(0)
-  lateSurcharge Float    @default(0)   // added to late orders (booked after the planning snapshot)
-  platformFeePercent Float @default(0) // Borla's share, taken before the driver 40/60 split
-  separatedDiscountPercent Float    @default(15)
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  binPrices     PricingRuleBinPrice[]
+  id                       String                @id @default(uuid())
+  name                     String
+  baseFee                  Float // flat fee per order
+  volumeRate               Float // per-bin charge, added to every bin whatever its size
+  zoneMultiplier           Float                 @default(1.0) // DEPRECATED: multipliers now live on each Zone. Kept so old rules stay readable.
+  hazardSurcharge          Float                 @default(0)
+  lateSurcharge            Float                 @default(0) // added to late orders (booked after the planning snapshot)
+  platformFeePercent       Float                 @default(0) // Borla's share, taken before the driver 40/60 split
+  separatedDiscountPercent Float                 @default(15)
+  active                   Boolean               @default(true)
+  createdAt                DateTime              @default(now())
+  binPrices                PricingRuleBinPrice[]
 }
 
 // Customer-facing bin sizes (e.g. small 30 L, medium 60 L, large 120 L).
 model BinSize {
-  id        String   @id @default(uuid())
-  code      String   @unique // "small" | "medium" | "large"
+  id        String                @id @default(uuid())
+  code      String                @unique // "small" | "medium" | "large"
   label     String
   litres    Int
-  sortOrder Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  sortOrder Int                   @default(0)
+  active    Boolean               @default(true)
+  createdAt DateTime              @default(now())
   prices    PricingRuleBinPrice[]
 }
 
@@ -203,11 +203,11 @@ model OperatingSettings {
   id                      Int      @id @default(1)
   timezone                String   @default("Africa/Accra")
   shiftStartMinutes       Int      @default(1200) // 20:00
-  shiftEndMinutes         Int      @default(360)  // 06:00 next morning
+  shiftEndMinutes         Int      @default(360) // 06:00 next morning
   planningSnapshotMinutes Int      @default(1080) // 18:00
-  hardCutoffMinutes       Int      @default(0)    // 00:00
-  maxTripsPerNight        Int      @default(3)    // round trips (collect -> unload) one driver can do in a shift
-  acceptMinutes           Int      @default(15)   // time a driver has to accept a stop before it goes to another driver
+  hardCutoffMinutes       Int      @default(0) // 00:00
+  maxTripsPerNight        Int      @default(3) // round trips (collect -> unload) one driver can do in a shift
+  acceptMinutes           Int      @default(15) // time a driver has to accept a stop before it goes to another driver
   autoDispatch            Boolean  @default(true) // from shift start, assign waiting orders to the best drivers automatically
   acceptHazardous         Boolean  @default(false) // customers can book hazardous waste (needs a site that takes it); planned by hand
   paystackTransfers       Boolean  @default(false) // Paystack can send driver payouts (needs a Registered Business account); off = Finance pays by hand
@@ -220,55 +220,54 @@ model OperatingSettings {
 }
 
 model PayoutRule {
-  id              String   @id @default(uuid())
-  pickupPercent   Float    // e.g. 40
-  disposalPercent Float    // e.g. 60
+  id                                String   @id @default(uuid())
+  pickupPercent                     Float // e.g. 40
+  disposalPercent                   Float // e.g. 60
   // Step 7 (lib/money-split.ts): how surcharges and the recyclable discount are shared, and the distance bonus.
-  lateSurchargeDriverPercent        Float @default(100) // share of the late-order surcharge that goes to drivers
-  hazardSurchargeDriverPercent      Float @default(100) // share of the hazardous surcharge that goes to drivers
-  recyclableDiscountPlatformPercent Float @default(100) // share of the recyclable discount Trashit's fee absorbs
-  distanceFreeKm                    Float @default(3)   // no bonus within this distance of the driver's home base
-  distanceBonusPerKm                Float @default(1)   // GHS per km beyond it (0 = no bonus)
-  distanceBonusCap                  Float @default(10)  // GHS, most a stop can earn
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  lateSurchargeDriverPercent        Float    @default(100) // share of the late-order surcharge that goes to drivers
+  hazardSurchargeDriverPercent      Float    @default(100) // share of the hazardous surcharge that goes to drivers
+  recyclableDiscountPlatformPercent Float    @default(100) // share of the recyclable discount Trashit's fee absorbs
+  distanceFreeKm                    Float    @default(3) // no bonus within this distance of the driver's home base
+  distanceBonusPerKm                Float    @default(1) // GHS per km beyond it (0 = no bonus)
+  distanceBonusCap                  Float    @default(10) // GHS, most a stop can earn
+  active                            Boolean  @default(true)
+  createdAt                         DateTime @default(now())
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  customerId  String
-  customer    User        @relation("CustomerOrders", fields: [customerId], references: [id])
-  driverId    String?
-  driver      User?       @relation("DriverOrders", fields: [driverId], references: [id])
-  status      OrderStatus @default(DRAFT)
-  zoneId      String?
-  zone        Zone?       @relation(fields: [zoneId], references: [id])
-  shiftDate   DateTime?   @db.Date // the night this order is collected (shift starts 20:00 on this date)
-  isLateOrder Boolean     @default(false)
-  rolloverCount Int       @default(0) // nights this order was moved on because it wasn't collected
-  assignedNoticeAt DateTime? // customer was told a driver is assigned (cleared on rollover)
-  cancelledAt   DateTime?
-  cancelReason  String?
+  id                    String      @id @default(uuid())
+  customerId            String
+  customer              User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  driverId              String?
+  driver                User?       @relation("DriverOrders", fields: [driverId], references: [id])
+  status                OrderStatus @default(DRAFT)
+  zoneId                String?
+  zone                  Zone?       @relation(fields: [zoneId], references: [id])
+  shiftDate             DateTime?   @db.Date // the night this order is collected (shift starts 20:00 on this date)
+  isLateOrder           Boolean     @default(false)
+  rolloverCount         Int         @default(0) // nights this order was moved on because it wasn't collected
+  assignedNoticeAt      DateTime? // customer was told a driver is assigned (cleared on rollover)
+  cancelledAt           DateTime?
+  cancelReason          String?
   // The price split, worked out once when payment is confirmed (lib/money-split.ts), in whole pesewas and
   // basis points. Later rule changes only affect new orders. Null on orders paid before this existed
   // (worked out at their first payout instead).
-  pricePesewas       Int?
-  platformFeePesewas Int?
-  pickupSharePesewas Int?
-  unloadSharePesewas Int?
-  feeBps             Int?
-  pickupBps          Int?
-  splitFrozenAt      DateTime?
-  distanceBonusPesewas  Int?    // fixed when the order is assigned, for that driver; paid with the unload share
+  pricePesewas          Int?
+  platformFeePesewas    Int?
+  pickupSharePesewas    Int?
+  unloadSharePesewas    Int?
+  feeBps                Int?
+  pickupBps             Int?
+  splitFrozenAt         DateTime?
+  distanceBonusPesewas  Int? // fixed when the order is assigned, for that driver; paid with the unload share
   distanceBonusDriverId String?
-  latitude    Float?
-  longitude   Float?
-  driverAcceptedAt DateTime? // the assigned driver accepted this stop (cleared on reassignment)
-  offeredAt        DateTime? // when the stop was given to the current driver (the accept clock starts here, or at shift start)
-  quoteSnapshot Json?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
+  latitude              Float?
+  longitude             Float?
+  driverAcceptedAt      DateTime? // the assigned driver accepted this stop (cleared on reassignment)
+  offeredAt             DateTime? // when the stop was given to the current driver (the accept clock starts here, or at shift start)
+  quoteSnapshot         Json?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
   evidence       OrderEvidence[]
   disputes       Dispute[]
@@ -297,7 +296,7 @@ model OrderRating {
   customerId String
   stars      Int
   comment    String?
-  reviewedBy String?   // ops member who looked at a low rating
+  reviewedBy String? // ops member who looked at a low rating
   reviewedAt DateTime?
   createdAt  DateTime  @default(now())
 
@@ -313,7 +312,7 @@ model DriverMiss {
   driver    User      @relation(fields: [driverId], references: [id])
   orderId   String
   order     Order     @relation(fields: [orderId], references: [id])
-  kind      String    // DECLINED | EXPIRED | NOT_COLLECTED
+  kind      String // DECLINED | EXPIRED | NOT_COLLECTED
   reason    String?
   shiftDate DateTime? @db.Date
   createdAt DateTime  @default(now())
@@ -339,12 +338,12 @@ model OrderEvidence {
   id           String   @id @default(uuid())
   orderId      String
   order        Order    @relation(fields: [orderId], references: [id])
-  type         String   // "customer_placement" | "driver_pickup"
+  type         String // "customer_placement" | "driver_pickup"
   photoUrl     String
   gpsLat       Float?
   gpsLng       Float?
   gpsAccuracy  Float?
-  photoHash    String?  // SHA-256 of the photo file, to spot the same photo used for two orders
+  photoHash    String? // SHA-256 of the photo file, to spot the same photo used for two orders
   capturedAt   DateTime
   aiAssessment Json?
   createdAt    DateTime @default(now())
@@ -358,34 +357,34 @@ model FacilityVerification {
   order      Order    @relation(fields: [orderId], references: [id])
   facilityId String
   facility   Facility @relation(fields: [facilityId], references: [id])
-  method     String   // "qr" | "pin"
+  method     String // "qr" | "pin"
   verifiedAt DateTime @default(now())
 }
 
 model Payment {
-  id            String   @id @default(uuid())
-  orderId       String
-  order         Order    @relation(fields: [orderId], references: [id])
-  provider      String   // "paystack" | "hubtel"
-  amount        Float
-  status        String   // "success" | "failed" | "refunded"
-  providerRef   String   @unique
-  refundedAmount Float   @default(0) // money sent back to the customer from this payment
-  createdAt     DateTime @default(now())
-  refunds       Refund[]
+  id             String   @id @default(uuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id])
+  provider       String // "paystack" | "hubtel"
+  amount         Float
+  status         String // "success" | "failed" | "refunded"
+  providerRef    String   @unique
+  refundedAmount Float    @default(0) // money sent back to the customer from this payment
+  createdAt      DateTime @default(now())
+  refunds        Refund[]
 }
 
 model LedgerEntry {
-  id          String   @id @default(uuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id])
-  type        String   // "customer_payment" | "platform_fee" | "driver_payout_pickup" | "driver_payout_disposal" | "refund"
-  amount      Float
-  driverId    String?  // for driver payouts: the driver who earned it
-  idempotencyKey String @unique
-  amountPesewas Int?     // the same amount in whole pesewas (the source of truth for new money maths)
-  clearsAt    DateTime?  // driver earnings: when they become withdrawable (null = waiting for the unload or ops)
-  createdAt   DateTime @default(now())
+  id             String    @id @default(uuid())
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id])
+  type           String // "customer_payment" | "platform_fee" | "driver_payout_pickup" | "driver_payout_disposal" | "refund"
+  amount         Float
+  driverId       String? // for driver payouts: the driver who earned it
+  idempotencyKey String    @unique
+  amountPesewas  Int? // the same amount in whole pesewas (the source of truth for new money maths)
+  clearsAt       DateTime? // driver earnings: when they become withdrawable (null = waiting for the unload or ops)
+  createdAt      DateTime  @default(now())
 
   @@index([driverId])
   @@index([driverId, type])
@@ -414,6 +413,7 @@ model AuditLog {
   reason    String?
   createdAt DateTime @default(now())
 }
+
 model Route {
   id        String      @id @default(uuid())
   driverId  String
@@ -428,7 +428,7 @@ model RouteTrip {
   routeId    String
   route      Route     @relation(fields: [routeId], references: [id])
   tripNumber Int
-  facilityId String?   // null when no suitable site was open; ops must choose one
+  facilityId String? // null when no suitable site was open; ops must choose one
   facility   Facility? @relation(fields: [facilityId], references: [id])
   createdAt  DateTime  @default(now())
 
@@ -436,13 +436,13 @@ model RouteTrip {
 }
 
 model RouteStop {
-  id        String   @id @default(uuid())
-  routeId   String
-  route     Route    @relation(fields: [routeId], references: [id])
-  orderId   String   @unique
-  order     Order    @relation(fields: [orderId], references: [id])
-  sequence  Int
-  tripNumber Int     @default(1) // 1st, 2nd, 3rd load of the night; each trip ends at a disposal site
+  id         String @id @default(uuid())
+  routeId    String
+  route      Route  @relation(fields: [routeId], references: [id])
+  orderId    String @unique
+  order      Order  @relation(fields: [orderId], references: [id])
+  sequence   Int
+  tripNumber Int    @default(1) // 1st, 2nd, 3rd load of the night; each trip ends at a disposal site
 }
 
 model RateLimitAttempt {
@@ -454,6 +454,7 @@ model RateLimitAttempt {
 
   @@index([identifier, action, createdAt])
 }
+
 model AdminActionLog {
   id        String   @id @default(uuid())
   actorId   String
@@ -468,16 +469,16 @@ model AdminActionLog {
 // Kinds of collection vehicle (aboboyaa, borla car, tipper truck). Capacity drives how many
 // orders fit on one trip; the radius limits how far from a driver orders are offered.
 model VehicleType {
-  id              String   @id @default(uuid())
-  code            String   @unique // "aboboyaa" | "borla-car" | "tipper-truck"
-  name            String   // shown to drivers and ops, e.g. "Aboboyaa tricycle"
-  capacityLitres  Int      // usable load space
-  defaultRadiusKm Float    // radius a new driver of this type starts with
-  maxRadiusKm     Float    // drivers can't set a radius above this
-  imagePath       String?  // picture under /public, e.g. /vehicles/aboboyaa.svg
-  sortOrder       Int      @default(0)
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id              String          @id @default(uuid())
+  code            String          @unique // "aboboyaa" | "borla-car" | "tipper-truck"
+  name            String // shown to drivers and ops, e.g. "Aboboyaa tricycle"
+  capacityLitres  Int // usable load space
+  defaultRadiusKm Float // radius a new driver of this type starts with
+  maxRadiusKm     Float // drivers can't set a radius above this
+  imagePath       String? // picture under /public, e.g. /vehicles/aboboyaa.svg
+  sortOrder       Int             @default(0)
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
   drivers         DriverProfile[]
 }
 
@@ -497,13 +498,13 @@ model Notification {
 
 // A phone or browser that agreed to receive push alerts for a user.
 model PushSubscription {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  endpoint   String   @unique
+  user       User      @relation(fields: [userId], references: [id])
+  endpoint   String    @unique
   p256dh     String
   auth       String
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
 
   @@index([userId])
@@ -518,27 +519,27 @@ model JobRun {
 
 // A driver asks for their earnings to be sent to their mobile money wallet.
 model Withdrawal {
-  id            String    @id @default(uuid())
-  driverId      String
-  driver        User      @relation(fields: [driverId], references: [id])
-  amount        Float
-  status        String    @default("REQUESTED") // REQUESTED | PROCESSING | CONFIRMING | PAID | FAILED | REJECTED
-  momoNumber    String
-  momoProvider  String
-  momoName      String
-  reference     String    @unique // our transfer reference (also sent to Paystack)
-  source        String    @default("request") // request (asked by the driver, sent by Finance) | cashout (Cash out now) | sweep (daily payout)
-  feePesewas    Int       @default(0) // transfer fee the driver pays (extra cash-outs); the amount sent is amount minus this
-  withholdingPesewas Int  @default(0) // tax withheld from this payout (lib/tax.ts); also taken from the amount sent
-  transferCode  String?   // Paystack's transfer code
-  method        String?   // "paystack" | "manual"
-  note          String?   // reason for rejection/failure, or the manual payment reference
-  markedPaidBy  String?   // manual payments: who recorded it (status CONFIRMING); a different person confirms it
-  markedPaidAt  DateTime?
-  reviewedBy    String?
-  requestedAt   DateTime  @default(now())
-  reviewedAt    DateTime?
-  paidAt        DateTime?
+  id                 String    @id @default(uuid())
+  driverId           String
+  driver             User      @relation(fields: [driverId], references: [id])
+  amount             Float
+  status             String    @default("REQUESTED") // REQUESTED | PROCESSING | CONFIRMING | PAID | FAILED | REJECTED
+  momoNumber         String
+  momoProvider       String
+  momoName           String
+  reference          String    @unique // our transfer reference (also sent to Paystack)
+  source             String    @default("request") // request (asked by the driver, sent by Finance) | cashout (Cash out now) | sweep (daily payout)
+  feePesewas         Int       @default(0) // transfer fee the driver pays (extra cash-outs); the amount sent is amount minus this
+  withholdingPesewas Int       @default(0) // tax withheld from this payout (lib/tax.ts); also taken from the amount sent
+  transferCode       String? // Paystack's transfer code
+  method             String? // "paystack" | "manual"
+  note               String? // reason for rejection/failure, or the manual payment reference
+  markedPaidBy       String? // manual payments: who recorded it (status CONFIRMING); a different person confirms it
+  markedPaidAt       DateTime?
+  reviewedBy         String?
+  requestedAt        DateTime  @default(now())
+  reviewedAt         DateTime?
+  paidAt             DateTime?
 
   @@index([driverId, status])
   @@index([status])
@@ -546,22 +547,22 @@ model Withdrawal {
 
 // Money sent back to a customer for a payment (full or part).
 model Refund {
-  id              String    @id @default(uuid())
-  orderId         String
-  order           Order     @relation(fields: [orderId], references: [id])
-  paymentId       String
-  payment         Payment   @relation(fields: [paymentId], references: [id])
-  amount          Float
-  reason          String
-  status          String    @default("PENDING") // AWAITING_APPROVAL | PENDING | PROCESSING | PROCESSED | FAILED | NEEDS_ATTENTION
-  paystackRefundId String?  @unique
-  requestedBy     String    // user id (customer or staff)
-  cancelOrder     Boolean   @default(false) // also cancel the order once the refund is sent
-  approvedBy      String?   // large staff refunds: the second person who approved it
-  approvedAt      DateTime?
-  driverFault     Boolean   @default(false) // ops recorded the driver as at fault: their shares of the order are taken back
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  orderId          String
+  order            Order     @relation(fields: [orderId], references: [id])
+  paymentId        String
+  payment          Payment   @relation(fields: [paymentId], references: [id])
+  amount           Float
+  reason           String
+  status           String    @default("PENDING") // AWAITING_APPROVAL | PENDING | PROCESSING | PROCESSED | FAILED | NEEDS_ATTENTION
+  paystackRefundId String?   @unique
+  requestedBy      String // user id (customer or staff)
+  cancelOrder      Boolean   @default(false) // also cancel the order once the refund is sent
+  approvedBy       String? // large staff refunds: the second person who approved it
+  approvedAt       DateTime?
+  driverFault      Boolean   @default(false) // ops recorded the driver as at fault: their shares of the order are taken back
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([orderId])
   @@index([status])
@@ -572,8 +573,8 @@ model DriverDocument {
   id        String   @id @default(uuid())
   driverId  String
   driver    User     @relation(fields: [driverId], references: [id])
-  type      String   // ghana_card | profile_photo | vehicle_photo | drivers_licence
-  path      String   // path in the private driver-documents bucket
+  type      String // ghana_card | profile_photo | vehicle_photo | drivers_licence
+  path      String // path in the private driver-documents bucket
   createdAt DateTime @default(now())
 
   @@index([driverId, type])
@@ -584,11 +585,11 @@ model DriverDocument {
 model Journal {
   id        String    @id @default(uuid())
   key       String    @unique // the event's idempotency key, so it is recorded once
-  event     String    // payment | payment_fee | earned | fee_income | refund | payout | payout_reversed | top_up | settlement
+  event     String // payment | payment_fee | earned | fee_income | refund | payout | payout_reversed | top_up | settlement
   orderId   String?
   driverId  String?
   memo      String?
-  createdBy String?   // staff member, for entries made by hand (top-ups, settlements)
+  createdBy String? // staff member, for entries made by hand (top-ups, settlements)
   createdAt DateTime  @default(now())
   postings  Posting[]
 
@@ -600,10 +601,10 @@ model Posting {
   id        String   @id @default(uuid())
   journalId String
   journal   Journal  @relation(fields: [journalId], references: [id])
-  account   String   // lib/accounts.ts ACCOUNTS
-  amount    Int      // pesewas: debit +, credit -
-  orderId   String?  // per-order account (customer funds held)
-  driverId  String?  // per-driver account (driver payable)
+  account   String // lib/accounts.ts ACCOUNTS
+  amount    Int // pesewas: debit +, credit -
+  orderId   String? // per-order account (customer funds held)
+  driverId  String? // per-driver account (driver payable)
   createdAt DateTime @default(now())
 
   @@index([journalId])
@@ -616,9 +617,9 @@ model PaystackSettlement {
   id              String    @id @default(uuid())
   paystackId      String    @unique
   settledAt       DateTime
-  amountPesewas   Int       // what Paystack says it sent to the bank
-  status          String    // Paystack's status, e.g. success | pending
-  receivedPesewas Int?      // what Finance saw arrive
+  amountPesewas   Int // what Paystack says it sent to the bank
+  status          String // Paystack's status, e.g. success | pending
+  receivedPesewas Int? // what Finance saw arrive
   confirmedBy     String?
   confirmedAt     DateTime?
   createdAt       DateTime  @default(now())
@@ -628,12 +629,12 @@ model PaystackSettlement {
 model TreasuryCheck {
   id             String   @id @default(uuid())
   day            String   @unique // YYYY-MM-DD, Accra
-  drivers        Int      // drivers due a payout
+  drivers        Int // drivers due a payout
   duePesewas     Int
   feesPesewas    Int
   bufferPesewas  Int
-  balancePesewas Int?     // the Paystack balance at the time (null if Paystack didn't answer)
-  topUpPesewas   Int      // what Finance needs to add
+  balancePesewas Int? // the Paystack balance at the time (null if Paystack didn't answer)
+  topUpPesewas   Int // what Finance needs to add
   createdAt      DateTime @default(now())
 }
 
@@ -647,4 +648,21 @@ model ReconciliationRun {
   reviewedAt DateTime?
   reviewNote String?
   createdAt  DateTime  @default(now())
+}
+
+// Anonymising one calendar year's records once they are 6 years old (privacy policy section 6, lib/records-retention.ts).
+// A super admin asks for it; a different super admin or finance user approves it, and it runs straight away.
+model RecordsRetentionRun {
+  id          String    @id @default(uuid())
+  year        Int
+  status      String    @default("REQUESTED") // REQUESTED | RUNNING | DONE | FAILED | CANCELLED
+  requestedBy String
+  requestedAt DateTime  @default(now())
+  approvedBy  String?
+  approvedAt  DateTime?
+  cancelledBy String?
+  finishedAt  DateTime?
+  summary     String? // what was anonymised, or why it failed
+
+  @@index([year])
 }

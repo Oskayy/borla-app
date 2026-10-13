@@ -7,6 +7,7 @@ import { EXCEPTION_ROLES } from './exceptions'
 import { APPROVAL_ROLES } from './driver-docs'
 import { PAYOUT_ROLES } from './wallet-server'
 import { STAFF_ADMIN_ROLES } from './staff'
+import { RECORDS_PAGE_ROLES } from './records-retention'
 
 export type QueueKey = 'unloads' | 'exceptions' | 'approvals' | 'lowRatings' | 'withdrawals' | 'needsDriver' | 'finance'
 
@@ -46,6 +47,7 @@ export const OPS_SECTIONS: { title: string; links: OpsLink[] }[] = [
       { href: '/ops/withdrawals', label: 'Withdrawals', icon: 'Wallet', roles: PAYOUT_ROLES, queue: 'withdrawals' },
       { href: '/ops/pricing', label: 'Pricing', icon: 'Tags', roles: MONEY_RULES },
       { href: '/ops/payouts', label: 'Payout rules', icon: 'Percent', roles: MONEY_RULES },
+      { href: '/ops/records', label: 'Old records', icon: 'Archive', roles: RECORDS_PAGE_ROLES },
     ],
   },
   {

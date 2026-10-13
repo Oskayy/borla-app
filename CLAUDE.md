@@ -90,7 +90,7 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 ## Open work (as of 13 Oct 2026)
 
-**State (checked 13 Oct 2026):** all migrations applied (latest `20261012150000_step7_pay_and_tax`); build, lint and tests
+**State (checked 13 Oct 2026):** all migrations applied (latest `20261013120000_records_retention`); build, lint and tests
 pass; work committed and pushed. The payment flow rewrite (steps 2–7) is live. Paystack is still in **test mode**.
 The local `.env` and Vercel both use the new `sb_secret_` Supabase key. The database pooler sometimes drops a connection
 for a few seconds: if a migration or script says "Can't reach database server", wait and run it again.
@@ -133,7 +133,9 @@ dispatch stress test so far was a simulation of the planner only.
   placeholders (`lib/legal-content.ts`: company name and address, contact email, section 4 legal basis).
 - Data retention (policy section 6) runs nightly (`lib/retention*.ts`, on since 13 Oct 2026): photos and order pins
   12 months, alerts 90 days, unpaid drafts 30 days. Orders, payments, payouts and the ledger are kept 6 years and are
-  **never deleted automatically**: deleting them needs an admin to approve it (not built yet; first due Sept 2032).
+  **never deleted automatically**. After that they are anonymised (personal details removed, amounts and the ledger
+  kept) one calendar year at a time on ops **Old records** (`/ops/records`, `lib/records-retention*.ts`): a super admin
+  asks, a different super admin or finance user approves with their password. 2026 records are first due 1 Jan 2033.
 - Confirm `NEXT_PUBLIC_SITE_URL` is set on Vercel and Supabase's redirect allow-list has only the real domain.
 
 **Frontend** (full plan: Frontend Enhancement Plan). Done so far: dark/light theme, loading and error screens,
