@@ -135,13 +135,20 @@ export const termsSections: LegalSection[] = [
   {
     heading: '1. Acceptance of Terms',
     blocks: [
-      { type: 'p', text: 'By creating an account or using Trashit ("the Platform"), you agree to these Terms & Conditions. If you do not agree, please do not use the Platform. [Company legal name and registration details to be inserted.]' },
+      { type: 'p', text: 'By creating an account or using Trashit ("the Platform"), you agree to these Terms & Conditions. If you do not agree, please do not use the Platform.' },
+      { type: 'p', text: "These Terms are an agreement between you and Trashit. [Registered company name, registration number and registered address: to be added once the company is registered.] Our Privacy Policy, Refund Policy and Cookie Policy are part of these Terms." },
     ],
   },
   {
     heading: '2. Description of Service',
     blocks: [
-      { type: 'p', text: "Trashit connects customers who need waste collected with independent drivers who provide pickup and disposal services within Ghana's designated night-shift collection hours. [Insert specific service hours, coverage areas, and any licensing details.]" },
+      { type: 'p', text: "Trashit connects customers who need household or business waste collected with independent drivers who collect it at night and take it to an approved disposal site." },
+      { type: 'bullets', items: [
+        "Collection happens overnight, during the hours shown in the app (currently 8pm to 6am, Ghana time). Bookings made before the cut-off shown in the app can be collected the same night; later ones are collected the next night.",
+        "We only collect in the zones shown in the app. Your pickup pin must be inside one of them.",
+        "We accept general and recyclable waste. Hazardous waste is only accepted when the app offers it as an option.",
+        "If a pickup cannot be done on its night (for example bad weather or too many bookings), it moves to the next night automatically. You can cancel for a full refund until that night’s collection starts.",
+      ]},
     ],
   },
   {
@@ -151,6 +158,11 @@ export const termsSections: LegalSection[] = [
         'Customers must be at least 16 years old; customers aged 16 or 17 need the permission of a parent or guardian',
         'Drivers must be at least 18 years old',
         "Drivers must give their Ghana Card number and vehicle plate number, add a photo of themselves and of their vehicle, and be approved by Trashit before they receive stops",
+        "Drivers must hold any licence, permit and insurance the law requires for their vehicle and for carrying waste",
+      ]},
+      { type: 'p', text: "Drivers are independent contractors, not employees of Trashit. They choose when to go online, use their own vehicle and equipment, and are paid per stop as described in section 7. Nothing in these Terms creates employment, partnership or agency between a driver and Trashit. Drivers are responsible for their own taxes, except any tax the law requires Trashit to withhold from their pay." },
+      { type: 'bullets', items: [
+        'Trashit may refuse, pause or end a driver account for safety, fraud, repeated complaints or breaking these Terms, and will say why',
       ]},
     ],
   },
@@ -161,7 +173,11 @@ export const termsSections: LegalSection[] = [
         'Provide an accurate pickup address and/or location pin',
         'Ensure waste is accessible and safely presented for pickup',
         'Pay the quoted price at time of booking',
-        '[Additional responsibilities to be added]',
+        "Put the waste out on the night of collection, in the bins or bags you booked, at the pin you dropped",
+        "Tell us the truth about the waste: do not hide hazardous waste (chemicals, batteries, medical waste or sharps, asbestos, fuel) in an ordinary booking",
+        "Never put out explosives, weapons, ammunition, or human or animal remains",
+        "Keep your phone number up to date so your driver can reach you",
+        "Treat drivers with respect",
       ]},
     ],
   },
@@ -172,26 +188,47 @@ export const termsSections: LegalSection[] = [
         'Maintain a valid, verified vehicle registration and identification',
         'Complete assigned pickups and disposals honestly, with accurate photo/location evidence',
         'Report issues (e.g. inaccessible pickup, hazards) through the app rather than leaving orders unresolved',
-        '[Additional responsibilities to be added]',
+        "Accept or decline each stop within the time shown in the app; a stop not accepted in time goes to another driver",
+        "Take every load to an approved disposal site and confirm the unload in the app; never dump waste anywhere else",
+        "Drive safely and obey traffic and environmental laws",
+        "Use customers' details only to complete their pickups, and never contact them for anything else",
+        "Never ask a customer for extra payment",
       ]},
     ],
   },
   {
     heading: '6. Pricing and Payment',
     blocks: [
-      { type: 'p', text: 'Prices are calculated based on bin size, quantity, zone, and waste type at the time of booking, as shown before payment is confirmed. Payments are processed via Paystack. [Insert details on price changes, taxes, and currency.]' },
+      { type: 'bullets', items: [
+        "The price depends on the size and number of bins, the zone and the type of waste. It is worked out by Trashit and shown, with any taxes, before you pay. The total shown is what you pay.",
+        "All prices are in Ghana cedis (GHS). You pay in the app by card or mobile money through Paystack. Trashit never sees your full card details.",
+        "Once you have paid, the price of that booking does not change. We may change prices for new bookings at any time.",
+        "A pickup is only booked once payment is confirmed.",
+      ]},
     ],
   },
   {
     heading: '7. Driver Payouts',
     blocks: [
-      { type: 'p', text: 'Drivers are paid a percentage of the order value upon verified pickup and a further percentage upon verified disposal, according to the payout rule active at the time of assignment. [Insert payment schedule and method details.]' },
+      { type: 'bullets', items: [
+        "For each stop, a driver earns a share of the price after Trashit's fee: part for the pickup and the rest once the unload at a disposal site is confirmed. The split is fixed when the customer pays and shown in the app.",
+        "Earnings become available to withdraw 24 hours after the later of the unload and the end of that night's shift, unless a complaint or refund about that order is still open. New drivers have a small part kept back for their first 30 days.",
+        "Available earnings are paid to the driver’s mobile money wallet each morning. Drivers can also cash out sooner from the app; the first cash-out each day is free and later ones the same day cost a small fee shown before you confirm.",
+        "If a refund is given because a driver was at fault, that driver’s pay for the order is taken back from their earnings. If a pickup fails because of the customer, the driver receives part of the attempt fee.",
+        "The amounts, times and limits in this section can change; the app always shows the current ones. Changes do not affect stops already paid for.",
+      ]},
     ],
   },
   {
     heading: '8. Cancellations',
     blocks: [
-      { type: 'p', text: '[To be completed: cancellation windows, applicable fees, and process.]' },
+      { type: 'bullets', items: [
+        "You can cancel a paid booking in the app at no cost until collection starts on its night (8pm). You get a full refund to the card or wallet you paid with.",
+        "After collection has started, the booking can no longer be cancelled in the app. Contact us, and any refund follows the Refund Policy.",
+        "If a driver arrives and cannot collect because of something on your side (for example the waste is not out, the gate is locked or the pin is wrong), we keep an attempt fee of 25% of the price and refund the rest.",
+        "If we cannot collect because of something on our side, you get a full refund or a free pickup on another night, whichever you choose.",
+        "Unpaid bookings can be deleted at any time.",
+      ]},
     ],
   },
   {
@@ -201,38 +238,53 @@ export const termsSections: LegalSection[] = [
         'Providing false address, identity, or waste information',
         "Attempting to circumvent the Platform's payment or verification systems",
         'Abusive or unsafe conduct toward drivers, customers, or staff',
-        '[Additional prohibited conduct to be added]',
+        "Paying, or asking to be paid, outside the app for a Trashit booking",
+        "Using someone else’s account, Ghana Card number or payment method, or letting someone else use yours",
+        "Faking pickup or unload photos or locations, or reusing photos",
+        "Trying to break into, overload or copy the Platform",
       ]},
+      { type: 'p', text: "We may suspend or close an account that breaks these rules. If money was taken unfairly, we may hold it back while we look into it." },
     ],
   },
   {
     heading: '10. Limitation of Liability',
     blocks: [
-      { type: 'p', text: '[To be completed with jurisdiction-appropriate limitation-of-liability language, covering service interruptions, third-party provider outages, and property/damage claims.]' },
+      { type: 'bullets', items: [
+        "We work to collect every booking on its night, but we do not promise the service will always be available or on time. Delays caused by weather, traffic, closed disposal sites, power or network failures, or the payment, map and hosting services we rely on are outside our control.",
+        "For any one order, Trashit's total liability to a customer is limited to the amount paid for that order, and to a driver to the pay for that stop.",
+        "We are not liable for loss of profit, or for indirect loss that could not reasonably have been expected.",
+        "Drivers are responsible for loss or damage they cause while collecting or carrying waste, as far as the law allows.",
+        "Nothing in these Terms limits liability for death or personal injury caused by negligence, for fraud, or for anything else the law of Ghana does not allow to be limited.",
+      ]},
     ],
   },
   {
     heading: '11. Dispute Resolution',
     blocks: [
-      { type: 'p', text: "[To be completed: internal dispute process via the app's exception-reporting system, followed by applicable Ghanaian legal remedies if unresolved.]" },
+      { type: 'bullets', items: [
+        "If something goes wrong, contact us first (section 14), with your order number. Drivers can also report a problem with a stop in the app. We will reply within 14 days and try to put it right.",
+        "If we cannot agree, either side may ask for mediation under the Alternative Dispute Resolution Act, 2010 (Act 798). Each side pays its own costs and shares the mediator’s fee equally.",
+        "If mediation does not settle it within 60 days, either side may take the dispute to the courts of Ghana.",
+        "This does not stop you from going to court or to any regulator at any time if the law gives you that right.",
+      ]},
     ],
   },
   {
     heading: '12. Governing Law',
     blocks: [
-      { type: 'p', text: 'These Terms are governed by the laws of the Republic of Ghana. [To be confirmed by legal counsel.]' },
+      { type: 'p', text: "These Terms are governed by the laws of the Republic of Ghana, and the courts of Ghana deal with any dispute that is not settled under section 11. If any part of these Terms cannot be enforced, the rest still applies." },
     ],
   },
   {
     heading: '13. Changes to These Terms',
     blocks: [
-      { type: 'p', text: '[To be completed: notice process for material changes.]' },
+      { type: 'p', text: "We may change these Terms when the service or the law changes. If a change matters, we will tell you in the app (and by email if we have it) at least 14 days before it takes effect, unless the law or safety needs it sooner. If you keep using Trashit after that, you accept the new Terms; if you do not agree, you can delete your account. Changes never affect bookings already paid for." },
     ],
   },
   {
     heading: '14. Contact Us',
     blocks: [
-      { type: 'p', text: 'For questions about these Terms, contact: [support email / physical address to be inserted].' },
+      { type: 'p', text: "For questions about these Terms, contact Trashit at: [support email and phone: to be added before launch]." },
     ],
   },
 ]
