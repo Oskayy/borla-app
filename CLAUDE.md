@@ -88,33 +88,57 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_MAPBOX_TOKEN`, `PAYSTACK_SECRET_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `ARKESEL_API_KEY`, `SMS_SENDER_ID`.
 
-## Open work (as of Oct 2026)
+## Open work (as of 13 Oct 2026)
 
-**Setup (checked 4 Oct 2026):** database migrations up to date (latest `20261001090000_launch_gaps`), build and lint
-pass, `driver-documents` bucket exists and is private, work committed and pushed. Still open:
-- Paystack: turn off "Confirm transfers before sending" (OTP) in Preferences → Transfers, in Test and later Live mode,
-  or withdrawals get stuck waiting for an OTP.
-- **Parked: Arkesel SMS.** `ARKESEL_API_KEY` and `SMS_SENDER_ID` are not set yet, on purpose. The app runs without them:
-  SMS is skipped (one `[sms] SMS is off` warning in the server log) and in-app + push alerts still go out.
-  Needed before launch, and before security fix F1 (which texts the old MoMo number).
+**State (checked 13 Oct 2026):** all migrations applied (latest `20261012150000_step7_pay_and_tax`); build, lint and tests
+pass; work committed and pushed. The payment flow rewrite (steps 2–7) is live. Paystack is still in **test mode**.
+The local `.env` and Vercel both use the new `sb_secret_` Supabase key. The database pooler sometimes drops a connection
+for a few seconds: if a migration or script says "Can't reach database server", wait and run it again.
 
-Email confirmation is deliberately **off** while testing with made-up emails.
+**Paystack and payouts:**
+- The account is a **Starter Business**, which Paystack won't let send third-party payouts ("You cannot initiate third
+  party payouts as a starter business"). Upgrade to a **Registered Business** (Settings → Business/Compliance), then
+  turn off "Confirm transfers before sending" (OTP) in Preferences → Transfers, then switch **Paystack transfers** on
+  (Finance page). Until then the switch is **off**: the 10am payout and Cash out now wait on the Withdrawals page and
+  Finance pays by hand (Mark paid; a second Finance user confirms; there are now two).
+- **Going live:** put the live Paystack keys on Vercel, point Paystack's live webhook at `/api/payments/webhook`, record
+  the live Paystack balance as an **opening balance** on the Finance page, and turn OTP off in Live mode too. The test
+  balance (GHS 1,521.47) was recorded as an opening balance on 11 Oct.
 
-**Security (Oct 2026 audit):** F1–F6 are done (2FA brute-force limit, cross-site request check, ops layout role check
-also fixed). Still open:
-- Switch `Content-Security-Policy-Report-Only` (`next.config.ts`) to enforcing once the console shows no reports
-  on the map and booking pages.
-- `tests/security/cross-account.test.ts` needs a staging Supabase project with two test customers and a driver.
-- Privacy (Ghana Data Protection Act 2012): fill the Data Retention section in `lib/legal-content.ts`, add a way to
-  ask for account deletion, and register with the Data Protection Commission.
+**Money decisions still with Collins (all placeholders work at 0 or their defaults):**
+- **Tax:** VAT, NHIL, GETFund and withholding on driver pay are all 0% (Pricing page). Needs the accountant: the rates,
+  whether VAT is charged on the price plus the levies (the app charges each on the price), and whether withholding applies.
+- **Disposal site tipping fees:** the field exists (all GHS 0) but drivers aren't reimbursed yet; build it once decided.
+- Placeholders worth reviewing with real data: platform fee 15%, payout rule (40/60, surcharges 100% to drivers,
+  Trashit absorbs 100% of the recyclable discount, distance bonus GHS 1/km beyond 3 km, max GHS 10), clearing 24 h,
+  new-driver reserve, sweep and cash-out limits (`lib/treasury.ts`), attempt fee 25%, refund approval GHS 100.
+
+**Drivers:**
+- All four approved drivers have **no Ghana Card number**. Their old card photos were deleted on 12 Oct, so ask the
+  drivers for the numbers and enter them on the ops Drivers page (Add number).
+- The test driver account must never be approved (dispatch would send it real orders).
+
+**Parked: Arkesel SMS.** `ARKESEL_API_KEY` and `SMS_SENDER_ID` are not set, on purpose. The app runs without them (SMS
+skipped, one `[sms] SMS is off` warning; in-app and push alerts still go out). Needed before launch and before security
+fix F1 (which texts the old MoMo number). Email confirmation is deliberately **off** while testing with made-up emails.
+
+**Staging Supabase project (not created yet):** needed for `tests/security/cross-account.test.ts` (two test customers
+and a driver) and for an end-to-end stress test (real accounts, bookings, payments and the dispatch sweep). The
+dispatch stress test so far was a simulation of the planner only.
+
+**Security and privacy:**
+- Switch `Content-Security-Policy-Report-Only` (`next.config.ts`) to enforcing once the console shows no reports on the
+  map and booking pages; the inline theme script in `app/layout.tsx` will need a hash or nonce.
+- Ghana Data Protection Act 2012: fill the Data Retention section in `lib/legal-content.ts` (still a placeholder), add
+  account deletion for **drivers** (customers already have it), and register with the Data Protection Commission.
 - Confirm `NEXT_PUBLIC_SITE_URL` is set on Vercel and Supabase's redirect allow-list has only the real domain.
 
-**Frontend phases** (full plan: Frontend Enhancement Plan):
-1. Accessibility: replace `#999` text (fails contrast) with `#6B6B6B`; input borders `#8A8375`; `:focus-visible`;
-   44–48 px tap targets; real labels; `aria-live` for errors and success; icons + words beside status colours.
-2. Design system: Tailwind v4 tokens, dark theme, shadcn/ui components, `loading.tsx`/`error.tsx`.
-3. Ease of use: step-by-step booking, order timeline, driver "next stop" home and night mode, ops dashboard.
-4. Speed: `next/image`, lazy-loaded maps, adaptive loading, offline-tolerant driver actions, web-vitals.
+**Frontend** (full plan: Frontend Enhancement Plan). Done so far: dark/light theme, loading and error screens,
+animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
+account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:
+the remaining accessibility items (contrast, tap targets, labels), shadcn/ui, and speed (`next/image`, lazy maps,
+offline-tolerant driver actions, web-vitals). Tested at 375 px and 1280 px wide; not yet on very small phones (320 px),
+iPhone Safari or older Android browsers.
 
 ## Documents (on claude.ai)
 
