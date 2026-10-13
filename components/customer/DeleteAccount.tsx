@@ -7,8 +7,8 @@ import { createClient } from '@/utils/supabase/client'
 import PasswordInput from '@/components/PasswordInput'
 import { FIELD } from '@/components/ui'
 
-// Deletes the customer's account after a password check and typing DELETE (rules in the API route).
-export default function DeleteAccount() {
+// Deletes the account (customer or driver) after a password check and typing DELETE (rules in the API route).
+export default function DeleteAccount({ who = 'customer' }: { who?: 'customer' | 'driver' }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -58,8 +58,9 @@ export default function DeleteAccount() {
       <p className="flex items-start gap-2.5 text-[15px] text-ink">
         <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0 text-danger" />
         <span>
-          This can&apos;t be undone. Your login, name, phone, email, home pin and your waste photos are deleted. Records of past
-          payments are kept for accounting, without your personal details.
+          {who === 'driver'
+            ? 'This can’t be undone. Your login, name, phone, email, Ghana Card number, MoMo wallet, home base, photos and documents are deleted. Records of past pickups, earnings and payouts are kept for accounting, without your personal details.'
+            : 'This can’t be undone. Your login, name, phone, email, home pin and your waste photos are deleted. Records of past payments are kept for accounting, without your personal details.'}
         </span>
       </p>
       <div>

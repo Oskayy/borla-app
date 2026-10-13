@@ -129,8 +129,7 @@ dispatch stress test so far was a simulation of the planner only.
 **Security and privacy:**
 - Switch `Content-Security-Policy-Report-Only` (`next.config.ts`) to enforcing once the console shows no reports on the
   map and booking pages; the inline theme script in `app/layout.tsx` will need a hash or nonce.
-- Ghana Data Protection Act 2012: fill the Data Retention section in `lib/legal-content.ts` (still a placeholder), add
-  account deletion for **drivers** (customers already have it), and register with the Data Protection Commission.
+- Ghana Data Protection Act 2012: fill the Data Retention section in `lib/legal-content.ts` (still a placeholder) and register with the Data Protection Commission.
 - Confirm `NEXT_PUBLIC_SITE_URL` is set on Vercel and Supabase's redirect allow-list has only the real domain.
 
 **Frontend** (full plan: Frontend Enhancement Plan). Done so far: dark/light theme, loading and error screens,

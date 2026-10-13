@@ -56,7 +56,7 @@ export default function WithdrawForm({ available, walletLabel, freeToday }: { av
             id="withdraw-amount"
             type="number"
             inputMode="decimal"
-            min="1"
+            min="0.01"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}

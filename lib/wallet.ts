@@ -29,7 +29,9 @@ export function toPesewas(ghs: number): number {
 export function checkWithdrawal(amount: unknown, available: number): string {
   if (typeof amount !== 'number' || !Number.isFinite(amount)) return 'Please enter an amount'
   if (Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-6) return 'Amounts can have at most 2 decimal places'
-  if (amount < MIN_WITHDRAWAL_GHS) return `The smallest withdrawal is GHS ${MIN_WITHDRAWAL_GHS}`
+  // Below the minimum is fine when it is everything left (so a balance can always reach zero, e.g. to close the account).
+  const all = toPesewas(amount) === toPesewas(available) && amount > 0
+  if (amount < MIN_WITHDRAWAL_GHS && !all) return `The smallest withdrawal is GHS ${MIN_WITHDRAWAL_GHS} (or all of your balance)`
   if (amount > MAX_WITHDRAWAL_GHS) return `The largest single withdrawal is GHS ${MAX_WITHDRAWAL_GHS}`
   if (toPesewas(amount) > toPesewas(available)) return `You can withdraw up to GHS ${available.toFixed(2)}`
   return ''

@@ -3,7 +3,7 @@ import { ArrowDownToLine, Clock, FileText, Wallet } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getEarningsHistory, getWalletSummary } from '@/lib/wallet-server'
-import { MIN_WITHDRAWAL_GHS, OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
+import { OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
 import { MOMO_PROVIDERS } from '@/lib/phone'
 import { ATTEMPT_TYPE, BONUS_TYPE, CLAWBACK_TYPE, CLEARING_HOURS, PICKUP_TYPE } from '@/lib/earnings'
 import { SWEEP_MIN_PESEWAS, SWEEP_MINUTES } from '@/lib/treasury'
@@ -154,8 +154,8 @@ export default async function DriverEarningsPage() {
                   Your wallet was changed recently, so withdrawals are paused until <strong>{holdUntil}</strong> for your safety. If you didn&apos;t make
                   this change, contact Trashit straight away.
                 </p>
-              ) : wallet.available < MIN_WITHDRAWAL_GHS ? (
-                <p className="text-[15px] text-ink-2">The smallest withdrawal is GHS {MIN_WITHDRAWAL_GHS}. Keep collecting!</p>
+              ) : wallet.available <= 0 ? (
+                <p className="text-[15px] text-ink-2">Nothing to cash out yet. Earnings appear here once they&apos;ve cleared. Keep collecting!</p>
               ) : (
                 <WithdrawForm available={wallet.available} walletLabel={`${providerName} ${profile.momoNumber}`} freeToday={freeToday} />
               )}
