@@ -60,6 +60,8 @@ export default function WithdrawForm({ available, walletLabel, freeToday }: { av
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            aria-describedby={msg ? 'withdraw-msg' : undefined}
+            aria-invalid={msg && !msg.ok ? true : undefined}
             className={`${FIELD} pl-14 text-lg font-semibold tabular-nums`}
           />
         </div>
@@ -68,7 +70,7 @@ export default function WithdrawForm({ available, walletLabel, freeToday }: { av
         </button>
       </div>
       {msg && (
-        <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-customer-deep' : 'text-danger'}`}>
+        <p id="withdraw-msg" role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-customer-deep' : 'text-danger'}`}>
           {msg.text}
         </p>
       )}

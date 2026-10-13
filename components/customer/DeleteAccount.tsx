@@ -68,7 +68,7 @@ export default function DeleteAccount({ who = 'customer' }: { who?: 'customer' |
           Your password
         </label>
         <div className="mt-1.5">
-          <PasswordInput id="delete-password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" className={FIELD} />
+          <PasswordInput id="delete-password" describedBy={error ? 'delete-error' : undefined} invalid={!!error} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" className={FIELD} />
         </div>
       </div>
       <div className="-mt-3">
@@ -85,7 +85,7 @@ export default function DeleteAccount({ who = 'customer' }: { who?: 'customer' |
         />
       </div>
       {error && (
-        <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+        <p id="delete-error" role="alert" className="flex items-start gap-2 text-sm text-danger">
           <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
         </p>
       )}

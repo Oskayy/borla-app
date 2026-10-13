@@ -51,6 +51,12 @@
   --shadow-lift: 0 2px 4px rgb(18 26 38 / 0.06), 0 18px 40px -18px rgb(18 26 38 / 0.28);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* The driver app's dark "hero" card (set by .theme-driver; these defaults keep the classes valid elsewhere). */
+  --color-hero: #111113;
+  --color-on-hero: #ffffff;
+  --color-on-hero-2: #b4b4bd;
+  --radius-pill: 999px;
 }
 
 /* Legacy names, still used by app screens that have not been rebuilt yet. */
@@ -97,37 +103,75 @@ p { text-wrap: pretty; }
 
 body:has([data-surface="new"]) { background: var(--color-surface); }
 
-/* ---- Night theme: the driver app (used outdoors at night, often on a dim screen) ----
-   Remaps the day tokens, so shared components render dark with amber actions. */
-.theme-night {
-  color-scheme: dark;
-  --color-canvas: #0e1726;
-  --color-surface: #16233a;
-  --color-ink: #e8edf5;
-  --color-ink-2: #c6cfdc;
-  --color-ink-3: #a3b0c4;
-  --color-line: #2a3b58;
-  --color-line-strong: #3d5175;
-  --color-action: #f0a43a;
-  --color-action-deep: #f7c06f;
-  --color-action-wash: rgb(240 164 58 / 0.14);
-  --color-on-action: #0e1726;
-  --color-customer-deep: #3fd99a;
-  --color-customer-wash: rgb(63 217 154 / 0.14);
-  --color-driver-deep: #f7c06f;
-  --color-driver-wash: rgb(240 164 58 / 0.14);
-  --color-ops-deep: #b5b0ff;
-  --color-ops-wash: rgb(139 132 255 / 0.16);
-  --color-danger: #ff8a7a;
-  --color-danger-wash: rgb(255 138 122 / 0.14);
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
-  --shadow-lift: 0 2px 4px rgb(0 0 0 / 0.35), 0 18px 40px -18px rgb(0 0 0 / 0.6);
+/* ---- Driver app: monochrome, light and dark (follows the theme switch like the rest of the app) ----
+   White pages, soft grey cards, black actions and a black "hero" card; dark mode inverts to near-black pages
+   with white actions. Colour is kept for meaning only: blue = with Trashit (unload being checked, done),
+   amber = on board, green = finished, red = problem. All text pairs meet 4.5:1. */
+.theme-driver {
+  --radius-card: 22px;
+  --radius-control: 14px;
+  --color-canvas: #ffffff;
+  --color-surface: #f4f4f6;
+  --color-ink: #111113;
+  --color-ink-2: #3f3f46;
+  --color-ink-3: #5f5f68;
+  --color-line: #e4e4e9;
+  --color-line-strong: #c9c9d1;
+  --color-action: #111113;
+  --color-action-deep: #111113;
+  --color-action-wash: #ececf0;
+  --color-on-action: #ffffff;
+  --color-hero: #111113;
+  --color-on-hero: #ffffff;
+  --color-on-hero-2: #b4b4bd;
+  --color-customer: #15803d;
+  --color-customer-deep: #166534;
+  --color-customer-wash: #e7f6ec;
+  --color-driver: #d98a14;
+  --color-driver-deep: #8a5300;
+  --color-driver-wash: #fff3dd;
+  --color-ops: #2f62d0;
+  --color-ops-deep: #2752b0;
+  --color-ops-wash: #e6eefc;
+  --shadow-card: 0 1px 2px rgb(17 17 19 / 0.04), 0 10px 28px -16px rgb(17 17 19 / 0.18);
+  --shadow-lift: 0 2px 6px rgb(17 17 19 / 0.08), 0 20px 44px -18px rgb(17 17 19 / 0.32);
   background: var(--color-canvas);
   color: var(--color-ink);
 }
-.theme-night :focus-visible { outline-color: var(--color-action); }
-.theme-night ::selection { background: rgb(240 164 58 / 0.3); color: #fff; }
-body:has(.theme-night) { background: #0e1726; }
+:root[data-theme="dark"] .theme-driver {
+  color-scheme: dark;
+  --color-canvas: #0a0a0b;
+  --color-surface: #18181b;
+  --color-ink: #f4f4f5;
+  --color-ink-2: #d0d0d6;
+  --color-ink-3: #a0a0aa;
+  --color-line: #2a2a30;
+  --color-line-strong: #3d3d45;
+  --color-action: #f4f4f5;
+  --color-action-deep: #ffffff;
+  --color-action-wash: rgb(255 255 255 / 0.08);
+  --color-on-action: #0a0a0b;
+  --color-hero: #1f1f23;
+  --color-on-hero: #ffffff;
+  --color-on-hero-2: #a8a8b2;
+  --color-customer: #4ade80;
+  --color-customer-deep: #4ade80;
+  --color-customer-wash: rgb(74 222 128 / 0.12);
+  --color-driver: #f5b04a;
+  --color-driver-deep: #f7c06f;
+  --color-driver-wash: rgb(245 176 74 / 0.14);
+  --color-ops: #6b9bff;
+  --color-ops-deep: #9dbcff;
+  --color-ops-wash: rgb(107 155 255 / 0.14);
+  --color-danger: #ff8a7a;
+  --color-danger-wash: rgb(255 138 122 / 0.14);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px -16px rgb(0 0 0 / 0.6);
+  --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.45), 0 20px 44px -18px rgb(0 0 0 / 0.7);
+}
+.theme-driver :focus-visible { outline-color: var(--color-ink); }
+.theme-driver ::selection { background: var(--color-action-wash); color: var(--color-ink); }
+body:has(.theme-driver) { background: var(--color-canvas); }
+:root[data-theme="dark"] body:has(.theme-driver) { background: #0a0a0b; }
 
 /* ---- Ops theme: the ops console (desktop, daylight) ----
    Indigo actions on light panels; the sidebar is night navy, so its focus ring is a lighter indigo. */
@@ -143,7 +187,7 @@ body:has(.theme-night) { background: #0e1726; }
 body:has(.theme-ops) { background: var(--color-canvas); }
 
 /* ---- Dark mode (the theme toggle sets data-theme on <html>; first visit follows the device setting) ----
-   Remaps the day tokens. The driver app is always night (.theme-night), whatever this says. */
+   Remaps the day tokens. The driver app has its own monochrome light and dark sets (.theme-driver). */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --color-canvas: #0b1220;

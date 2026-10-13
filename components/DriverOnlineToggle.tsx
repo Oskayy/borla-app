@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LocateFixed, Power } from 'lucide-react'
 
@@ -12,11 +13,15 @@ export default function DriverOnlineToggle({
   canGoOnline,
   shiftLabel,
   overrideUntil,
+  summary,
+  children,
 }: {
   initialOnline: boolean
   canGoOnline: boolean // true during shift hours, or when ops have given an override
   shiftLabel: string // e.g. "8:00pm – 6:00am"
   overrideUntil: string | null
+  summary?: string // the night in a line, e.g. "6 stops in 2 trips · about 1 h 40 min"
+  children?: React.ReactNode // pill shortcuts (HeroLink)
 }) {
   const [online, setOnline] = useState(initialOnline)
   const [busy, setBusy] = useState(false)
@@ -88,51 +93,71 @@ export default function DriverOnlineToggle({
 
   const disabled = busy || (!online && !canGoOnline)
 
+  // The dark "hero" card at the top of Tonight: status, the switch (top right), the night in numbers, then
+  // the shortcuts passed in as children.
   return (
-    <section className={`h-full rounded-card p-4 ring-1 sm:p-5 ${online ? 'bg-action-wash ring-action/40' : 'bg-surface ring-line'}`}>
-      <div className="flex items-center gap-4">
-        <span className={`relative grid size-12 shrink-0 place-items-center rounded-full ${online ? 'bg-action text-on-action' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}>
-          <Power aria-hidden className="size-5" strokeWidth={2.5} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-bold tracking-tight">{online ? 'You are online' : 'You are offline'}</p>
-          <p className="text-sm text-ink-3">
+    <section aria-label="Your shift" className="rounded-[26px] bg-hero p-5 text-on-hero shadow-lift sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-on-hero-2">
             Shift {shiftLabel}
             {overrideUntil && ` · extra hours until ${new Date(overrideUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}
           </p>
+          <p className="mt-1.5 flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.02em]">
+            <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${online ? 'bg-[#4ade80] shadow-[0_0_0_4px_rgb(74_222_128/0.2)]' : 'bg-on-hero-2'}`} />
+            {online ? 'Online' : 'Offline'}
+          </p>
+          {summary && <p className="mt-1 text-[15px] text-on-hero-2">{summary}</p>}
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={online}
           aria-label="Online"
+          aria-busy={busy}
           onClick={toggle}
           disabled={disabled}
-          className={`min-h-12 shrink-0 rounded-full px-5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-            online ? 'bg-canvas text-ink ring-1 ring-line-strong' : 'bg-action text-on-action shadow-card hover:brightness-95'
-          }`}
+          className="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-full bg-white px-5 text-[15px] font-semibold text-[#111113] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {busy ? '…' : online ? 'Go offline' : 'Go online'}
+          <Power aria-hidden className="size-4" strokeWidth={2.5} />
+          {busy ? 'Saving…' : online ? 'Go offline' : 'Go online'}
         </button>
       </div>
 
-      {!online && !canGoOnline && <p className="mt-3 text-sm text-ink-3">You can go online when the shift starts.</p>}
-      {online && gps === 'on' && (
-        <p className="mt-3 flex items-center gap-1.5 text-sm text-ink-2">
-          <LocateFixed aria-hidden className="size-4 text-action" /> Sharing your location while you are online
-        </p>
-      )}
-      {online && gps === 'idle' && <p className="mt-3 text-sm text-ink-3">Getting your location…</p>}
+      {children && <div className="mt-5 grid grid-cols-2 gap-2.5">{children}</div>}
+
+      <div aria-live="polite" className="empty:hidden">
+        {!online && !canGoOnline && <p className="mt-3 text-sm text-on-hero-2">You can go online when the shift starts.</p>}
+        {online && gps === 'on' && (
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-on-hero-2">
+            <LocateFixed aria-hidden className="size-4" /> Sharing your location while you are online
+          </p>
+        )}
+        {online && gps === 'idle' && <p className="mt-3 text-sm text-on-hero-2">Getting your location…</p>}
+      </div>
       {online && gps === 'denied' && (
-        <p role="alert" className="mt-3 text-sm text-danger">
+        <p role="alert" className="mt-3 rounded-2xl bg-white/10 p-3 text-sm font-medium text-[#ffc2b8]">
           Location is blocked. Turn it on in your browser settings so we can send you nearby pickups.
         </p>
       )}
       {error && (
-        <p role="alert" className="mt-3 text-sm text-danger">
+        <p role="alert" className="mt-3 rounded-2xl bg-white/10 p-3 text-sm font-medium text-[#ffc2b8]">
           {error}
         </p>
       )}
     </section>
+  )
+}
+
+// A pill shortcut inside the hero card (e.g. My nights, Earnings).
+export function HeroLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="press flex min-h-12 items-center justify-center gap-2 rounded-full bg-white/[0.12] px-3 text-[15px] font-semibold text-on-hero ring-1 ring-white/15 transition hover:bg-white/20"
+    >
+      {icon}
+      {children}
+    </Link>
   )
 }

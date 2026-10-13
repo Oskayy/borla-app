@@ -59,7 +59,7 @@ export default function DriverLocationTracker() {
   }
 
   return (
-    <p style={{ fontSize: 11, color: '#999', marginBottom: 16 }}>
+    <p style={{ fontSize: 11, color: 'var(--color-ink-3)', marginBottom: 16 }}>
       {status === 'tracking' ? '📍 Location sharing is on' : 'Getting your location...'}
     </p>
   )

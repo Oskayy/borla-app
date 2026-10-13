@@ -22,9 +22,9 @@ export function AccountRow({
   desc?: string
 }) {
   return (
-    <li className="flex min-h-14 items-center gap-1.5 rounded-control px-2 hover:bg-canvas">
+    <li className="flex min-h-14 items-center gap-1.5 rounded-[16px] px-2 hover:bg-canvas">
       <Link href={href} className="press flex min-h-14 min-w-0 items-center gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-canvas text-ink-2 ring-1 ring-line">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-canvas text-ink">
           <Icon aria-hidden className="size-[18px]" />
         </span>
         <span className="min-w-0 py-2">
@@ -43,7 +43,7 @@ export function AccountRow({
 
 export function AccountGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="rounded-card bg-surface p-3 ring-1 ring-line sm:p-4">
+    <section aria-label={title} className="rounded-card bg-surface p-3 sm:p-4">
       <h2 className="px-2 pb-1 pt-1 text-sm font-semibold text-ink-3">{title}</h2>
       <ul className="grid">{children}</ul>
     </section>

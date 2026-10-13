@@ -228,6 +228,7 @@ export default function SignupPage() {
           <div className="mt-1.5">
             <PasswordInput
               id="password"
+              describedBy="password-rules"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -235,7 +236,7 @@ export default function SignupPage() {
               className={field}
             />
           </div>
-          <ul className="-mt-1 grid gap-1 text-xs" aria-label="Password rules">
+          <ul id="password-rules" className="-mt-1 grid gap-1 text-xs" aria-label="Password rules">
             {strengthChecks.map((c) => (
               <li key={c.label} className={`flex items-center gap-1.5 ${c.pass ? 'text-customer-deep' : 'text-ink-3'}`}>
                 {c.pass ? <Check aria-hidden className="size-3.5" strokeWidth={2.5} /> : <Circle aria-hidden className="size-3" />}

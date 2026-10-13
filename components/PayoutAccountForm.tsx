@@ -75,6 +75,8 @@ export default function PayoutAccountForm({
         </label>
         <input
           id="momo-number"
+          aria-describedby={msg && !msg.ok ? 'payout-msg' : undefined}
+          aria-invalid={msg && !msg.ok ? true : undefined}
           value={values.momoNumber}
           onChange={(e) => setValues((v) => ({ ...v, momoNumber: e.target.value }))}
           className={`${FIELD} mt-1.5`}
@@ -107,10 +109,11 @@ export default function PayoutAccountForm({
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            aria-describedby={[replacing ? 'payout-hold' : '', msg && !msg.ok ? 'payout-msg' : ''].filter(Boolean).join(' ') || undefined}
             className={FIELD}
           />
           {replacing && (
-            <p className="flex items-start gap-2 text-sm text-driver-deep">
+            <p id="payout-hold" className="flex items-start gap-2 text-sm text-driver-deep">
               <ShieldAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
               Changing your wallet pauses withdrawals for 24 hours, and we&apos;ll alert you about the change.
             </p>
@@ -125,7 +128,7 @@ export default function PayoutAccountForm({
         </button>
       )}
       {msg && (
-        <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-customer-deep' : 'text-danger'}`}>
+        <p id="payout-msg" role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-customer-deep' : 'text-danger'}`}>
           {msg.text}
         </p>
       )}

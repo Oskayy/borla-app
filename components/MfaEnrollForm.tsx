@@ -81,7 +81,7 @@ export default function MfaEnrollForm({ onEnrolled, redirectTo }: { onEnrolled?:
         Scan this QR code with Google Authenticator, Authy, or a similar app.
       </p>
       <div dangerouslySetInnerHTML={{ __html: qrCode }} style={{ marginBottom: 12 }} />
-      <p style={{ fontSize: 11, color: '#999', marginBottom: 16 }}>
+      <p style={{ fontSize: 11, color: 'var(--color-ink-3)', marginBottom: 16 }}>
         Can&apos;t scan? Enter this code manually: <code>{secret}</code>
       </p>
       <form onSubmit={confirmCode}>

@@ -20,7 +20,7 @@ export default function LegalPage({
   return (
     <div style={{ maxWidth: 720, margin: '40px auto', padding: '0 20px 60px' }}>
       <h1 style={{ fontSize: 28, marginBottom: 4 }}>{title}</h1>
-      <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>Last updated: {lastUpdated}</p>
+      <p style={{ fontSize: 13, color: 'var(--color-ink-3)', marginBottom: 20 }}>Last updated: {lastUpdated}</p>
 
       <div className="panel" style={{ background: '#FDECEA', borderColor: '#B3261E', marginBottom: 28 }}>
         <p style={{ fontSize: 13, color: '#B3261E', fontWeight: 600, margin: 0 }}>

@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
             />
             <div style={{ marginBottom: 16, marginTop: -8 }}>
               {checks.map((c) => (
-                <p key={c.label} style={{ fontSize: 12, color: c.pass ? '#2F7A4D' : '#999', margin: '2px 0' }}>
+                <p key={c.label} style={{ fontSize: 12, color: c.pass ? '#2F7A4D' : 'var(--color-ink-3)', margin: '2px 0' }}>
                   {c.pass ? '✓' : '○'} {c.label}
                 </p>
               ))}

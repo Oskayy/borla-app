@@ -19,7 +19,6 @@ import { prisma } from '@/lib/prisma'
 import { dateLabel } from '@/lib/format'
 import { NIGHT_NAMES } from '@/lib/availability'
 import { AVATAR_DOC, driverPhotoUrls } from '@/lib/driver-photos'
-import { BUTTON_QUIET } from '@/components/ui'
 import { AccountGroup, AccountRow } from '@/components/driver/AccountRow'
 import PhotoUpload from '@/components/driver/PhotoUpload'
 import SignOutButton from '@/components/SignOutButton'
@@ -55,9 +54,9 @@ export default async function DriverAccountPage() {
 
   return (
     <div className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)] gap-5">
-      <h1 className="text-[clamp(1.6rem,3vw,2rem)] font-bold leading-tight tracking-[-0.025em]">Account</h1>
+      <h1 className="text-[26px] font-bold leading-tight tracking-[-0.025em]">Account</h1>
 
-      <section aria-label="Profile" className="flex items-center gap-4 rounded-card bg-surface p-5 ring-1 ring-line">
+      <section aria-label="Profile" className="flex items-center gap-4 rounded-card bg-surface p-5">
         <PhotoUpload type={AVATAR_DOC} url={photos[AVATAR_DOC]} fallback={initials} round label="Change your profile picture" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-bold tracking-tight">{me.name}</p>
@@ -67,7 +66,7 @@ export default async function DriverAccountPage() {
             {profile?.approvalStatus === 'APPROVED' ? 'Driving with Trashit since' : 'Signed up'} {dateLabel(me.createdAt)}
           </p>
         </div>
-        <Link href="/dashboard/driver/account/profile" className={BUTTON_QUIET}>
+        <Link href="/dashboard/driver/account/profile" className="press inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-action px-4 text-[15px] font-semibold text-on-action">
           <Pencil aria-hidden className="size-4" /> Edit
         </Link>
       </section>
@@ -117,7 +116,7 @@ export default async function DriverAccountPage() {
         <AccountRow href="/dashboard/driver/performance" icon={BarChart3} title="Ratings, acceptance and missed stops" />
       </AccountGroup>
 
-      <div className="rounded-card bg-surface p-3 ring-1 ring-line sm:p-4">
+      <div className="rounded-card bg-surface p-3 sm:p-4">
         <SignOutButton className="press flex min-h-12 w-full items-center gap-3 rounded-control px-2 text-[15px] font-medium text-danger hover:bg-danger-wash" />
       </div>
     </div>

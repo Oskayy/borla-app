@@ -17,8 +17,8 @@ export function PageHeader({ title, lead, action }: { title: string; lead?: stri
   )
 }
 
-export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <section className={`rounded-card bg-surface p-5 ring-1 ring-line sm:p-6 ${className}`}>{children}</section>
+export function Card({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
+  return <section id={id} className={`rounded-card bg-surface p-5 ring-1 ring-line sm:p-6 ${className}`}>{children}</section>
 }
 
 export function CardTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {

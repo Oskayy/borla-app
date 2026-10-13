@@ -43,10 +43,14 @@ export default function DriverRouteMap({
   useEffect(() => {
     if (map.current || !container.current) return
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
+    // Follows the app's light or dark mode (read once; the map is rebuilt when the page reloads).
+    const dark = document.documentElement.dataset.theme === 'dark'
+    const ink = dark ? '#f4f4f5' : '#111113'
+    const paper = dark ? '#0a0a0b' : '#ffffff'
 
     const m = new mapboxgl.Map({
       container: container.current,
-      style: 'mapbox://styles/mapbox/dark-v11', // night theme: drivers use this outdoors in the dark
+      style: dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
       center: [start.lng, start.lat],
       zoom: 12,
     })
@@ -61,18 +65,18 @@ export default function DriverRouteMap({
         id: 'route-line',
         type: 'line',
         source: 'route',
-        paint: { 'line-color': '#f0a43a', 'line-width': 3, 'line-opacity': 0.8, 'line-dasharray': [2, 1] },
+        paint: { 'line-color': ink, 'line-width': 3, 'line-opacity': 0.85, 'line-dasharray': [2, 1] },
       })
 
       for (const p of points) {
         const el = document.createElement('div')
         if (p.kind === 'stop') {
           el.textContent = p.label
-          el.style.cssText = `width:26px;height:26px;border-radius:13px;background:${p.done ? '#3d5175' : '#f0a43a'};color:${p.done ? '#c6cfdc' : '#0e1726'};font:700 12px sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid #0e1726;box-shadow:0 1px 3px rgba(0,0,0,.3)`
+          el.style.cssText = `width:28px;height:28px;border-radius:14px;background:${p.done ? '#9a9aa3' : ink};color:${paper};font:700 12px sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid ${paper};box-shadow:0 1px 4px rgba(0,0,0,.35)`
         } else {
           el.innerHTML =
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
-          el.style.cssText = `width:28px;height:28px;border-radius:8px;background:${p.done ? '#3d5175' : '#4b40e0'};display:flex;align-items:center;justify-content:center;border:2px solid #b5b0ff;box-shadow:0 1px 3px rgba(0,0,0,.4)`
+          el.style.cssText = `width:30px;height:30px;border-radius:15px;background:${p.done ? '#9a9aa3' : '#2f62d0'};display:flex;align-items:center;justify-content:center;border:2px solid ${paper};box-shadow:0 1px 4px rgba(0,0,0,.4)`
         }
         new mapboxgl.Marker({ element: el })
           .setLngLat([p.lng, p.lat])

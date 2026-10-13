@@ -24,13 +24,13 @@ export default function NextStopCard({
 
   if (!next) return null
 
-  const card = 'rounded-card p-5 ring-1 sm:p-6'
+  const card = 'rounded-card p-5 sm:p-6'
   const kicker = 'flex items-center gap-2 text-sm font-semibold'
 
   if (next.kind === 'accept') {
     return (
-      <section className={`${card} bg-action-wash ring-action/40`}>
-        <p className={`${kicker} text-action-deep`}>New stops for you</p>
+      <section className={`${card} bg-surface ring-2 ring-ink`}>
+        <p className={`${kicker} text-ink-2`}>New stops for you</p>
         <p className="mt-1 text-xl font-bold tracking-tight">
           {next.count === 1 ? 'You have 1 new stop.' : `You have ${next.count} new stops.`}
         </p>
@@ -52,7 +52,7 @@ export default function NextStopCard({
 
   if (next.kind === 'no-site') {
     return (
-      <section className={`${card} bg-danger-wash ring-danger/40`}>
+      <section className={`${card} bg-danger-wash`}>
         <p className={`${kicker} text-danger`}>Trip {next.tripNumber}: unload</p>
         <p className="mt-1 text-lg font-semibold">No disposal site is set for this trip. Please call ops before unloading.</p>
       </section>
@@ -61,7 +61,7 @@ export default function NextStopCard({
 
   if (next.kind === 'site') {
     return (
-      <section className={`${card} bg-surface ring-ops/40`}>
+      <section className={`${card} bg-ops-wash`}>
         <p className={`${kicker} text-ops-deep`}>
           <Flag aria-hidden className="size-4" /> Next: unload (trip {next.tripNumber})
         </p>
@@ -77,8 +77,8 @@ export default function NextStopCard({
   }
 
   return (
-    <section className={`${card} bg-surface ring-action/40`}>
-      <p className={`${kicker} text-action-deep`}>
+    <section className={`${card} bg-surface`}>
+      <p className={`${kicker} text-ink-2`}>
         <MapPin aria-hidden className="size-4" /> Next: stop {next.stopNumber} (trip {next.tripNumber})
       </p>
       <p className="mb-4 mt-1 text-2xl font-bold leading-tight tracking-tight">{next.address}</p>

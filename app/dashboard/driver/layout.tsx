@@ -1,14 +1,15 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ChevronRight, Moon, ShieldAlert, Truck } from 'lucide-react'
-import Logo from '@/components/Logo'
+import { ChevronRight, ShieldAlert, Truck } from 'lucide-react'
 import { DriverBottomTabs, DriverTabs } from '@/components/driver/DriverNav'
+import ThemeToggle from '@/components/ThemeToggle'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
 import { windowLabel } from '@/lib/shift'
 
-// The driver workspace: night theme (used outdoors in the dark), amber actions, big touch targets.
+// The driver workspace: monochrome cards in light or dark mode (the theme switch), big touch targets,
+// a greeting header and a floating tab bar for the thumb.
 export default async function DriverLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,6 +27,7 @@ export default async function DriverLayout({ children }: { children: React.React
   if (me.role !== 'DRIVER') redirect('/dashboard')
 
   const vehicle = profile?.vehicleTypeRef?.name ?? profile?.vehicleType ?? null
+  const firstName = me.name.split(/\s+/)[0] ?? me.name
   const initials = me.name
     .split(/\s+/)
     .slice(0, 2)
@@ -33,41 +35,39 @@ export default async function DriverLayout({ children }: { children: React.React
     .join('')
 
   return (
-    <div data-surface="new" className="theme-night min-h-dvh">
-      <header className="sticky top-0 z-20 border-b border-line bg-canvas/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4 sm:px-6">
-          <Link href="/dashboard/driver" aria-label="Trashit driver home" className="flex items-center gap-2">
-            <Logo height={26} onDark />
-            <span className="hidden text-sm font-semibold text-ink-3 sm:inline">Driver</span>
+    <div data-surface="new" className="theme-driver min-h-dvh">
+      <header className="sticky top-0 z-20 bg-canvas/90 backdrop-blur-md">
+        <div className="mx-auto flex h-[72px] max-w-5xl items-center gap-3 px-4 sm:px-6">
+          <Link
+            href="/dashboard/driver/account"
+            aria-label="Your account"
+            className="press grid size-12 shrink-0 place-items-center rounded-full bg-action text-[15px] font-semibold text-on-action"
+          >
+            {initials}
           </Link>
-          <div className="ml-auto flex items-center gap-2">
-            {vehicle && (
-              <span className="hidden items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium ring-1 ring-line sm:inline-flex">
-                <Truck aria-hidden className="size-4 text-action" /> {vehicle}
-                {profile?.vehiclePlate && <span className="text-ink-3">· {profile.vehiclePlate}</span>}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[17px] font-semibold leading-tight tracking-tight">Hello, {firstName}</p>
+            <p className="flex items-center gap-1 truncate text-sm text-ink-3">
+              <Truck aria-hidden className="size-3.5 shrink-0" />
+              <span className="truncate">
+                {vehicle ? `${vehicle}${profile?.vehiclePlate ? ` · ${profile.vehiclePlate}` : ''}` : 'No vehicle yet'}
+                <span className="hidden sm:inline"> · Shift {windowLabel(settings)}</span>
               </span>
-            )}
-            <span className="hidden items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium ring-1 ring-line sm:inline-flex">
-              <Moon aria-hidden className="size-4 text-ops-deep" /> Shift {windowLabel(settings)}
-            </span>
-            <Link href="/dashboard/driver/account" aria-label="Your account" className="grid size-11 place-items-center rounded-full bg-action text-sm font-semibold text-on-action">
-              {initials}
-            </Link>
+            </p>
           </div>
+          <ThemeToggle className="bg-surface ring-0" />
         </div>
         <DriverTabs />
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 sm:px-6 lg:pb-16">
+      <main className="mx-auto max-w-5xl px-4 pb-32 pt-4 sm:px-6 lg:pb-16">
         {/* Until a driver is approved, every page says where the application stands. */}
         {profile && profile.approvalStatus !== 'APPROVED' && (
           <Link
             href="/dashboard/driver/verification"
-            className={`press mb-5 flex items-start gap-3 rounded-card p-4 ring-1 ${
-              profile.approvalStatus === 'REJECTED' ? 'bg-danger-wash ring-danger/30' : 'bg-surface ring-action/40'
-            }`}
+            className={`press mb-5 flex items-start gap-3 rounded-[20px] p-4 ${profile.approvalStatus === 'REJECTED' ? 'bg-danger-wash' : 'bg-surface'}`}
           >
-            <ShieldAlert aria-hidden className={`mt-0.5 size-5 shrink-0 ${profile.approvalStatus === 'REJECTED' ? 'text-danger' : 'text-action'}`} />
+            <ShieldAlert aria-hidden className={`mt-0.5 size-5 shrink-0 ${profile.approvalStatus === 'REJECTED' ? 'text-danger' : 'text-ink'}`} />
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">
                 {profile.approvalStatus === 'REJECTED'

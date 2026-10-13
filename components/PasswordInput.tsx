@@ -10,6 +10,8 @@ interface PasswordInputProps {
   autoComplete?: string
   className?: string
   id?: string
+  describedBy?: string // id of the hint or error that explains this field
+  invalid?: boolean
 }
 
 export default function PasswordInput({
@@ -20,6 +22,8 @@ export default function PasswordInput({
   autoComplete,
   className,
   id,
+  describedBy,
+  invalid,
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false)
 
@@ -33,6 +37,8 @@ export default function PasswordInput({
         onChange={onChange}
         required={required}
         autoComplete={autoComplete}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         className={className}
         style={{ paddingRight: 60, width: '100%', marginBottom: 0 }}
       />
@@ -46,8 +52,9 @@ export default function PasswordInput({
           right: 10,
           background: 'none',
           border: 'none',
-          color: '#5f6b7a',
-          minHeight: 32,
+          color: 'var(--color-ink-3)',
+          minHeight: 44,
+          minWidth: 44,
           fontSize: 12,
           cursor: 'pointer',
           padding: 4,
