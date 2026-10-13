@@ -4,19 +4,20 @@ export const privacyPolicySections: LegalSection[] = [
   {
     heading: '1. Introduction',
     blocks: [
-      { type: 'p', text: 'Trashit ("we", "our", "us") operates a waste collection platform connecting customers with waste collectors in Ghana. This Privacy Policy explains what personal data we collect, why we collect it, and how it is handled. [Company legal name, registration number, and registered address to be inserted here.]' },
+      { type: 'p', text: 'Trashit ("we", "our", "us") operates a waste collection platform connecting customers with waste collectors in Ghana. This Privacy Policy explains what personal data we collect, why we collect it, and how it is handled.' },
+      { type: 'p', text: "Trashit is responsible for your personal data (the \"data controller\" under the Data Protection Act, 2012 (Act 843)). [Registered company name, registration number and registered address: to be added once the company is registered.]" },
     ],
   },
   {
     heading: '2. Information We Collect',
     blocks: [
       { type: 'bullets', items: [
-        'Account information: name, email address, phone number, gender (optional)',
-        'Identity verification: government ID or vehicle registration documents (drivers only)',
+        'Account information: name, email address, phone number and password (stored only in scrambled form)',
+        "Driver details (drivers only): Ghana Card number, vehicle plate number, a photo of the driver and of the vehicle, a driver's licence photo if provided, home base, mobile money wallet for payouts, and the driver's location while online",
         'Location data: pickup address, GPS coordinates captured at booking and at pickup/disposal confirmation',
         'Photo evidence: images of waste placement and collection, which may include incidental location metadata',
         'Payment information: processed by our payment provider (Paystack); we do not store full card details',
-        'Usage data: booking history, app interactions, device/browser information',
+        'Usage data: booking history, ratings and comments, and, if you turn on alerts, the push address your browser gives us',
       ]},
     ],
   },
@@ -36,17 +37,30 @@ export const privacyPolicySections: LegalSection[] = [
   {
     heading: '4. Legal Basis for Processing',
     blocks: [
-      { type: 'p', text: "[To be completed with reference to Ghana's Data Protection Act, 2012 (Act 843), including consent, contractual necessity, and legitimate interest bases as applicable to each category of data above.]" },
+      { type: 'p', text: "Under the Data Protection Act, 2012 (Act 843), we only use personal data when we have a lawful reason:" },
+      { type: 'bullets', items: [
+        "To provide the service you asked for (our contract with you): your account, bookings, pickup pins and photos, payments and refunds, and for drivers their stops, earnings and payouts.",
+        "To meet our legal duties: keeping tax and accounting records, checking who our drivers are, and answering lawful requests from the authorities.",
+        "For our legitimate interests, balanced against yours: spotting fraud and fake pickups (for example a photo far from the pin, or the same photo used twice), keeping accounts secure, settling complaints, and improving routes and prices. These checks flag things for a person to review; they never decide on their own.",
+        "With your consent: alerts on your phone, and your device's location when you choose to share it. You can withdraw consent at any time in your browser or phone settings; this does not affect what was done before.",
+      ]},
     ],
   },
   {
     heading: '5. Third Parties We Share Data With',
     blocks: [
       { type: 'bullets', items: [
-        'Paystack — payment processing',
-        'Mapbox — address geocoding and route optimization',
-        'Supabase — authentication and data hosting infrastructure',
-        '[Any future analytics, SMS, or notification providers to be added here]',
+        'Paystack: card and mobile money payments, refunds and driver payouts',
+        'Supabase: sign-in, database and file storage',
+        'Vercel: hosts the app',
+        'Mapbox: maps and finding addresses',
+        "Google Maps: when a driver taps Navigate, the customer's pin is opened in Google Maps on the driver's phone",
+        'Arkesel: text messages (SMS), once switched on',
+        "Your browser's or phone's push service (for example Google or Apple): delivers alerts you turned on",
+      ]},
+      { type: 'p', text: "Each of them only gets the data needed for their part, and may not use it for anything else. Some of them store data outside Ghana: our database and files are kept in the European Union (Ireland). We only use providers that protect personal data to a standard at least as high as Ghanaian law requires. We do not sell personal data, and we do not use it for advertising." },
+      { type: 'bullets', items: [
+        "Within Trashit, staff see only what their job needs. Customers see their driver’s first name and type of vehicle. Drivers see, for their own stops only, the customer’s pin, address, waste photo and phone number (to call on arrival), but never the customer’s email. Ratings reach the driver without the customer’s name.",
       ]},
     ],
   },
@@ -70,31 +84,49 @@ export const privacyPolicySections: LegalSection[] = [
   {
     heading: '7. Your Rights',
     blocks: [
-      { type: 'p', text: '[To be completed with data subject rights under Act 843 — access, correction, deletion, and objection to processing — and how to exercise them.]' },
+      { type: 'p', text: "Under the Data Protection Act, 2012 (Act 843), you have the right to:" },
+      { type: 'bullets', items: [
+        "Know what personal data we hold about you and get a copy. Customers can download their data in the app (Settings, Download my data); drivers can ask us.",
+        "Have wrong or out-of-date data corrected. You can change most details yourself in the app.",
+        "Have your data deleted, by deleting your account in the app or asking us (see section 6 for what we must keep for tax).",
+        "Object to us using your data for our legitimate interests, or ask us to stop.",
+        "Withdraw your consent to alerts or location sharing at any time.",
+        "Complain to the Data Protection Commission of Ghana if you think we have mishandled your data.",
+      ]},
+      { type: 'p', text: "To use any of these rights, contact us (section 11). We may ask you to confirm who you are first. We will reply within 30 days and will not charge you." },
     ],
   },
   {
     heading: '8. Data Security',
     blocks: [
-      { type: 'p', text: 'We apply reasonable technical and organizational measures to protect personal data, including encrypted connections, access controls, and rate-limited authentication. [Further specifics to be added.]' },
+      { type: 'p', text: "We protect personal data with technical and organisational measures, including:" },
+      { type: 'bullets', items: [
+        'Encrypted connections (HTTPS) for everything the app sends and receives',
+        'Passwords stored only in scrambled form; we can never see them',
+        'Two-step sign-in (2FA) for all Trashit staff, and limits on repeated sign-in attempts',
+        'Staff can only open what their role needs, and staff actions are logged',
+        "Photos and drivers' documents kept in private storage, shown only through links that expire after 30 minutes",
+        'Changing a payout wallet needs the password again; manual payouts and large refunds need a second person to approve',
+      ]},
+      { type: 'p', text: "No system is completely secure. If a breach puts your personal data at risk, we will tell you and the Data Protection Commission as soon as we reasonably can." },
     ],
   },
   {
     heading: "9. Children's Privacy",
     blocks: [
-      { type: 'p', text: 'Trashit is not intended for use by individuals under [18] years old. [To be confirmed and expanded.]' },
+      { type: 'p', text: "You must be at least 16 to book pickups and at least 18 to drive with Trashit. If you are 16 or 17, you need the permission of a parent or guardian to use Trashit. We do not knowingly collect personal data from anyone younger; if we learn that we have, we will delete the account and its data." },
     ],
   },
   {
     heading: '10. Changes to This Policy',
     blocks: [
-      { type: 'p', text: 'We may update this policy from time to time. Material changes will be communicated via the app or by email. [To be finalized.]' },
+      { type: 'p', text: "We may update this policy when the service or the law changes. If we make an important change, we will tell you in the app (and by email if we have it) before it takes effect. The latest version is always on this page." },
     ],
   },
   {
     heading: '11. Contact Us',
     blocks: [
-      { type: 'p', text: 'For privacy questions or data requests, contact: [support email / physical address to be inserted].' },
+      { type: 'p', text: "For privacy questions or data requests, contact Trashit at: [privacy email and phone: to be added before launch]. You can also contact the Data Protection Commission of Ghana." },
     ],
   },
 ]
@@ -116,9 +148,9 @@ export const termsSections: LegalSection[] = [
     heading: '3. Eligibility',
     blocks: [
       { type: 'bullets', items: [
-        'Users must be at least [18] years old',
-        'Drivers must complete identity verification (ID/license and vehicle registration) before accepting jobs',
-        '[Any additional eligibility requirements to be added]',
+        'Customers must be at least 16 years old; customers aged 16 or 17 need the permission of a parent or guardian',
+        'Drivers must be at least 18 years old',
+        "Drivers must give their Ghana Card number and vehicle plate number, add a photo of themselves and of their vehicle, and be approved by Trashit before they receive stops",
       ]},
     ],
   },
