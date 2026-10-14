@@ -60,10 +60,10 @@ export default function FlashHost() {
       {list.map((m) => (
         <div
           key={m.id}
-          className={`flex items-start gap-3 rounded-card p-4 ring-1 ${m.tone === 'ok' ? 'bg-ops-wash ring-ops/30' : 'bg-danger-wash ring-danger/30'}`}
+          className={`anim-note flex items-start gap-3 rounded-card p-4 ring-1 ${m.tone === 'ok' ? 'bg-ok-wash ring-ok/30' : 'bg-danger-wash ring-danger/30'}`}
         >
           {m.tone === 'ok' ? (
-            <CheckCircle2 aria-hidden className="mt-0.5 size-5 shrink-0 text-ops-deep" />
+            <CheckCircle2 aria-hidden className="mt-0.5 size-5 shrink-0 text-ok-deep" />
           ) : (
             <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0 text-danger" />
           )}

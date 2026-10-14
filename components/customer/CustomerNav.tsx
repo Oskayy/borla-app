@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import TabBar from '@/components/kit/TabBar'
 import { Bell, CalendarPlus, Home, LayoutList, MapPin, Menu, Settings, User } from 'lucide-react'
 
 const BASE = '/dashboard/customer'
@@ -52,39 +53,16 @@ export function SidebarNav({ unread }: { unread: number }) {
   )
 }
 
+const MORE = ['/notifications', '/home-location', '/profile', '/settings'].map((p) => `${BASE}${p}`)
+
 const TABS = [
   { href: BASE, label: 'Home', icon: Home, exact: true },
   { href: `${BASE}/book`, label: 'Book', icon: CalendarPlus },
   { href: `${BASE}/orders`, label: 'Orders', icon: LayoutList },
-  { href: `${BASE}/more`, label: 'More', icon: Menu },
+  { href: `${BASE}/more`, label: 'More', icon: Menu, also: MORE },
 ]
 
-// Phone bottom tabs. "More" is also active on the account pages it lists.
+// Phone bottom tabs: the shared floating pill. "More" is also active on the account pages it lists.
 export function BottomTabs() {
-  const pathname = usePathname()
-  const moreActive = ['/notifications', '/home-location', '/profile', '/settings', '/more'].some((p) => pathname.startsWith(`${BASE}${p}`))
-  return (
-    <nav
-      aria-label="Customer"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
-    >
-      <ul className="mx-auto grid max-w-md grid-cols-4">
-        {TABS.map(({ href, label, icon: Icon, exact }) => {
-          const on = label === 'More' ? moreActive : isActive(pathname, href, exact)
-          return (
-            <li key={href}>
-              <Link
-                href={href}
-                aria-current={on ? 'page' : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium ${on ? 'text-customer-deep' : 'text-ink-3'}`}
-              >
-                <Icon aria-hidden className="size-5" strokeWidth={on ? 2.4 : 2} />
-                {label}
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
-  )
+  return <TabBar tabs={TABS} label="Customer" />
 }

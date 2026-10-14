@@ -47,7 +47,7 @@ export default function AlertBell({
         aria-label={count ? `${label}: ${count} new` : `${label}: none`}
         className="press relative grid size-11 place-items-center rounded-full text-ink-2 ring-1 ring-line transition hover:bg-surface hover:text-ink"
       >
-        <Bell aria-hidden className={`size-5 ${count ? 'text-action' : ''}`} />
+        <Bell aria-hidden className={`size-5 ${count ? 'text-action-deep' : ''}`} />
         {count > 0 && (
           <span className="absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-danger px-1 text-[11px] font-bold tabular-nums leading-5 text-white ring-2 ring-canvas">
             {count > 9 ? '9+' : count}

@@ -107,7 +107,7 @@ function Nav({ sections, onNavigate }: { sections: ShellSection[]; onNavigate?: 
                     onClick={onNavigate}
                     aria-current={on ? 'page' : undefined}
                     className={`press flex min-h-11 items-center gap-3 rounded-control px-3 text-[14px] font-medium transition lg:min-h-10 ${
-                      on ? 'bg-ops text-white shadow-[0_6px_16px_-8px_rgb(75_64_224/0.8)]' : 'text-night-ink/80 hover:bg-white/5 hover:text-white'
+                      on ? 'bg-ops text-white shadow-card' : 'text-night-ink/80 hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     <Icon aria-hidden className={`size-4 shrink-0 ${on ? 'text-white' : 'text-night-muted'}`} />

@@ -69,7 +69,15 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   night using `JobRun` rows as locks (`snapshot:<date>`, `shiftstart:<date>`, `rollover:<date>`).
 - Alerts: in-app `Notification` table + Web Push (`web-push`, VAPID keys, `public/sw.js`) + **Arkesel SMS** (`lib/sms.ts`).
 - Maps: Mapbox GL in the app; Google Maps links for turn-by-turn.
-- Brand: `lib/brand.ts`, `components/Logo.tsx`, `public/brand/*`. Colours: primary `#0F3D3E`, accent `#E8A33D`, background `#F7F5F1`.
+- Brand: `lib/brand.ts`, `components/Logo.tsx`, `public/brand/*` (logo and launch animation are being redesigned; old files until then).
+- Design system (14 Oct 2026, design canvas "Trashit Unified Design"): one structure, a green per platform. Tokens in
+  `app/globals.css`: customers and website on `:root` (leaf `#9BE07A` buttons, forest `#163320` hero, ivory `#F6F1E6`),
+  `.theme-driver` (evergreen `#1E5A45`, clay `#D9A06B`), `.theme-ops` (moss `#3E6630`, sky `#9CC9E4`), each with a dark set.
+  Status colours: blue waiting on Trashit, amber on the way, green with a tick done, red needs someone (`StatusTone` in
+  `lib/order-status.ts`). The old role colours (`customer`, `driver`, `ops`, `night`) are aliases kept for screens not
+  rebuilt yet; don't use them in new work. Shared pieces: `components/kit/*` (Chip, HeroCard, StepTrack, TabBar,
+  IconRail, Sheet, Note, Skeleton) and `components/ui.tsx` (buttons, fields). Motion classes (`anim-rise`, `anim-stagger`,
+  `lift`, `skeleton`, `hero-glow`, `dialog.sheet`) stay under 400 ms and fade only with reduced motion.
   Internal names kept on purpose: "Borla car" vehicle type, `borla-wd-` references, `borla-dispatch-sweep` job.
 
 ### Where things live
@@ -146,7 +154,9 @@ dispatch stress test so far was a simulation of the planner only.
   asks, a different super admin or finance user approves with their password. 2026 records are first due 1 Jan 2033.
 - Confirm `NEXT_PUBLIC_SITE_URL` is set on Vercel and Supabase's redirect allow-list has only the real domain.
 
-**Frontend** (full plan: Frontend Enhancement Plan). Done so far: dark/light theme, loading and error screens,
+**Frontend** (full plan: Frontend Enhancement Plan; redesign build plan in 7 steps: 1 foundation (done 14 Oct), 2 logo and
+launch screen (on hold, Collins wants to improve it), 3 customer app, 4 driver app (Collins decides 3 and 4 when reached),
+5 admin console, 6 website (the scroll-driven landing tour) and older screens, 7 final checks). Done earlier: dark/light theme, loading and error screens,
 animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
 account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:
 the remaining accessibility items (contrast, tap targets, labels), shadcn/ui, and speed (`next/image`, lazy maps,
@@ -159,6 +169,8 @@ iPhone Safari or older Android browsers.
   https://claude.ai/code/artifact/8f55f9f7-6ac3-4d71-ae11-90e8c0c9fa11
 - Trashit Frontend Enhancement Plan: https://claude.ai/code/artifact/f6eac5d5-47de-4573-bf73-ef2738f183dc
 - Trashit Security and Compliance Test Plan: https://claude.ai/code/artifact/225ba51b-89b2-4f69-a531-6220d1a6049b
+- Trashit Unified Design (canvas: options, the three apps, logo, website and sign-in designs):
+  https://claude.ai/artifact/A1pYhHXBi1MVDmUKhuz4S7
 
 ## Working with Collins
 

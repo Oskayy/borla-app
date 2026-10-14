@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Moon, User, Wallet } from 'lucide-react'
+import TabBar from '@/components/kit/TabBar'
 
 const BASE = '/dashboard/driver'
 
@@ -49,35 +50,7 @@ export function DriverTabs() {
   )
 }
 
-// Phones: a floating pill above the bottom edge. The current tab is a dark pill with its name; the others are
-// icons with their names for screen readers (each still a 48 px target).
+// Phones: the shared floating pill tab bar.
 export function DriverBottomTabs() {
-  const pathname = usePathname()
-  return (
-    <nav
-      aria-label="Driver"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+14px)] lg:hidden"
-    >
-      <ul className="pointer-events-auto flex items-center gap-1 rounded-full bg-canvas p-1.5 shadow-lift ring-1 ring-line">
-        {LINKS.map(({ href, label, icon: Icon, exact, also }) => {
-          const on = isActive(pathname, href, exact) || !!also?.some((p) => pathname.startsWith(p))
-          return (
-            <li key={href}>
-              <Link
-                href={href}
-                aria-current={on ? 'page' : undefined}
-                aria-label={on ? undefined : label}
-                className={`press flex h-12 items-center justify-center gap-2 rounded-full text-sm font-semibold transition ${
-                  on ? 'bg-action px-5 text-on-action' : 'w-14 text-ink-3 hover:text-ink'
-                }`}
-              >
-                <Icon aria-hidden className="size-[22px]" strokeWidth={on ? 2.3 : 2} />
-                {on && label}
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
-    </nav>
-  )
+  return <TabBar tabs={LINKS} label="Driver" />
 }

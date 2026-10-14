@@ -13,7 +13,7 @@ import EnableAlerts from '@/components/EnableAlerts'
 import type { NextPoint } from '@/lib/driver-next'
 import FlashHost from '@/components/driver/Flash'
 import { durationLabel } from '@/lib/trip-time'
-import StepTrack from '@/components/driver/StepTrack'
+import StepTrack from '@/components/kit/StepTrack'
 
 // The driver's Tonight screen: online switch and balance side by side, the next thing to do, then the night's
 // trips (one card each: stops, then where to unload) beside the map.

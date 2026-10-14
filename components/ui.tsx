@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { Check } from 'lucide-react'
-import { CUSTOMER_STAGES, TONE_PILL, type CustomerStatus } from '@/lib/order-status'
+import { CUSTOMER_STAGES, type CustomerStatus } from '@/lib/order-status'
+import Chip from '@/components/kit/Chip'
 
-// Small building blocks shared by the app screens. They use the action colour, which each workspace sets
-// (customer green, driver amber on the night theme, ops indigo).
+// Small building blocks shared by the app screens. They use the platform tokens, which each workspace sets
+// (customers: clean green, drivers: evergreen, ops: moss). More shared pieces live in components/kit.
 
 export function PageHeader({ title, lead, action }: { title: string; lead?: string; action?: React.ReactNode }) {
   return (
@@ -31,12 +32,7 @@ export function CardTitle({ children, action }: { children: React.ReactNode; act
 }
 
 export function StatusPill({ status }: { status: CustomerStatus }) {
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${TONE_PILL[status.tone]}`}>
-      {status.tone === 'done' && <Check aria-hidden className="size-3" strokeWidth={3} />}
-      {status.label}
-    </span>
-  )
+  return <Chip tone={status.tone}>{status.label}</Chip>
 }
 
 // Booked → Driver assigned → Collected → Done, with the stage reached so far.
@@ -49,8 +45,8 @@ export function StageTrack({ stage, problem = false }: { stage: number; problem?
         return (
           <li key={label} className="min-w-0" aria-current={current ? 'step' : undefined}>
             <span
-              className={`block h-1.5 rounded-full ${
-                done ? (problem && current ? 'bg-danger' : i === 3 ? 'bg-customer' : i === 0 ? 'bg-customer' : 'bg-driver') : 'bg-line'
+              className={`block h-1.5 rounded-full transition-colors duration-500 ${
+                done ? (problem && current ? 'bg-danger' : 'bg-action-strong') : 'bg-line'
               }`}
             />
             <span className={`mt-2 flex items-center gap-1 text-xs font-medium ${done ? 'text-ink' : 'text-ink-3'}`}>
@@ -66,14 +62,14 @@ export function StageTrack({ stage, problem = false }: { stage: number; problem?
 }
 
 export const BUTTON_PRIMARY =
-  'press inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-action px-5 text-[15px] font-semibold text-on-action shadow-card transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60'
+  'press inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-action px-6 text-[15px] font-semibold text-on-action shadow-card transition hover:brightness-105 hover:shadow-lift disabled:cursor-not-allowed disabled:opacity-60'
 export const BUTTON_QUIET =
-  'press inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-surface px-4 text-[15px] font-semibold text-ink ring-1 ring-line-strong transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60'
+  'press inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-surface px-5 text-[15px] font-semibold text-ink ring-1 ring-line-strong transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60'
 // For refusing or rejecting: outlined in red, never filled (the filled button stays the main action).
 export const BUTTON_DANGER =
-  'press inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-surface px-4 text-[15px] font-semibold text-danger ring-1 ring-danger/40 transition hover:bg-danger-wash disabled:cursor-not-allowed disabled:opacity-60'
+  'press inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-surface px-5 text-[15px] font-semibold text-danger ring-1 ring-danger/40 transition hover:bg-danger-wash disabled:cursor-not-allowed disabled:opacity-60'
 export const FIELD =
-  'block w-full rounded-control border border-line-strong bg-surface px-3.5 py-3 text-[15px] text-ink placeholder:text-ink-3 focus:border-action focus:outline-none focus:ring-3 focus:ring-action/20'
+  'block w-full rounded-control border border-line-strong bg-surface px-3.5 py-3 text-[15px] text-ink transition-[border-color,box-shadow] placeholder:text-ink-3 focus:border-action-deep focus:outline-none focus:ring-4 focus:ring-action/25'
 
 export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
