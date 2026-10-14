@@ -71,7 +71,7 @@ function YearItem({ row, canRequest }: { row: YearRow; canRequest: boolean }) {
   }
 
   return (
-    <li className="rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+    <li className="rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-semibold tabular-nums">Records from {row.year}</h3>
         {status ? <Chip tone={status.tone}>{status.text}</Chip> : row.due ? <Chip tone="danger">Due</Chip> : <Chip>Due {row.dueOn}</Chip>}

@@ -54,10 +54,10 @@ export default async function DriverAccountPage() {
     .join('')
 
   return (
-    <div className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)] gap-5">
-      <h1 className="text-[26px] font-bold leading-tight tracking-[-0.025em]">Account</h1>
+    <div className="anim-stagger grid max-w-5xl gap-5 lg:grid-cols-2 lg:items-start">
+      <h1 className="lg:col-span-2 text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">Account</h1>
 
-      <section aria-label="Profile" className="flex items-center gap-4 rounded-card bg-surface p-5">
+      <section aria-label="Profile" className="flex items-center gap-4 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 lg:col-span-2">
         <PhotoUpload type={AVATAR_DOC} url={photos[AVATAR_DOC]} fallback={initials} round label="Change your profile picture" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-lg font-bold tracking-tight">{me.name}</p>

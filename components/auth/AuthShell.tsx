@@ -48,7 +48,7 @@ export function AuthTabs({ current }: { current: 'signin' | 'signup' }) {
   )
 }
 
-export default function AuthShell({ children, agreeVerb }: { children: React.ReactNode; agreeVerb: string }) {
+export default function AuthShell({ children, agreeVerb }: { children: React.ReactNode; agreeVerb?: string }) {
   return (
     <div data-surface="new" className="min-h-dvh bg-canvas lg:grid lg:place-items-center lg:p-8">
       <div className="mx-auto grid w-full max-w-5xl overflow-hidden bg-surface lg:min-h-[640px] lg:grid-cols-[1fr_1.1fr] lg:rounded-[24px] lg:shadow-lift lg:ring-1 lg:ring-line">
@@ -89,7 +89,8 @@ export default function AuthShell({ children, agreeVerb }: { children: React.Rea
           </ul>
         </aside>
         <main className="px-6 py-10 sm:px-10 lg:flex lg:flex-col lg:justify-center lg:py-12">
-          <div className="mx-auto w-full max-w-sm">{children}</div>
+          <div className="anim-rise mx-auto w-full max-w-sm">{children}</div>
+          {agreeVerb && (
           <p className="mx-auto mt-10 w-full max-w-sm text-xs text-ink-3">
             By {agreeVerb} you agree to Trashit&apos;s{' '}
             <Link href="/terms" className="underline underline-offset-2 hover:text-ink">
@@ -101,6 +102,7 @@ export default function AuthShell({ children, agreeVerb }: { children: React.Rea
             </Link>
             .
           </p>
+          )}
         </main>
       </div>
     </div>

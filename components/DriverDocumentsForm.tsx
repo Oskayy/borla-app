@@ -75,7 +75,7 @@ export default function DriverDocumentsForm({
     <div className="grid gap-3">
       <ul className="grid gap-3">
         {types.map((t) => (
-          <li key={t.code} className="flex flex-wrap items-center gap-4 rounded-card bg-surface p-4 ring-1 ring-line sm:p-5">
+          <li key={t.code} className="flex flex-wrap items-center gap-4 rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70 sm:p-5">
             <span
               className={`grid size-11 shrink-0 place-items-center rounded-full ${have[t.code] ? 'bg-ok-wash text-ok-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
             >

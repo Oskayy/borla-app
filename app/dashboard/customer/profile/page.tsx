@@ -27,9 +27,9 @@ export default async function ProfilePage() {
     .join('')
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-5xl">
       <PageHeader title="Profile" lead="Keep your details up to date so pickups go smoothly." />
-      <div className="grid gap-6">
+      <div className="anim-stagger grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Card>
           <div className="mb-6 flex items-center gap-4">
             <span className="grid size-14 place-items-center rounded-full bg-customer text-lg font-semibold text-white">{initials}</span>

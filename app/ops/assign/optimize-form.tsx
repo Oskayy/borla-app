@@ -168,7 +168,7 @@ export default function OptimizeForm({
 
       <fieldset>
         <legend className="text-sm font-semibold text-ink-2">1. Choose orders</legend>
-        <ul className="mt-2 divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+        <ul className="mt-2 divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
           {visibleOrders.map((order) => {
             const count = inRangeCounts[order.id]
             const hasCoords = order.latitude != null && order.longitude != null
@@ -202,7 +202,7 @@ export default function OptimizeForm({
         </ul>
       </fieldset>
 
-      <fieldset className="rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+      <fieldset className="rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:p-6">
         <legend className="sr-only">2. Choose a driver</legend>
         <p className="text-sm font-semibold text-ink-2" aria-hidden>
           2. Choose a driver

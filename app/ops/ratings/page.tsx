@@ -75,7 +75,7 @@ export default async function OpsRatingsPage() {
         lead={`Customers rate pickups from 1 to 5 stars. Ratings of ${LOW_RATING} stars or fewer wait here until someone has looked into them.`}
       />
 
-      <section className="rounded-card bg-surface p-5 ring-1 ring-line">
+      <section className="rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70">
         <h2 className="text-base font-semibold">Low ratings to review ({toReview.length})</h2>
         {toReview.length === 0 ? (
           <p className="mt-3 text-[15px] text-ink-3">Nothing to review.</p>
@@ -111,7 +111,7 @@ export default async function OpsRatingsPage() {
         )}
       </section>
 
-      <section className="mt-6 rounded-card bg-surface p-5 ring-1 ring-line">
+      <section className="mt-6 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70">
         <h2 className="text-base font-semibold">Approved drivers</h2>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[34rem] text-left text-[15px]">

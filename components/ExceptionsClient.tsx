@@ -274,7 +274,7 @@ export default function ExceptionsClient({
     const m = msg[key]
     const Section = SECTIONS[item.kind]
     return (
-      <article key={key} aria-labelledby="exception-title" className="anim-rise rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+      <article key={key} aria-labelledby="exception-title" className="anim-rise rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:p-6">
         <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-3">
           <Section.icon aria-hidden className="size-4" /> {Section.title}
         </p>
@@ -483,7 +483,7 @@ export default function ExceptionsClient({
           </div>
 
           {shown.length === 0 ? (
-            <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-[15px] text-ink-2 ring-1 ring-line">
+            <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">
               <CheckCircle2 aria-hidden className="size-5 text-ok-deep" /> Nothing here right now.
             </p>
           ) : (
@@ -527,7 +527,7 @@ export default function ExceptionsClient({
           {current ? (
             detail(current)
           ) : (
-            <p className="rounded-card bg-surface p-6 text-[15px] text-ink-2 ring-1 ring-line">Pick an exception to see it here.</p>
+            <p className="rounded-card bg-surface p-6 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">Pick an exception to see it here.</p>
           )}
           {current && <p className="mt-2 text-sm text-ink-3">{SECTIONS[current.kind].hint}</p>}
         </div>
@@ -539,9 +539,9 @@ export default function ExceptionsClient({
         </h2>
         <p className="mt-1 text-sm text-ink-3">Open refunds, and everything from the last 14 days.</p>
         {refunds.length === 0 ? (
-          <p className="mt-3 rounded-card bg-surface p-4 text-[15px] text-ink-2 ring-1 ring-line">No refunds.</p>
+          <p className="mt-3 rounded-card bg-surface p-4 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">No refunds.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+          <ul className="mt-3 divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
             {refunds.map((r) => {
               const state = refundState(r)
               return (

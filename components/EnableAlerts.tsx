@@ -141,7 +141,7 @@ export default function EnableAlerts({
     )
   }
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-card bg-surface p-4 ring-1 ring-line">
+    <div className="flex flex-wrap items-center gap-3 rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
       <span className="grid size-10 shrink-0 place-items-center rounded-full bg-action-wash text-action-deep">
         <BellRing aria-hidden className="size-5" />
       </span>

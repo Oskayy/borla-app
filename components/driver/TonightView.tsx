@@ -1,13 +1,12 @@
 import Link from 'next/link'
-import { AlertTriangle, CalendarDays, Check, ChevronDown, ChevronRight, Flag, Moon, Phone, Wallet } from 'lucide-react'
-import ConfirmPickupButton from '@/app/dashboard/driver/confirm-pickup-button'
+import { Check, ChevronRight, Flag, Moon } from 'lucide-react'
 import ConfirmDisposalButton from '@/app/dashboard/driver/confirm-disposal-button'
-import DriverOnlineToggle, { HeroLink } from '@/components/DriverOnlineToggle'
+import DriverOnlineToggle from '@/components/DriverOnlineToggle'
+import Chip from '@/components/kit/Chip'
 import NavigateButtons from '@/components/NavigateButtons'
 import DriverRouteMap, { type RoutePoint } from '@/components/DriverRouteMap'
 import ConfirmTripUnload from '@/components/ConfirmTripUnload'
 import NextStopCard from '@/components/NextStopCard'
-import StopResponse from '@/components/StopResponse'
 import DriverLiveUpdates from '@/components/DriverLiveUpdates'
 import EnableAlerts from '@/components/EnableAlerts'
 import type { NextPoint } from '@/lib/driver-next'
@@ -15,8 +14,8 @@ import FlashHost from '@/components/driver/Flash'
 import { durationLabel } from '@/lib/trip-time'
 import StepTrack from '@/components/kit/StepTrack'
 
-// The driver's Tonight screen: online switch and balance side by side, the next thing to do, then the night's
-// trips (one card each: stops, then where to unload) beside the map.
+// The driver's Tonight screen, as designed: the shift card (online switch), the next thing to do, then the night's
+// trips (stops as rows that open the stop page, then where to unload) beside the map.
 // Data comes from app/dashboard/driver/page.tsx.
 
 export interface TripGroup {
@@ -72,127 +71,90 @@ function stopState(o: Stop): { text: string; cls: string } {
 // A trip is done once nothing is left to collect or unload.
 const tripDone = (g: TripGroup) => g.orders.every((o) => o.status === 'DISPOSAL_PENDING')
 
-function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; firstStopNo: number; current: boolean; currentStopId: string | null }) {
+function TripCard({ g, firstStopNo, current }: { g: TripGroup; firstStopNo: number; current: boolean }) {
   const done = tripDone(g)
   const collected = g.orders.filter((o) => o.status === 'PICKED_UP')
   const toCollect = g.orders.filter((o) => o.status === 'ASSIGNED').length
-  const badge = done ? { text: 'Done', cls: 'bg-ok-wash text-ok-deep' } : current ? { text: 'Now', cls: 'bg-highlight text-on-highlight' } : { text: 'Next', cls: 'bg-canvas text-ink-2 ring-1 ring-line' }
+  const chip = done ? { text: 'Done', tone: 'done' as const } : current ? { text: 'Now', tone: 'progress' as const } : { text: 'Next', tone: 'neutral' as const }
   const accepted = g.orders.filter((o) => o.status !== 'ASSIGNED' || o.accepted).length
   const picked = g.orders.filter((o) => o.status !== 'ASSIGNED').length
   const n = g.orders.length
 
   return (
-    <details open={!done} className={`anim-rise group overflow-hidden rounded-card bg-surface ${current ? 'ring-2 ring-action-strong' : 'ring-1 ring-line'}`}>
-      {/* Trip header: always visible; tap to fold a finished trip away. */}
-      <summary className="flex cursor-pointer list-none items-center gap-3.5 px-4 pb-3 pt-4 sm:px-5 [&::-webkit-details-marker]:hidden">
-        <span
-          className={`grid size-12 shrink-0 place-items-center rounded-full text-lg font-bold tabular-nums ${
-            done ? 'bg-ok-wash text-ok-deep' : current ? 'bg-action text-on-action' : 'bg-canvas text-ink'
-          }`}
-        >
-          {done ? <Check aria-hidden className="size-5" strokeWidth={3} /> : g.tripNumber}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight">Trip {g.tripNumber}</span>
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${badge.cls}`}>{badge.text}</span>
-          </span>
-          <span className="block truncate text-sm text-ink-3">
-            {g.orders.length} {g.orders.length === 1 ? 'stop' : 'stops'}
-            {!done && g.minutes != null && ` · ${durationLabel(g.minutes)}`} · unload at {g.site?.name ?? 'no site yet'}
-          </span>
-        </span>
-        <ChevronDown aria-hidden className="size-5 shrink-0 text-ink-3 transition group-open:rotate-180" />
-      </summary>
-
-      <div className="px-4 pb-4 pt-1 sm:px-5">
-        <StepTrack
-          label={`Trip ${g.tripNumber} progress`}
-          steps={[
-            { label: 'Accepted', sub: `${accepted} of ${n}`, done: accepted === n },
-            { label: 'Collected', sub: `${picked} of ${n}`, done: picked === n },
-            { label: 'Unloaded', sub: g.site?.name ?? 'No site yet', done },
-          ]}
-        />
+    <section
+      aria-labelledby={`trip-${g.key}`}
+      className={`anim-rise grid gap-4 rounded-card bg-surface p-4 sm:p-5 ${current ? 'shadow-lift ring-2 ring-action-strong' : 'ring-1 ring-line'}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 id={`trip-${g.key}`} className="text-[19px] font-bold tracking-tight">
+            Trip {g.tripNumber}
+          </h3>
+          <p className="truncate text-sm text-ink-3">
+            {n} {n === 1 ? 'stop' : 'stops'}
+            {!done && g.minutes != null && ` · about ${durationLabel(g.minutes)}`} · unload at {g.site?.name ?? 'no site yet'}
+          </p>
+        </div>
+        <Chip tone={chip.tone}>{chip.text}</Chip>
       </div>
 
-      <ol className="mx-2.5 divide-y divide-line rounded-[18px] bg-canvas sm:mx-3">
+      <StepTrack
+        label={`Trip ${g.tripNumber} progress`}
+        steps={[
+          { label: 'Accepted', sub: `${accepted} of ${n}`, done: accepted === n },
+          { label: 'Collected', sub: `${picked} of ${n}`, done: picked === n },
+          { label: 'Unloaded', sub: g.site?.name ?? 'No site yet', done },
+        ]}
+      />
+
+      {/* Each stop opens its own page: map, navigate, call, then the photo to confirm the pickup. */}
+      <ol className="grid gap-2">
         {g.orders.map((order, i) => {
           const st = stopState(order)
-          const finished = order.status === 'DISPOSAL_PENDING'
+          const finished = order.status !== 'ASSIGNED'
           return (
-            <li key={order.id} className={`px-4 py-4 sm:px-5 ${finished ? 'opacity-60' : ''}`}>
-              <div className="flex items-start gap-3">
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-action text-sm font-bold tabular-nums text-on-action">{firstStopNo + i}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <Link href={`/dashboard/driver/stop/${order.id}`} className="group/stop inline-flex items-start gap-1 text-lg font-semibold leading-snug hover:underline">
-                      {order.address}
-                      <ChevronRight aria-hidden className="mt-1 size-4 shrink-0 text-ink-3 transition group-hover/stop:translate-x-0.5" />
-                    </Link>
-                    <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${st.cls}`}>{st.text}</span>
-                  </div>
-                  {order.bins && <p className="mt-0.5 text-sm text-ink-3">{order.bins}</p>}
-                  {order.pay && (
-                    <p className="mt-1 text-sm tabular-nums">
-                      <span className="font-semibold text-ink">Your pay GHS {order.pay.total.toFixed(2)}</span>
-                      <span className="text-ink-3">
-                        {' '}
-                        · {order.pay.pickup.toFixed(2)} at pickup, {order.pay.unload.toFixed(2)} after unload
-                        {(order.pay.bonus ?? 0) > 0 && ` (incl. ${order.pay.bonus!.toFixed(2)} distance bonus)`}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {order.status === 'ASSIGNED' && order.approximate && (
-                <p className="mt-3 flex items-start gap-2 rounded-control bg-warn-wash p-3 text-sm">
-                  <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warn-deep" />
-                  <span>
-                    No exact pin.{' '}
-                    {order.customerPhone && (
-                      <a href={`tel:${order.customerPhone}`} className="inline-flex items-center gap-1 font-semibold text-action-deep underline underline-offset-2">
-                        <Phone aria-hidden className="size-3.5" /> Call the customer
-                      </a>
-                    )}
+            <li key={order.id}>
+              <Link
+                href={`/dashboard/driver/stop/${order.id}`}
+                className={`lift group flex items-center gap-3 rounded-[18px] bg-canvas p-3 ${order.status === 'DISPOSAL_PENDING' ? 'opacity-60' : ''}`}
+              >
+                <span
+                  className={`grid size-9 shrink-0 place-items-center rounded-full text-sm font-bold tabular-nums ${
+                    finished ? 'bg-ok-wash text-ok-deep' : !order.accepted ? 'bg-highlight text-on-highlight' : 'bg-action text-on-action'
+                  }`}
+                >
+                  {finished ? <Check aria-hidden className="size-4" strokeWidth={3} /> : firstStopNo + i}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold">{order.address}</span>
+                  <span className="block truncate text-xs text-ink-3">
+                    {[order.bins, order.pay ? `your pay GHS ${order.pay.total.toFixed(2)}` : null].filter(Boolean).join(' · ')}
                   </span>
-                </p>
+                </span>
+                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${st.cls}`}>{st.text}</span>
+                <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-3 transition group-hover:translate-x-0.5" />
+              </Link>
+              {order.status === 'PICKED_UP' && !g.routeId && (
+                <div className="mt-2 pl-12">
+                  <ConfirmDisposalButton orderId={order.id} />
+                </div>
               )}
-
-              <div className="mt-3 grid gap-2.5 pl-11 empty:hidden">
-                {order.status === 'ASSIGNED' && !order.accepted && <StopResponse orderId={order.id} deadline={order.deadline} />}
-                {order.status === 'ASSIGNED' && order.accepted && order.lat != null && order.lng != null && <NavigateButtons lat={order.lat} lng={order.lng} quiet />}
-                {order.status === 'ASSIGNED' && order.accepted && (order.id === currentStopId || currentStopId === null ? (
-                  <ConfirmPickupButton orderId={order.id} />
-                ) : (
-                  <details className="group/act">
-                    <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden">
-                      <ChevronDown aria-hidden className="size-4 transition group-open/act:rotate-180" /> Pickup actions
-                    </summary>
-                    <div className="mt-2">
-                      <ConfirmPickupButton orderId={order.id} />
-                    </div>
-                  </details>
-                ))}
-                {order.status === 'PICKED_UP' && !g.routeId && <ConfirmDisposalButton orderId={order.id} />}
-              </div>
             </li>
           )
         })}
       </ol>
 
-      {/* Then unload: the last step of the trip, in the same card. */}
-      <div className={`m-2.5 rounded-[18px] px-4 py-4 sm:m-3 sm:px-5 ${g.site ? 'bg-info-wash' : 'bg-danger-wash'}`}>
+      {/* Then unload: the last step of the trip. */}
+      <div className={`rounded-[18px] p-4 ${g.site ? 'bg-info-wash' : 'bg-danger-wash'}`}>
         {g.site ? (
           <>
             <div className="flex items-start gap-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-info text-white">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-info text-white">
                 <Flag aria-hidden className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-info">Then unload at</p>
-                <p className="text-lg font-semibold leading-snug">{g.site.name}</p>
+                <p className="font-semibold leading-snug">{g.site.name}</p>
                 <p className="mt-0.5 text-sm text-ink-3">
                   {g.site.hours}
                   {g.site.status !== 'OPEN' && <span className="font-medium text-danger"> · {g.site.status.toLowerCase()} now: call ops</span>}
@@ -200,7 +162,7 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
               </div>
             </div>
             {!done && (
-              <div className="mt-3 grid gap-2.5 pl-11">
+              <div className="mt-3 grid gap-2.5 sm:pl-12">
                 {collected.length > 0 && g.site.lat != null && g.site.lng != null && <NavigateButtons lat={g.site.lat} lng={g.site.lng} quiet />}
                 {g.routeId && collected.length > 0 && (
                   <ConfirmTripUnload
@@ -221,7 +183,7 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
           </p>
         )}
       </div>
-    </details>
+    </section>
   )
 }
 
@@ -258,14 +220,7 @@ export default function TonightView({
       </div>
 
       {/* The online switch and the night in numbers; money lives on the Earnings tab. */}
-      <DriverOnlineToggle initialOnline={online} canGoOnline={canGoOnline} shiftLabel={shiftLabel} overrideUntil={overrideUntil} summary={summary}>
-        <HeroLink href="/dashboard/driver/availability" icon={<CalendarDays aria-hidden className="size-[18px]" />}>
-          My nights
-        </HeroLink>
-        <HeroLink href="/dashboard/driver/earnings" icon={<Wallet aria-hidden className="size-[18px]" />}>
-          Earnings
-        </HeroLink>
-      </DriverOnlineToggle>
+      <DriverOnlineToggle initialOnline={online} canGoOnline={canGoOnline} shiftLabel={shiftLabel} overrideUntil={overrideUntil} summary={summary} />
 
       {offTonight && (
         <p className="flex items-start gap-2.5 rounded-card bg-surface p-4 text-[15px]">
@@ -297,13 +252,7 @@ export default function TonightView({
           <section aria-labelledby="h-trips" className="grid gap-4">
             <h2 id="h-trips" className="text-[17px] font-semibold tracking-tight">Your trips</h2>
             {groups.map((g, i) => (
-              <TripCard
-                key={g.key}
-                g={g}
-                firstStopNo={firstStop[i]}
-                current={g.key === currentKey}
-                currentStopId={next?.kind === 'stop' ? next.orderId : null}
-              />
+              <TripCard key={g.key} g={g} firstStopNo={firstStop[i]} current={g.key === currentKey} />
             ))}
           </section>
 

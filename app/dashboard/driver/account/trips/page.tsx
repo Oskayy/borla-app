@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { EmptyState } from '@/components/ui'
 import { History } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
@@ -62,22 +63,20 @@ export default async function DriverTripsPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-2xl grid-cols-[minmax(0,1fr)] gap-5">
+    <div className="grid max-w-4xl grid-cols-[minmax(0,1fr)] gap-5">
       <div>
         <BackToAccount />
-        <h1 className="text-[clamp(1.5rem,3vw,1.9rem)] font-bold tracking-[-0.025em]">Trip history</h1>
+        <h1 className="anim-rise text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">Trip history</h1>
         <p className="mt-1 text-sm text-ink-3">The last {DAYS} days.</p>
       </div>
 
       {nights.size === 0 ? (
-        <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
-          <History aria-hidden className="size-5 text-ink-3" /> No paid stops yet. They show here once you collect.
-        </p>
+        <EmptyState icon={History} title="No trips yet" text="Your paid stops show here, night by night, once you collect and unload." />
       ) : (
         [...nights.entries()].map(([night, list]) => {
           const total = list.reduce((n, s) => n + s.pickup + s.unload, 0)
           return (
-            <section key={night} aria-label={`Night of ${dateLabel(night)}`} className="rounded-card bg-surface ring-1 ring-line">
+            <section key={night} aria-label={`Night of ${dateLabel(night)}`} className="rounded-card bg-surface shadow-card ring-1 ring-line/70">
               <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
                 <h2 className="font-semibold">Night of {dateLabel(night)}</h2>
                 <span className="text-sm tabular-nums text-ink-3">

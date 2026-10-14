@@ -44,7 +44,7 @@ export default function ZonesClient({
         {zones.length === 0 ? (
           <AllClear>No zones yet.</AllClear>
         ) : (
-          <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+          <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
             {zones.map((zone) => (
               <li key={zone.id} className={`p-4 sm:px-5 ${zone.active ? '' : 'bg-canvas/60'}`}>
                 <div className="flex flex-wrap items-start justify-between gap-3">

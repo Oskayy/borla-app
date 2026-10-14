@@ -83,7 +83,7 @@ export default async function DriverEarningsPage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-[26px] font-bold leading-tight tracking-[-0.025em]">Earnings</h1>
+      <h1 className="anim-rise mb-4 text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">Earnings</h1>
 
       {/* The balance card: what can be cashed out now, with shortcuts. */}
       <section aria-label="Your balance" className="hero-glow anim-rise rounded-card bg-hero p-5 text-on-hero shadow-lift sm:p-6">

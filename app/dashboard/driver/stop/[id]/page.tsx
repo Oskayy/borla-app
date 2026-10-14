@@ -72,7 +72,7 @@ export default async function StopPage({ params }: { params: Promise<{ id: strin
   const markers: MapMarker[] = hasSpot ? [{ lat: order.latitude!, lng: order.longitude!, kind: 'pin' }] : []
 
   return (
-    <div className="mx-auto grid max-w-2xl gap-5">
+    <div className="grid max-w-4xl gap-5">
       <Link href="/dashboard/driver" className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-semibold text-ink-2 hover:text-ink">
         <ArrowLeft aria-hidden className="size-4" /> Tonight
       </Link>
@@ -84,7 +84,7 @@ export default async function StopPage({ params }: { params: Promise<{ id: strin
         <p className="rounded-card bg-danger-wash p-4 text-sm font-medium text-danger">No map position for this stop. Call the customer or ops.</p>
       )}
 
-      <section aria-labelledby="stop-title" className="anim-rise grid gap-4 rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+      <section aria-labelledby="stop-title" className="anim-rise grid gap-4 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <h1 id="stop-title" className="text-2xl font-bold leading-tight tracking-tight">
             {address}

@@ -362,7 +362,7 @@ export default async function Home() {
                   { icon: Camera, text: 'Pickup photos are stored privately and checked when something looks off.' },
                   { icon: Phone, text: 'A real person handles missed pickups, disputes and refunds.' },
                 ].map(({ icon: Icon, text }) => (
-                  <li key={text} className="flex items-start gap-3 rounded-card bg-surface p-5 ring-1 ring-line">
+                  <li key={text} className="flex items-start gap-3 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70">
                     <Icon aria-hidden className="mt-0.5 size-5 shrink-0 text-ops" />
                     <span className="text-[15px] leading-relaxed text-ink-2">{text}</span>
                   </li>

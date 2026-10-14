@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { BellRing, X } from 'lucide-react'
 
 interface Notice {
   id: string
@@ -23,22 +24,26 @@ export default function NoticeList({ notices }: { notices: Notice[] }) {
 
   if (list.length === 0) return null
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+    <ul role="status" className="mb-5 grid gap-2">
       {list.map((n) => (
-        <div key={n.id} className="panel" style={{ borderLeft: '4px solid var(--color-accent)', display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontWeight: 600, fontSize: 14 }}>{n.title}</p>
-            <p style={{ fontSize: 13, color: '#444' }}>{n.body}</p>
+        <li key={n.id} className="anim-note flex items-start gap-3 rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-action-wash text-action-deep">
+            <BellRing aria-hidden className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{n.title}</p>
+            <p className="text-sm text-ink-2">{n.body}</p>
           </div>
           <button
+            type="button"
             onClick={() => dismiss(n.id)}
             aria-label="Dismiss"
-            style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#666', alignSelf: 'flex-start' }}
+            className="press -m-2 grid size-11 shrink-0 place-items-center rounded-full text-ink-3 hover:bg-canvas hover:text-ink"
           >
-            ×
+            <X aria-hidden className="size-4" />
           </button>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }

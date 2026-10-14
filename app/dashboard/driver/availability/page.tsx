@@ -24,7 +24,7 @@ export default async function DriverAvailabilityPage() {
   const tonight = planningShiftDate(new Date(), settings)
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader title="Availability" lead="Choose the nights you work. On your nights off, you won't be planned or sent new stops." />
       <Card>
         <AvailabilityForm

@@ -22,7 +22,7 @@ export default function ZoneMapCard({
   legend?: boolean
 }) {
   return (
-    <section aria-labelledby="zone-title" className="grid gap-2 rounded-card bg-surface p-3.5 ring-1 ring-line">
+    <section aria-labelledby="zone-title" className="grid gap-2 rounded-card bg-surface p-3.5 shadow-card ring-1 ring-line/70">
       <div className="flex items-center justify-between gap-3 px-1 pt-0.5">
         <h2 id="zone-title" className="truncate text-[15px] font-semibold">
           {title}

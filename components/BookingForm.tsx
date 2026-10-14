@@ -379,22 +379,22 @@ function BookingFormInner({
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-5">
+    <div className="max-w-5xl">
+      <div className="anim-rise mb-5 max-w-2xl">
         <h1 className="text-[clamp(1.6rem,3vw,2rem)] font-bold leading-tight tracking-[-0.03em]">{guest ? 'Price a pickup' : 'Book a pickup'}</h1>
         <p className="mt-1.5 text-[15px] text-ink-2">
           {guest ? 'See your price and collection night first. You only need an account when you book.' : 'A few quick questions. You see your price and collection night before you pay.'}
         </p>
       </div>
       {!guest && draft && step === 0 && (
-        <p role="status" className="anim-note mb-5 flex items-start gap-2.5 rounded-card bg-ok-wash p-4 text-[15px] text-ink ring-1 ring-ok/25">
+        <p role="status" className="anim-note mb-5 flex items-start gap-2.5 rounded-card bg-ok-wash lg:mr-[344px] p-4 text-[15px] text-ink ring-1 ring-ok/25">
           <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-ok-deep" strokeWidth={2.5} />
           We kept the pickup you priced. Check the details, add a photo of your waste, then pay.
         </p>
       )}
 
       {/* Progress: one segment per question */}
-      <ol aria-label="Booking steps" className="mb-5 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }}>
+      <ol aria-label="Booking steps" className="mb-5 grid gap-1.5 lg:mr-[344px]" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }}>
         {STEPS.map((s, i) => (
           <li key={s.id} aria-current={i === step ? 'step' : undefined} className="min-w-0">
             <span className={`block h-1.5 rounded-full transition-colors duration-300 ${i <= step ? 'bg-action-strong' : 'bg-line'}`} />
@@ -404,7 +404,8 @@ function BookingFormInner({
         ))}
       </ol>
 
-      <section key={current.id} aria-labelledby="step-title" className="anim-rise rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+      <section key={current.id} aria-labelledby="step-title" className="anim-rise rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:p-6">
         <p className="text-sm font-semibold text-ink-3">
           Step {step + 1} of {STEPS.length}
         </p>
@@ -780,6 +781,50 @@ function BookingFormInner({
           )}
         </div>
       </section>
+
+      {/* On a computer: what's been chosen so far, and the price as soon as it's known. */}
+      <aside aria-label="Your pickup so far" className="anim-rise hidden lg:sticky lg:top-24 lg:block">
+        <div className="hero-glow grid gap-4 rounded-card bg-hero p-5 text-on-hero shadow-lift">
+          <p className="text-sm text-on-hero-2">Your pickup</p>
+          <dl className="grid gap-3 text-sm">
+            <div>
+              <dt className="text-on-hero-2">Where</dt>
+              <dd className="mt-0.5 truncate font-semibold">{useHome && home ? 'My home' : address.trim() || 'Not chosen yet'}</dd>
+            </div>
+            <div>
+              <dt className="text-on-hero-2">Bins</dt>
+              <dd className="mt-0.5 font-semibold">
+                {totalBins > 0
+                  ? sizes
+                      .filter((z) => (bins[z.code] ?? 0) > 0)
+                      .map((z) => `${bins[z.code]} × ${z.litres} L`)
+                      .join(', ')
+                  : 'None yet'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-on-hero-2">Waste</dt>
+              <dd className="mt-0.5 font-semibold">
+                {wasteType === 'recyclable' ? 'Recyclable' : 'General'}
+                {hazardous ? ', with hazardous items' : ''}
+              </dd>
+            </div>
+          </dl>
+          <div className="rounded-[16px] bg-white/8 p-4">
+            <p className="text-sm text-on-hero-2">Price</p>
+            <p aria-live="polite" className="mt-1 text-[28px] font-bold leading-none tracking-tight tabular-nums">
+              {quote ? `GHS ${quote.price.toFixed(2)}` : pricing ? '…' : '—'}
+            </p>
+            <p className="mt-2 text-xs text-on-hero-2">
+              {quote ? `${quote.zoneName} · ${quote.collectionLabel}` : 'Worked out for your area. You see it in full before you pay.'}
+            </p>
+          </div>
+          <p className="flex items-center gap-1.5 text-xs text-on-hero-2">
+            <Lock aria-hidden className="size-3.5" /> MoMo or card, through Paystack
+          </p>
+        </div>
+      </aside>
+      </div>
     </div>
   )
 }

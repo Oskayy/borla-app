@@ -57,7 +57,7 @@ export default function DisposalReviewClient({ groups, canRefund = false }: { gr
 
   if (groups.length === 0) {
     return (
-      <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
+      <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">
         <CheckCircle2 aria-hidden className="size-5 text-action-deep" /> Nothing to check. Every unload so far was confirmed at the site.
       </p>
     )
@@ -69,7 +69,7 @@ export default function DisposalReviewClient({ groups, canRefund = false }: { gr
         const litres = g.orders.reduce((n, o) => n + (o.litres ?? 0), 0)
         const msg = messages[g.key]
         return (
-          <li key={g.key} className="grid gap-5 rounded-card bg-surface p-5 ring-1 ring-line sm:grid-cols-[220px_1fr] sm:p-6">
+          <li key={g.key} className="grid gap-5 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:grid-cols-[220px_1fr] sm:p-6">
             {g.photoUrl ? (
               <a href={g.photoUrl} target="_blank" rel="noopener noreferrer" className="block self-start overflow-hidden rounded-control ring-1 ring-line">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

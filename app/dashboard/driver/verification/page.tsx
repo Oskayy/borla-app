@@ -25,7 +25,7 @@ export default async function DriverVerificationPage() {
   const waiting = profile.approvalStatus === 'PENDING' && !!profile.submittedAt
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader title="Get approved to drive" />
       {waiting && (
         <div className="mb-6 flex items-start gap-3 rounded-card bg-action-wash p-5 ring-1 ring-action/30">

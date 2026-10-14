@@ -78,14 +78,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const rateable = !order.rating && order.driver && rateWindowOpen(order)
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <Link href="/dashboard/customer/orders" className="mb-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink">
         <ArrowLeft aria-hidden className="size-4" /> My orders
       </Link>
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-[clamp(1.5rem,3vw,1.9rem)] font-bold leading-tight tracking-[-0.025em]">{binsText(quote) || 'Pickup'}</h1>
+          <h1 className="anim-rise text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">{binsText(quote) || 'Pickup'}</h1>
           <p className="mt-1 text-[15px] text-ink-2">
             Booked {dateLabel(order.createdAt)} · <span className="tabular-nums">{ghs(quote?.price)}</span>
           </p>

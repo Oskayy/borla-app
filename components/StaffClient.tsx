@@ -135,7 +135,7 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
         <SectionTitle id="h-staff" count={rows.length}>
           Staff
         </SectionTitle>
-        <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+        <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
           {rows.map((r) => (
             <li key={r.id} className={`p-4 sm:px-5 ${r.active ? '' : 'bg-canvas/60'}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">

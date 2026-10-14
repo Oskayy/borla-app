@@ -50,7 +50,7 @@ export default async function ShiftSettingsPage() {
           hazardSites={hazardSites}
         />
       ) : (
-        <p className="rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
+        <p className="rounded-card bg-surface p-5 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">
           Trips per night: {trips} · minutes to accept: {acceptMinutes} · automatic assignment {autoDispatch ? 'on' : 'off'} · hazardous
           waste {acceptHazardous ? 'accepted' : 'not accepted'}. Only a Super Admin or Ops
           Manager can change these.

@@ -34,9 +34,9 @@ export default async function SettingsPage() {
   const has2fa = !!factors?.totp?.some((f) => f.status === 'verified')
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-5xl">
       <PageHeader title="Settings" lead="Make Trashit work the way you want it to." />
-      <div className="grid gap-6">
+      <div className="anim-stagger grid items-start gap-6 lg:grid-cols-2">
         <Card>
           <CardTitle>Sign-in and security</CardTitle>
           <div className="grid gap-1">

@@ -13,9 +13,9 @@ export default async function DriverSecurityPage() {
   const has2fa = !!factors.data?.totp?.some((f) => f.status === 'verified')
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-4xl">
       <BackToAccount />
-      <h1 className="mb-5 text-[clamp(1.5rem,3vw,1.9rem)] font-bold tracking-[-0.025em]">Sign-in and security</h1>
+      <h1 className="anim-rise mb-5 text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">Sign-in and security</h1>
       <AccountGroup title="Sign-in">
         <AccountRow
           href="/reset-password"

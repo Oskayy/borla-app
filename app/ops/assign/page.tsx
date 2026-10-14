@@ -112,7 +112,7 @@ export default async function AssignOrdersPage() {
         )}
         {orders.length === 0 && (
           <>
-            <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
+            <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">
               <CheckCircle2 aria-hidden className="size-5 text-action-deep" /> No paid orders waiting for a driver.
               {assigned.length > 0 && (assigned.length === 1 ? " Tonight's route is on the map." : " Tonight's routes are on the map.")}
             </p>

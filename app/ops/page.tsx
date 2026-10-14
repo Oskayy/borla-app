@@ -1,6 +1,5 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AlertTriangle, BadgeCheck, CheckCircle2, ChevronRight, Flag, Landmark, Moon, Route, Star, Undo2, Wallet, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, Flag, Landmark, Route, Star, Undo2, Wallet, type LucideIcon } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
@@ -10,7 +9,7 @@ import { worksNight } from '@/lib/availability'
 import { REFUND_ROLES } from '@/lib/refunds'
 import { PAYOUT_ROLES } from '@/lib/wallet-server'
 import { OPS_SECTIONS, canOpen, type QueueKey } from '@/lib/ops-nav'
-import HeroCard from '@/components/kit/HeroCard'
+import OpsOverviewView from '@/components/ops/OpsOverviewView'
 import { queueCounts } from '@/lib/ops-queue'
 
 export const dynamic = 'force-dynamic'
@@ -56,18 +55,17 @@ function tonightInfo(settings: Awaited<ReturnType<typeof getShiftSettings>>) {
 }
 
 // Drivers who count as online right now (online and inside the shift, or with an ops override).
-function onlineNow(drivers: { isOnline: boolean; onlineOverrideUntil: Date | null }[], settings: Awaited<ReturnType<typeof getShiftSettings>>) {
+function onlineNow<T extends { isOnline: boolean; onlineOverrideUntil: Date | null }>(drivers: T[], settings: Awaited<ReturnType<typeof getShiftSettings>>): T[] {
   const now = new Date()
-  return drivers.filter((d) => isDriverAvailable(d, now, settings)).length
+  return drivers.filter((d) => isDriverAvailable(d, now, settings))
 }
 
-// Stages of tonight's orders in the shared status colours (on the dark card): sky = waiting on Trashit,
-// amber = with a driver, light amber = collected, white = done.
+// Stages of tonight's orders.
 const STAGES = [
-  { key: 'waiting', label: 'Waiting for a driver', bar: 'bg-highlight', statuses: ['PAID', 'READY_FOR_BATCH'] },
-  { key: 'withDriver', label: 'With a driver', bar: 'bg-warn', statuses: ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW'] },
-  { key: 'collected', label: 'Collected, not unloaded', bar: 'bg-warn/55', statuses: ['PICKED_UP', 'DISPOSAL_PENDING'] },
-  { key: 'unloaded', label: 'Unloaded and verified', bar: 'bg-white', statuses: ['DISPOSAL_VERIFIED', 'COMPLETED'] },
+  { key: 'waiting', statuses: ['PAID', 'READY_FOR_BATCH'] },
+  { key: 'withDriver', statuses: ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW'] },
+  { key: 'collected', statuses: ['PICKED_UP', 'DISPOSAL_PENDING'] },
+  { key: 'unloaded', statuses: ['DISPOSAL_VERIFIED', 'COMPLETED'] },
 ] as const
 
 export default async function OpsOverview() {
@@ -88,7 +86,16 @@ export default async function OpsOverview() {
   const [drivers, refundsToApprove, paymentsToConfirm] = await prisma.$transaction([
     prisma.driverProfile.findMany({
       where: { approvalStatus: 'APPROVED', isActive: true, user: { active: true } },
-      select: { isOnline: true, onlineOverrideUntil: true, workNights: true, nightsOff: true },
+      select: {
+        userId: true,
+        isOnline: true,
+        onlineOverrideUntil: true,
+        workNights: true,
+        nightsOff: true,
+        vehicleType: true,
+        vehicleTypeRef: { select: { name: true } },
+        user: { select: { name: true } },
+      },
     }),
     prisma.refund.count({ where: canRefund ? { status: 'AWAITING_APPROVAL' } : { id: 'none' } }),
     prisma.withdrawal.count({ where: canPay ? { status: 'CONFIRMING' } : { id: 'none' } }),
@@ -130,108 +137,44 @@ export default async function OpsOverview() {
   }))
   const totalTonight = stageCounts.reduce((n, s) => n + s.count, 0)
   const working = drivers.filter((d) => worksNight(d, night)).length
-  const online = onlineNow(drivers, settings)
+  const onlineDrivers = onlineNow(drivers, settings)
+  const online = onlineDrivers.length
 
-  const done = stageCounts.find((s) => s.key === 'unloaded')?.count ?? 0
+  // What each driver online is doing tonight.
+  const theirs = onlineDrivers.length
+    ? await prisma.order.findMany({
+        where: { shiftDate: dbDate(night), driverId: { in: onlineDrivers.map((d) => d.userId) }, status: { in: ['ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED'] } },
+        select: { driverId: true, status: true },
+      })
+    : []
+  const driverRows = onlineDrivers
+    .map((d) => {
+      const mine = theirs.filter((o) => o.driverId === d.userId)
+      const toCollect = mine.filter((o) => o.status === 'ASSIGNED').length
+      const onBoard = mine.filter((o) => o.status === 'PICKED_UP').length
+      const status =
+        toCollect > 0 ? `${toCollect} to collect${onBoard ? `, ${onBoard} on board` : ''}` : onBoard > 0 ? `${onBoard} on board, to unload` : mine.length > 0 ? `${mine.length} done tonight` : 'Waiting for stops'
+      const tone = toCollect + onBoard > 0 ? ('progress' as const) : mine.length > 0 ? ('done' as const) : ('neutral' as const)
+      return { id: d.userId, name: d.user.name, vehicle: d.vehicleTypeRef?.name ?? d.vehicleType, status, tone }
+    })
+    .sort((a, b) => (a.tone === b.tone ? a.name.localeCompare(b.name) : a.tone === 'progress' ? -1 : b.tone === 'progress' ? 1 : 0))
+
+  const count = (key: string) => stageCounts.find((s) => s.key === key)?.count ?? 0
 
   return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="text-[clamp(1.6rem,2.4vw,2rem)] font-bold leading-tight tracking-[-0.025em]">Tonight, {label}</h1>
-        <p className="mt-1 text-[15px] text-ink-2">How the night is going, then what needs a person.</p>
-      </div>
-
-      {/* The live progress card: tonight's orders by stage, and drivers online. */}
-      <HeroCard aria-labelledby="orders" className="anim-rise grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-8">
-        <div className="grid gap-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-sm text-on-hero-2">
-              <Moon aria-hidden className="size-4 text-highlight" /> {running ? 'Shift running' : 'Shift'} · {windowLabel(settings)}
-            </p>
-            {running && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-highlight">
-                <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-highlight" /> Live
-              </span>
-            )}
-          </div>
-          <h2 id="orders" className="flex flex-wrap items-baseline gap-x-3 text-[clamp(2rem,4vw,2.75rem)] font-bold leading-none tracking-tight">
-            <span className="tabular-nums">{done}</span>
-            <span className="text-lg font-semibold text-on-hero-2">
-              of {totalTonight} {totalTonight === 1 ? 'order' : 'orders'} done
-            </span>
-          </h2>
-          {totalTonight > 0 ? (
-            <div className="flex h-3 overflow-hidden rounded-full bg-white/12" aria-hidden>
-              {stageCounts
-                .filter((s) => s.count > 0)
-                .map((s) => (
-                  <span key={s.key} className={`${s.bar} h-full transition-[width] duration-700`} style={{ width: `${(s.count / totalTonight) * 100}%` }} />
-                ))}
-            </div>
-          ) : (
-            <p className="text-sm text-on-hero-2">No orders booked for tonight yet.</p>
-          )}
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-            {stageCounts.map((s) => (
-              <div key={s.key}>
-                <dt className="flex items-center gap-1.5 text-on-hero-2">
-                  <span aria-hidden className={`size-2 shrink-0 rounded-full ${s.bar}`} /> {s.label}
-                </dt>
-                <dd className="mt-0.5 text-xl font-bold tabular-nums">{s.count}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        <dl aria-label="Drivers" className="grid grid-cols-3 content-start gap-3 rounded-[18px] bg-white/6 p-4 lg:grid-cols-1">
-          <div>
-            <dt className="text-sm text-on-hero-2">Online now</dt>
-            <dd className="mt-0.5 text-3xl font-bold tabular-nums tracking-tight text-highlight">{online}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-on-hero-2">Working tonight</dt>
-            <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight">{working}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-on-hero-2">Approved</dt>
-            <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight">{drivers.length}</dd>
-          </div>
-        </dl>
-      </HeroCard>
-
-      <section aria-labelledby="attention" className="rounded-card bg-surface ring-1 ring-line">
-        <h2 id="attention" className="flex items-center gap-2 px-5 pt-5 text-base font-semibold tracking-tight sm:px-6">
-          Needs you
-          {waiting.length > 0 && (
-            <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold tabular-nums text-white">{waiting.reduce((n, a) => n + a.count, 0)}</span>
-          )}
-        </h2>
-        {waiting.length === 0 ? (
-          <p className="flex items-center gap-2.5 px-5 pb-6 pt-3 text-[15px] text-ink-2 sm:px-6">
-            <CheckCircle2 aria-hidden className="size-5 text-ok-deep" /> All clear. Nothing is waiting for you right now.
-          </p>
-        ) : (
-          <ul className="anim-stagger grid gap-2 p-3 pt-2 sm:grid-cols-2">
-            {waiting.map((a) => (
-              <li key={a.key}>
-                <Link href={a.href} className="lift group flex h-full items-center gap-4 rounded-[18px] bg-canvas px-4 py-4">
-                  <span
-                    className={`grid size-10 shrink-0 place-items-center rounded-full ${
-                      a.key === 'needsDriver' || a.key === 'exceptions' ? 'bg-danger-wash text-danger' : 'bg-action-wash text-action-deep'
-                    }`}
-                  >
-                    <a.icon aria-hidden className="size-[18px]" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold tabular-nums">{a.title(a.count)}</span>
-                    <span className="block text-sm text-ink-3">{a.hint}</span>
-                  </span>
-                  <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-3 transition group-hover:translate-x-0.5 group-hover:text-ink" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+    <OpsOverviewView
+      dateLine={`${label} · shift ${windowLabel(settings)}`}
+      running={running}
+      planHref={allowed.has('/ops/assign') ? '/ops/assign' : null}
+      done={count('unloaded')}
+      total={totalTonight}
+      waitingForDriver={count('waiting')}
+      withDriver={count('withDriver')}
+      collected={count('collected')}
+      online={online}
+      working={working}
+      waiting={waiting.map(({ key, count, title, hint, href, icon }) => ({ key, count, text: title(count), hint, href, icon }))}
+      drivers={driverRows}
+    />
   )
 }

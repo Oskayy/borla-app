@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Check, CheckCircle2, Circle } from 'lucide-react'
 import PasswordInput from '@/components/PasswordInput'
+import AuthShell, { AUTH_BUTTON, AUTH_FIELD, ErrorLine } from '@/components/auth/AuthShell'
 
 function checkStrength(password: string) {
   return [
@@ -29,7 +31,7 @@ export default function ResetPasswordPage() {
     setError('')
 
     if (!allPass) {
-      setError('Please meet all password requirements below')
+      setError('Choose a password that meets all the rules below it')
       return
     }
 
@@ -54,34 +56,53 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Choose a new password</h1>
-        {done ? (
-          <p style={{ fontSize: 14, color: '#2F7A4D', marginTop: 12 }}>Password updated. Redirecting to login...</p>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <PasswordInput
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-              className="input-field"
-            />
-            <div style={{ marginBottom: 16, marginTop: -8 }}>
-              {checks.map((c) => (
-                <p key={c.label} style={{ fontSize: 12, color: c.pass ? '#2F7A4D' : 'var(--color-ink-3)', margin: '2px 0' }}>
-                  {c.pass ? '✓' : '○'} {c.label}
-                </p>
-              ))}
+    <AuthShell>
+      {done ? (
+        <div role="status" className="anim-rise">
+          <span className="anim-pop grid size-14 place-items-center rounded-full bg-action text-on-action">
+            <CheckCircle2 aria-hidden className="size-6" />
+          </span>
+          <h1 className="mt-5 text-2xl font-bold tracking-tight">Password updated</h1>
+          <p className="mt-2 text-[15px] text-ink-2">Taking you on…</p>
+        </div>
+      ) : (
+        <>
+          <h1 className="text-2xl font-bold tracking-tight">Choose a new password</h1>
+          <p className="mt-2 text-[15px] text-ink-2">Other phones signed in to your account will be signed out.</p>
+          <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+            <div>
+              <label htmlFor="new-password" className="text-sm font-medium text-ink-2">
+                New password
+              </label>
+              <div className="mt-1.5">
+                <PasswordInput
+                  id="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  describedBy="reset-rules"
+                  invalid={!!error}
+                  className={AUTH_FIELD}
+                />
+              </div>
             </div>
-            {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 12 }}>{error}</p>}
-            <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-              {loading ? 'Updating...' : 'Update password'}
+            <ul id="reset-rules" className="-mt-1 grid gap-1 text-xs" aria-label="Password rules">
+              {checks.map((c) => (
+                <li key={c.label} className={`flex items-center gap-1.5 ${c.pass ? 'font-medium text-ok-deep' : 'text-ink-3'}`}>
+                  {c.pass ? <Check aria-hidden className="size-3.5" strokeWidth={2.5} /> : <Circle aria-hidden className="size-3" />}
+                  {c.label}
+                  <span className="sr-only">{c.pass ? '(done)' : '(not yet)'}</span>
+                </li>
+              ))}
+            </ul>
+            <ErrorLine text={error} />
+            <button type="submit" disabled={loading} className={AUTH_BUTTON}>
+              {loading ? 'Updating…' : 'Update password'}
             </button>
           </form>
-        )}
-      </div>
-    </div>
+        </>
+      )}
+    </AuthShell>
   )
 }

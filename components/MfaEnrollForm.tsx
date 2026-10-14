@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, CheckCircle2, Smartphone } from 'lucide-react'
+import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
 
 export default function MfaEnrollForm({ onEnrolled, redirectTo }: { onEnrolled?: () => void; redirectTo?: string }) {
   const [qrCode, setQrCode] = useState('')
@@ -60,43 +62,60 @@ export default function MfaEnrollForm({ onEnrolled, redirectTo }: { onEnrolled?:
     }
   }
 
+  const errorLine = error && (
+    <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+      <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+    </p>
+  )
+
   if (done) {
-    return <p style={{ color: '#2F7A4D', fontSize: 14 }}>2FA enabled successfully.</p>
+    return (
+      <p role="status" className="anim-note flex items-center gap-3 rounded-[16px] bg-ok-wash p-4 font-semibold text-ok-deep">
+        <CheckCircle2 aria-hidden className="size-5" /> Two-step sign-in is on.
+      </p>
+    )
   }
 
   if (!started) {
     return (
-      <div>
-        {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-        <button onClick={startEnroll} disabled={loading} className="btn-accent">
-          {loading ? 'Starting...' : 'Set up 2FA'}
+      <div className="grid gap-3">
+        {errorLine}
+        <button onClick={startEnroll} disabled={loading} className={`w-full ${BUTTON_PRIMARY}`}>
+          <Smartphone aria-hidden className="size-4" /> {loading ? 'Starting…' : 'Set up two-step sign-in'}
         </button>
       </div>
     )
   }
 
   return (
-    <div>
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
-        Scan this QR code with Google Authenticator, Authy, or a similar app.
+    <div className="anim-rise grid gap-4">
+      <ol className="grid gap-1.5 text-[15px] text-ink-2">
+        <li>1. Open Google Authenticator, Authy or a similar app.</li>
+        <li>2. Scan this code with it.</li>
+        <li>3. Type the 6-digit code it shows.</li>
+      </ol>
+      <div className="grid place-items-center rounded-[18px] bg-white p-4 ring-1 ring-line [&_svg]:size-44" dangerouslySetInnerHTML={{ __html: qrCode }} />
+      <p className="text-xs text-ink-3">
+        Can&apos;t scan? Type this key into the app instead: <code className="break-all rounded bg-canvas px-1.5 py-0.5 font-mono text-ink">{secret}</code>
       </p>
-      <div dangerouslySetInnerHTML={{ __html: qrCode }} style={{ marginBottom: 12 }} />
-      <p style={{ fontSize: 11, color: 'var(--color-ink-3)', marginBottom: 16 }}>
-        Can&apos;t scan? Enter this code manually: <code>{secret}</code>
-      </p>
-      <form onSubmit={confirmCode}>
+      <form onSubmit={confirmCode} className="grid gap-3">
+        <label htmlFor="mfa-new-code" className="text-sm font-medium text-ink-2">
+          6-digit code
+        </label>
         <input
-          placeholder="Enter the 6-digit code"
+          id="mfa-new-code"
+          placeholder="000000"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           required
           maxLength={6}
           inputMode="numeric"
-          className="input-field"
+          autoComplete="one-time-code"
+          className={`${FIELD} text-center text-2xl font-semibold tracking-[0.4em] tabular-nums`}
         />
-        {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-        <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-          {loading ? 'Confirming...' : 'Confirm & Enable'}
+        {errorLine}
+        <button type="submit" disabled={loading} className={`w-full ${BUTTON_PRIMARY}`}>
+          {loading ? 'Checking…' : 'Turn on two-step sign-in'}
         </button>
       </form>
     </div>

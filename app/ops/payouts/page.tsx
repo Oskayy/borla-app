@@ -27,7 +27,7 @@ export default async function PayoutRulesPage() {
 
       <section aria-labelledby="h-history">
         <SectionTitle id="h-history">History</SectionTitle>
-        <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+        <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
           {rules.map((rule) => (
             <li key={rule.id} className="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5">
               <span className={rule.active ? '' : 'text-ink-3'}>

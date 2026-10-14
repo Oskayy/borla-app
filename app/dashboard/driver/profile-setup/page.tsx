@@ -58,7 +58,7 @@ export default async function DriverProfileSetupPage() {
   const isSetUp = !!profile?.vehicleTypeId && profile.homeLat != null
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader
         title={isSetUp ? 'Vehicle & area' : `Welcome to Trashit, ${dbUser.name.split(/\s+/)[0]}`}
         lead={

@@ -4,7 +4,7 @@ import { Bell, BellOff, ChevronRight } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { dateTimeLabel } from '@/lib/format'
-import { Card, PageHeader } from '@/components/ui'
+import { EmptyState, PageHeader } from '@/components/ui'
 import MarkAllRead from '@/components/customer/MarkAllRead'
 import EnableAlerts from '@/components/EnableAlerts'
 
@@ -24,7 +24,7 @@ export default async function NotificationsPage() {
   const unreadIds = notices.filter((n) => !n.readAt).map((n) => n.id)
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader title="Notifications" lead="Updates about your pickups and payments." action={<MarkAllRead ids={unreadIds} />} />
 
       <div className="mb-6 empty:hidden">
@@ -32,13 +32,9 @@ export default async function NotificationsPage() {
       </div>
 
       {notices.length === 0 ? (
-        <Card className="grid place-items-center py-14 text-center">
-          <BellOff aria-hidden className="size-8 text-ink-3" />
-          <p className="mt-3 font-semibold">No notifications yet</p>
-          <p className="mt-1 text-sm text-ink-2">We&apos;ll tell you here when your pickup is booked, assigned and collected.</p>
-        </Card>
+        <EmptyState icon={BellOff} title="No notifications yet" text="We'll tell you here when your pickup is booked, assigned and collected." />
       ) : (
-        <ul className="overflow-hidden rounded-card bg-surface ring-1 ring-line divide-y divide-line">
+        <ul className="overflow-hidden rounded-card bg-surface shadow-card ring-1 ring-line/70 divide-y divide-line">
           {notices.map((n) => {
             const unread = !n.readAt
             const inner = (

@@ -5,9 +5,9 @@ import InstallPrompt from '@/components/InstallPrompt'
 
 export default function DriverCommunicationPage() {
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-4xl">
       <BackToAccount />
-      <h1 className="mb-5 text-[clamp(1.5rem,3vw,1.9rem)] font-bold tracking-[-0.025em]">Communication</h1>
+      <h1 className="anim-rise mb-5 text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">Communication</h1>
       <Card>
         <h2 className="text-base font-semibold tracking-tight">Alerts on this phone</h2>
         <p className="mt-1 text-sm text-ink-2">

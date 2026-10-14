@@ -336,7 +336,7 @@ export default function DisposalSitesClient({
         {sites.length === 0 ? (
           <AllClear>No disposal sites yet.</AllClear>
         ) : (
-          <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+          <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
             {sites.map((s) => {
               const st = STATUS[s.status] ?? STATUS.OPEN
               return (

@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { binsText, customerStatus, ghs, type OrderSnapshot } from '@/lib/order-status'
 import { dateLabel } from '@/lib/format'
-import { BUTTON_PRIMARY, Card, PageHeader, StatusPill } from '@/components/ui'
+import { BUTTON_PRIMARY, EmptyState, PageHeader, StatusPill } from '@/components/ui'
 import DeleteDraftButton from '@/components/DeleteDraftButton'
 
 export const dynamic = 'force-dynamic'
@@ -41,11 +41,16 @@ export default async function OrderHistoryPage() {
       />
 
       {rows.length === 0 ? (
-        <Card className="grid place-items-center py-14 text-center">
-          <Inbox aria-hidden className="size-8 text-ink-3" />
-          <p className="mt-3 font-semibold">No pickups yet</p>
-          <p className="mt-1 text-sm text-ink-2">Book your first pickup and it will show here.</p>
-        </Card>
+        <EmptyState
+          icon={Inbox}
+          title="No pickups yet"
+          text="Book your first pickup and it shows here, with each step through the night."
+          action={
+            <Link href="/dashboard/customer/book" className={BUTTON_PRIMARY}>
+              <CalendarPlus aria-hidden className="size-4" /> Book a pickup
+            </Link>
+          }
+        />
       ) : (
         <div className="grid gap-8">
           {groups.map((g) => (

@@ -43,7 +43,7 @@ export function AccountRow({
 
 export function AccountGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="rounded-card bg-surface p-3 sm:p-4">
+    <section aria-label={title} className="rounded-card bg-surface p-3 shadow-card ring-1 ring-line/70 sm:p-4">
       <h2 className="px-2 pb-1 pt-1 text-sm font-semibold text-ink-3">{title}</h2>
       <ul className="grid">{children}</ul>
     </section>

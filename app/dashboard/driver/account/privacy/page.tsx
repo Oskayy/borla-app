@@ -28,10 +28,10 @@ export default async function DriverPrivacyPage() {
   const blockers = driverDeleteBlockers({ openStops, openWithdrawals, wallet }, accraDate)
 
   return (
-    <div className="mx-auto grid max-w-2xl gap-5">
+    <div className="grid max-w-4xl gap-5">
       <div>
         <BackToAccount />
-        <h1 className="text-[clamp(1.5rem,3vw,1.9rem)] font-bold tracking-[-0.025em]">Privacy and data</h1>
+        <h1 className="anim-rise text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">Privacy and data</h1>
       </div>
       <AccountGroup title="Policies">
         <AccountRow href="/privacy-policy" icon={FileText} title="Privacy policy" />

@@ -15,9 +15,9 @@ const LINKS = [
 export default function MorePage() {
   const help = supportHref()
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader title="Your account" />
-      <ul className="anim-rise overflow-hidden rounded-card bg-surface ring-1 ring-line divide-y divide-line">
+      <ul className="anim-rise overflow-hidden rounded-card bg-surface shadow-card ring-1 ring-line/70 divide-y divide-line">
         <li>
           <ThemeSwitch />
         </li>

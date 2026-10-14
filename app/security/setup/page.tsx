@@ -2,8 +2,11 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { MANDATORY_MFA_ROLES } from '@/lib/mfa'
+import { ROLE_NAMES } from '@/lib/ops-nav'
 import MfaEnrollForm from '@/components/MfaEnrollForm'
+import { Card, PageHeader } from '@/components/ui'
 
+// Staff must set up two-step sign-in before any ops page opens.
 export default async function SecuritySetupPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,13 +27,15 @@ export default async function SecuritySetupPage() {
   }
 
   return (
-    <div style={{ maxWidth: 440, margin: '60px auto', padding: '0 20px' }}>
-      <div className="panel">
-        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Two-Factor Authentication Required</h1>
-        <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
-          Your role ({dbUser.role}) requires 2FA before you can access ops tools. This takes about a minute.
-        </p>
-        <MfaEnrollForm redirectTo="/ops" />
+    <div data-surface="new" className="theme-ops min-h-dvh bg-canvas px-4 py-8 sm:py-14">
+      <div className="mx-auto max-w-xl">
+        <PageHeader
+          title="Set up two-step sign-in"
+          lead={`As ${ROLE_NAMES[dbUser.role] ?? dbUser.role}, you need a 6-digit code from an app on your phone each time you sign in. It takes about a minute.`}
+        />
+        <Card className="anim-rise">
+          <MfaEnrollForm redirectTo="/ops" />
+        </Card>
       </div>
     </div>
   )

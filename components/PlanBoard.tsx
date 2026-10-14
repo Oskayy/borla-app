@@ -267,13 +267,13 @@ export default function PlanBoard({
     <div className="grid gap-4">
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
-          <div key={k.label} className="flex items-center justify-between gap-3 rounded-card bg-surface px-4 py-3.5 ring-1 ring-line">
+          <div key={k.label} className="flex items-center justify-between gap-3 rounded-card bg-surface px-4 py-3.5 shadow-card ring-1 ring-line/70">
             <dt className="text-sm text-ink-2">{k.label}</dt>
             <dd className={`text-xl font-bold tabular-nums tracking-tight ${k.tone}`}>{k.value}</dd>
           </div>
         ))}
       </dl>
-      <div className="sticky top-[4.5rem] z-10 flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface p-4 shadow-card ring-1 ring-line sm:px-5">
+      <div className="sticky top-[4.5rem] z-10 flex flex-wrap items-center justify-between gap-3 rounded-card bg-surface p-4 shadow-card shadow-card ring-1 ring-line/70 sm:px-5">
         <div>
           <p className="font-semibold">Suggested plan</p>
           <p className="text-sm text-ink-3">
@@ -303,7 +303,7 @@ export default function PlanBoard({
       </div>
 
       {messages.length > 0 && (
-        <ul aria-live="polite" className="grid gap-1.5 rounded-card bg-surface p-4 ring-1 ring-line">
+        <ul aria-live="polite" className="grid gap-1.5 rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
           {messages.map((m, i) => (
             <li key={i} className={`flex items-start gap-2 text-sm ${m.ok ? 'text-ink' : 'text-danger'}`}>
               {m.ok ? <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0 text-action-deep" /> : <XCircle aria-hidden className="mt-0.5 size-4 shrink-0" />}
@@ -500,7 +500,7 @@ export default function PlanBoard({
       })}
 
       {unassignedOrders.length > 0 && (
-        <section aria-labelledby="unassigned" className="rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+        <section aria-labelledby="unassigned" className="rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:p-6">
           <h3 id="unassigned" className="text-lg font-semibold tracking-tight">
             Not assigned <span className="font-normal tabular-nums text-ink-3">({unassignedOrders.length})</span>
           </h3>

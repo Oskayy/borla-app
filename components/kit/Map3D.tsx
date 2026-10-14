@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
+// Marker icons, drawn in the app's icon style (Lucide's flag and house).
+const SVG = (d: string) =>
+  `<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`
+const ICON_FLAG = SVG('M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.33 2q2 0 3.67-.67V14q-1.67.67-3.67.67C12 14.67 10 13 8 13a6 6 0 0 0-4 1.33')
+const ICON_HOUSE = SVG('M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z')
+
 export interface MapMarker {
   lat: number
   lng: number
@@ -65,7 +71,9 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
         el.innerHTML = '<span class="pin3d-ring"></span><span class="pin3d-drop"></span>'
       } else {
         el.className = `mark3d mark3d-${m.kind}${m.done ? ' is-done' : ''}`
-        el.textContent = m.kind === 'stop' ? m.label ?? '' : m.kind === 'site' ? '⚑' : '⌂'
+        if (m.kind === 'stop') el.textContent = m.label ?? ''
+        else el.innerHTML = m.kind === 'site' ? ICON_FLAG : ICON_HOUSE
+        if (m.label) el.title = m.label
       }
       new mapboxgl.Marker({ element: el, anchor: m.kind === 'pin' ? 'bottom' : 'center' }).setLngLat([m.lng, m.lat]).addTo(map)
     })

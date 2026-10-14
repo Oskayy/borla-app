@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { ArrowRight, MailCheck } from 'lucide-react'
+import AuthShell, { AUTH_BUTTON, AUTH_FIELD } from '@/components/auth/AuthShell'
+import { BackLink } from '@/components/ui'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -21,38 +24,47 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="panel" style={{ maxWidth: 380, width: '100%' }}>
-        <h1 style={{ fontSize: 24, marginBottom: 4 }}>Reset your password</h1>
-        {submitted ? (
-          <p style={{ fontSize: 14, color: '#666', marginTop: 12 }}>
-            If an account exists for that email, we&apos;ve sent a password reset link. Check your inbox.
+    <AuthShell>
+      <BackLink href="/login">Back to sign in</BackLink>
+      {submitted ? (
+        <div role="status" className="anim-rise">
+          <span className="anim-pop grid size-14 place-items-center rounded-full bg-action text-on-action">
+            <MailCheck aria-hidden className="size-6" />
+          </span>
+          <h1 className="mt-5 text-2xl font-bold tracking-tight">Check your email</h1>
+          <p className="mt-2 text-[15px] leading-relaxed text-ink-2">
+            If an account exists for <span className="font-semibold text-ink">{email}</span>, we&apos;ve sent a link to choose a new password.
           </p>
-        ) : (
-          <>
-            <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>
-              Enter your email and we&apos;ll send you a reset link.
-            </p>
-            <form onSubmit={handleSubmit}>
+          <Link href="/login" className={`mt-7 ${AUTH_BUTTON}`}>
+            Back to sign in
+          </Link>
+        </div>
+      ) : (
+        <>
+          <h1 className="mt-3 text-2xl font-bold tracking-tight">Reset your password</h1>
+          <p className="mt-2 text-[15px] text-ink-2">Enter your email and we&apos;ll send you a link to choose a new one.</p>
+          <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+            <div>
+              <label htmlFor="email" className="text-sm font-medium text-ink-2">
+                Email
+              </label>
               <input
+                id="email"
                 type="email"
-                placeholder="Email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="input-field"
+                className={`${AUTH_FIELD} mt-1.5`}
               />
-              <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-                {loading ? 'Sending...' : 'Send reset link'}
-              </button>
-            </form>
-          </>
-        )}
-        <Link href="/login" style={{ display: 'block', textAlign: 'center', marginTop: 16, fontSize: 13, color: '#666' }}>
-          Back to login
-        </Link>
-      </div>
-    </div>
+            </div>
+            <button type="submit" disabled={loading} className={AUTH_BUTTON}>
+              {loading ? 'Sending…' : 'Send reset link'} {!loading && <ArrowRight aria-hidden className="size-4" />}
+            </button>
+          </form>
+        </>
+      )}
+    </AuthShell>
   )
 }

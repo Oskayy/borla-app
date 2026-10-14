@@ -206,7 +206,7 @@ export default function WithdrawalsClient({ open, recent, transfersOn = true }: 
         {recent.length === 0 ? (
           <AllClear>No finished withdrawals yet.</AllClear>
         ) : (
-          <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+          <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
             {recent.map((w) => {
               const st = recentState(w.status)
               return (

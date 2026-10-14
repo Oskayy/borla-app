@@ -26,7 +26,7 @@ function Stars({ value, size = 'size-4' }: { value: number; size?: string }) {
 
 function Tile({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="rounded-card bg-surface p-5 ring-1 ring-line">
+    <div className="rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70">
       <p className="text-sm text-ink-3">{label}</p>
       <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight">{value}</p>
       <p className="mt-0.5 text-sm text-ink-3">{note}</p>

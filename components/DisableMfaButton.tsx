@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, ShieldOff } from 'lucide-react'
+import { BUTTON_DANGER } from '@/components/ui'
 
 export default function DisableMfaButton({ factorId }: { factorId: string }) {
   const [loading, setLoading] = useState(false)
@@ -9,7 +11,7 @@ export default function DisableMfaButton({ factorId }: { factorId: string }) {
   const router = useRouter()
 
   async function disable() {
-    if (!confirm('Turn off 2FA for your account?')) return
+    if (!confirm('Turn off two-step sign-in for your account?')) return
     setError('')
     setLoading(true)
 
@@ -22,7 +24,7 @@ export default function DisableMfaButton({ factorId }: { factorId: string }) {
     setLoading(false)
 
     if (!res.ok) {
-      setError(data.error || 'Could not disable 2FA')
+      setError(data.error || 'Could not turn off two-step sign-in')
       return
     }
 
@@ -30,10 +32,14 @@ export default function DisableMfaButton({ factorId }: { factorId: string }) {
   }
 
   return (
-    <div>
-      {error && <p style={{ color: '#B3261E', fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      <button onClick={disable} disabled={loading} style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 4, padding: 8, fontSize: 13 }}>
-        {loading ? 'Disabling...' : 'Turn off 2FA'}
+    <div className="grid gap-2">
+      {error && (
+        <p role="alert" className="flex items-start gap-2 text-sm text-danger">
+          <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}
+        </p>
+      )}
+      <button onClick={disable} disabled={loading} className={`self-start ${BUTTON_DANGER}`}>
+        <ShieldOff aria-hidden className="size-4" /> {loading ? 'Turning off…' : 'Turn off two-step sign-in'}
       </button>
     </div>
   )

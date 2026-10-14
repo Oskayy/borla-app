@@ -65,7 +65,7 @@ export default function VehicleChangeCard({
 
   if (stage === 'sent_back') {
     return (
-      <section className="rounded-card bg-surface p-5 ring-1 ring-line">
+      <section className="rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70">
         <h2 className="text-base font-semibold tracking-tight">Vehicle change not approved</h2>
         <p className="mt-1 text-[15px] text-ink-2">
           Trashit said: <strong className="font-semibold text-ink">{note}</strong>. You&apos;re still set up with your {currentName.toLowerCase()}. To try

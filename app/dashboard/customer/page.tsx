@@ -144,7 +144,7 @@ export default async function CustomerHome() {
             )}
           </div>
           {earlier.length === 0 ? (
-            <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-sm text-ink-2 ring-1 ring-line">
+            <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-sm text-ink-2 shadow-card ring-1 ring-line/70">
               <Clock aria-hidden className="size-4 shrink-0" /> {active ? 'Your earlier pickups will show here.' : 'No pickups yet. Your first booking will show here.'}
             </p>
           ) : (
@@ -193,11 +193,11 @@ export default async function CustomerHome() {
         )}
 
         <dl className="grid grid-cols-2 gap-3">
-          <div className="rounded-card bg-surface p-4 ring-1 ring-line">
+          <div className="rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
             <dt className="text-sm text-ink-3">Pickups done</dt>
             <dd className="mt-1 text-2xl font-bold tabular-nums tracking-tight">{completed.length}</dd>
           </div>
-          <div className="rounded-card bg-surface p-4 ring-1 ring-line">
+          <div className="rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
             <dt className="flex items-center gap-1.5 text-sm text-ink-3">
               <Recycle aria-hidden className="size-4 text-action-deep" /> Bins collected
             </dt>

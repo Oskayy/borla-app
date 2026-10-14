@@ -47,7 +47,7 @@ export default async function PricingRulesPage() {
 
       <section aria-labelledby="h-price-history">
         <SectionTitle id="h-price-history">History</SectionTitle>
-        <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+        <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
           {rules.map((rule) => {
             const bins = [...rule.binPrices]
               .sort((a, b) => a.binSize.sortOrder - b.binSize.sortOrder)

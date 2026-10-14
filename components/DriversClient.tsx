@@ -155,7 +155,7 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
   return (
     <div>
       <Result msg={message ? { ok: false, text: message } : null} />
-      <ul className="divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+      <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
         {drivers.map((d) => (
           <li key={d.id} className={`flex flex-wrap items-start justify-between gap-4 p-4 sm:px-5 ${d.active ? '' : 'bg-canvas/60'}`}>
             <div className="min-w-0 flex-1 basis-72">

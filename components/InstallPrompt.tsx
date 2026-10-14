@@ -62,7 +62,7 @@ export default function InstallPrompt() {
 
   if (mode === 'hidden') return null
   return (
-    <div className="flex items-start gap-3.5 rounded-card bg-surface p-4 ring-1 ring-line">
+    <div className="flex items-start gap-3.5 rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icons/icon-192.png" alt="" width={40} height={40} className="size-10 rounded-[10px]" />
       <div className="min-w-0 flex-1">

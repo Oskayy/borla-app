@@ -27,7 +27,7 @@ export function SectionTitle({ children, count, hint, id }: { children: React.Re
 
 export function AllClear({ children }: { children: React.ReactNode }) {
   return (
-    <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-[15px] text-ink-2 ring-1 ring-line sm:px-5">
+    <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70 sm:px-5">
       <CheckCircle2 aria-hidden className="size-5 shrink-0 text-ok-deep" /> {children}
     </p>
   )
@@ -42,7 +42,7 @@ export function Result({ msg }: { msg?: { ok: boolean; text: string } | null }) 
   )
 }
 
-export const PANEL = 'rounded-card bg-surface p-5 ring-1 ring-line sm:p-6'
+export const PANEL = 'rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:p-6'
 export const SELECT =
   'min-h-11 rounded-control border border-line-strong bg-surface px-3 text-[15px] text-ink focus:border-action focus:outline-none focus:ring-3 focus:ring-action/20'
 export const CHECK = 'size-4 accent-[var(--color-action-deep)]'

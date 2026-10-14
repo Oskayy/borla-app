@@ -1,8 +1,7 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import type { OrderStatus } from '@prisma/client'
 import { Suspense } from 'react'
-import { ArrowRight, BellRing, Flame, Moon, Star, Wallet } from 'lucide-react'
+import { BellRing, Flame, Moon, Star, Wallet } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
@@ -13,9 +12,7 @@ import { storedSplit } from '@/lib/money-split'
 import { summarizeRatings } from '@/lib/ratings'
 import { DRIVER_LEDGER_TYPES } from '@/lib/earnings'
 import { greeting } from '@/lib/format'
-import Chip from '@/components/kit/Chip'
-import HeroCard from '@/components/kit/HeroCard'
-import ZoneMapCard from '@/components/driver/ZoneMapCard'
+import DriverHomeView, { type HomeTip } from '@/components/driver/DriverHomeView'
 import type { MapMarker } from '@/components/kit/Map3D'
 import OutsideTips, { OutsideTipsLoading } from '@/components/driver/OutsideTips'
 
@@ -140,87 +137,35 @@ export default async function DriverHome() {
     offTonight
       ? { icon: Moon, title: "You're off tonight", text: 'Dispatch won’t send you stops. Change it in My nights.', href: '/dashboard/driver/availability' }
       : { icon: BellRing, title: 'Before the shift', text: 'Charge your phone, turn alerts on, and bring gloves and a torch.' },
-  ].filter(Boolean) as { icon: typeof Flame; title: string; text: string; href?: string }[]
+  ].filter(Boolean) as HomeTip[]
 
   const status = offTonight ? { tone: 'neutral' as const, text: 'Off tonight' } : waiting > 0 ? { tone: 'progress' as const, text: `${waiting} to accept` } : orders.length > 0 ? { tone: 'done' as const, text: 'Ready' } : { tone: 'neutral' as const, text: online ? 'Online' : 'Offline' }
   const headline =
     orders.length === 0 ? 'No stops yet tonight' : toCollect.length === 0 ? 'All collected. Unload to finish.' : `${toCollect.length} ${toCollect.length === 1 ? 'stop' : 'stops'} waiting for you`
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-8">
-      <div className="anim-stagger grid gap-5">
-        <h1 className="text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-[-0.03em]">
-          {greeting()}, {firstName}
-        </h1>
-
-        <HeroCard aria-labelledby="job-title" className="grid gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-on-hero-2">Tonight&apos;s job · shift {windowLabel(settings)}</p>
-            <Chip tone={status.tone}>{status.text}</Chip>
-          </div>
-          <h2 id="job-title" className="text-2xl font-bold leading-tight tracking-tight">
-            {headline}
-          </h2>
-          {orders.length > 0 && (
-            <p className="text-sm text-on-hero-2">
-              {trips} {trips === 1 ? 'trip' : 'trips'}
-              {pay > 0 && ` · up to GHS ${(pay / 100).toFixed(2)}`}
-            </p>
-          )}
-          {orders.length === 0 && !offTonight && (
-            <p className="text-sm text-on-hero-2">Go online when the shift starts and stops near you will come in. We&apos;ll alert you.</p>
-          )}
-        </HeroCard>
-
-        <Link
-          href="/dashboard/driver"
-          className="press flex min-h-16 items-center justify-center gap-2.5 rounded-full bg-action px-6 text-lg font-bold text-on-action shadow-lift transition hover:brightness-110"
-        >
-          Go to tonight&apos;s job <ArrowRight aria-hidden className="size-5" />
-        </Link>
-      </div>
-
-      <div className="anim-stagger grid gap-5">
-        <ZoneMapCard
-          markers={markers}
-          title={profile.zone ? `Your area · ${profile.zone.name}` : 'Your area'}
-          radius={profile.radiusKm ? `${profile.radiusKm} km radius` : null}
-          stops={orders.length}
-        />
-
-        <section aria-labelledby="tips-title" className="grid gap-2.5">
-          <h2 id="tips-title" className="px-0.5 text-sm font-semibold text-ink-3">
-            For tonight
-          </h2>
-          <ul className="grid gap-2.5 sm:grid-cols-2">
-            <Suspense fallback={<OutsideTipsLoading />}>
-              <OutsideTips area={area} shiftDate={date} settings={settings} />
-            </Suspense>
-            {tips.map(({ icon: Icon, title, text, href }) => {
-              const body = (
-                <>
-                  <span className="grid size-10 place-items-center rounded-[14px] bg-action-wash text-action-deep">
-                    <Icon aria-hidden className="size-5" />
-                  </span>
-                  <span className="mt-3 block text-[15px] font-semibold">{title}</span>
-                  <span className="mt-0.5 block text-sm text-ink-2">{text}</span>
-                </>
-              )
-              return (
-                <li key={title}>
-                  {href ? (
-                    <Link href={href} className="lift block h-full rounded-card bg-surface p-4 ring-1 ring-line">
-                      {body}
-                    </Link>
-                  ) : (
-                    <div className="h-full rounded-card bg-surface p-4 ring-1 ring-line">{body}</div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      </div>
-    </div>
+    <DriverHomeView
+      greeting={`${greeting()}, ${firstName}`}
+      shiftLabel={windowLabel(settings)}
+      status={status}
+      headline={headline}
+      detail={
+        orders.length > 0
+          ? [`${trips} ${trips === 1 ? 'trip' : 'trips'}`, pay > 0 ? `up to GHS ${(pay / 100).toFixed(2)}` : null].filter(Boolean).join(' · ')
+          : offTonight
+            ? null
+            : 'Go online when the shift starts and stops near you will come in. We’ll alert you.'
+      }
+      markers={markers}
+      mapTitle={profile.zone ? `Your area · ${profile.zone.name}` : 'Your area'}
+      radius={profile.radiusKm ? `${profile.radiusKm} km radius` : null}
+      stops={orders.length}
+      tips={tips}
+      outsideTips={
+        <Suspense fallback={<OutsideTipsLoading />}>
+          <OutsideTips area={area} shiftDate={date} settings={settings} />
+        </Suspense>
+      }
+    />
   )
 }

@@ -19,7 +19,7 @@ export default async function HomeLocationPage() {
   const initial = profile ? { address: profile.address, lat: profile.homeLat, lng: profile.homeLng } : null
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-4xl">
       <PageHeader
         title="Home pin"
         lead="Set this once and every pickup uses it. You can still choose a different place for a single order. The shaded circles show where we collect."

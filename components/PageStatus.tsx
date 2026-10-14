@@ -17,7 +17,7 @@ export function PageSkeleton({ tiles = 3, rows = 4 }: { tiles?: number; rows?: n
           ))}
         </div>
       )}
-      <div className="mt-6 divide-y divide-line rounded-card bg-surface ring-1 ring-line">
+      <div className="mt-6 divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="flex items-center gap-4 p-5">
             <Skeleton className="size-10 shrink-0 rounded-full" />
@@ -36,7 +36,7 @@ export function PageSkeleton({ tiles = 3, rows = 4 }: { tiles?: number; rows?: n
 // Shown when a page couldn't load (usually a slow connection to the database): try again, or go back home.
 export function PageError({ reset, home }: { reset: () => void; home: string }) {
   return (
-    <div role="alert" className="mx-auto max-w-md rounded-card bg-surface p-6 text-center ring-1 ring-line">
+    <div role="alert" className="mx-auto max-w-md rounded-card bg-surface p-6 text-center shadow-card ring-1 ring-line/70">
       <p className="text-lg font-semibold">This page didn&apos;t load</p>
       <p className="mt-1 text-[15px] text-ink-2">The connection was slow. Nothing you did was lost.</p>
       <div className="mt-5 flex flex-wrap justify-center gap-2.5">

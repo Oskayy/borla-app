@@ -42,10 +42,10 @@ export default async function DriverPayPage() {
   const pool = split.pool / 100
 
   return (
-    <div className="mx-auto grid max-w-2xl grid-cols-[minmax(0,1fr)] gap-5">
+    <div className="grid max-w-4xl grid-cols-[minmax(0,1fr)] gap-5">
       <div>
         <BackToAccount />
-        <h1 className="text-[clamp(1.5rem,3vw,1.9rem)] font-bold tracking-[-0.025em]">How your pay is worked out</h1>
+        <h1 className="anim-rise text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">How your pay is worked out</h1>
       </div>
 
       <Card>

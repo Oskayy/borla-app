@@ -3,7 +3,7 @@ import { nearbyFuel, nightWeather, weatherLine } from '@/lib/driver-tips'
 import { googleDirectionsUrl } from '@/lib/navigation'
 import type { ShiftSettings } from '@/lib/shift'
 
-const CARD = 'block h-full rounded-card bg-surface p-4 ring-1 ring-line'
+const CARD = 'block h-full rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70'
 
 function Body({ icon: Icon, title, text }: { icon: typeof Fuel; title: string; text: string }) {
   return (
@@ -52,7 +52,7 @@ export function OutsideTipsLoading() {
   return (
     <>
       {[0, 1].map((i) => (
-        <li key={i} aria-hidden className="h-[132px] rounded-card bg-surface p-4 ring-1 ring-line">
+        <li key={i} aria-hidden className="h-[132px] rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
           <span className="skeleton block size-10 rounded-[14px]" />
           <span className="skeleton mt-3 block h-4 w-1/2" />
           <span className="skeleton mt-2 block h-3 w-3/4" />
