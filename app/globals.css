@@ -531,3 +531,22 @@ dialog.sheet::backdrop { background: rgb(8 14 10 / 0.5); animation: fade 240ms e
   .pin3d-drop { animation: fade 200ms ease both; }
   .pin3d-ring { animation: none; opacity: 0; }
 }
+
+/* Driver map markers: numbered stops (evergreen), disposal sites (blue flag), home base (clay). They pop in one by one. */
+@keyframes mark-in { from { opacity: 0; transform: scale(0.4) translateY(-10px); } to { opacity: 1; transform: none; } }
+.mark3d {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 6px;
+  font: 700 13px/1 var(--font-sans);
+  color: #ffffff;
+  box-shadow: 0 8px 16px -6px rgb(0 0 0 / 0.5), 0 0 0 2px #ffffff;
+  animation: mark-in 420ms var(--ease-spring) calc(200ms + var(--i, 0) * 70ms) both;
+}
+.mark3d-stop { background: #1e5a45; }
+.mark3d-site { background: #2b57a3; }
+.mark3d-home { background: #c98a4e; border-radius: 10px; }
+.mark3d.is-done { background: #8a948f; }
+@media (prefers-reduced-motion: reduce) { .mark3d { animation: fade 200ms ease both; } }

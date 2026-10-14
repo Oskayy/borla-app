@@ -86,7 +86,7 @@ export default async function DriverEarningsPage() {
       <h1 className="mb-4 text-[26px] font-bold leading-tight tracking-[-0.025em]">Earnings</h1>
 
       {/* The balance card: what can be cashed out now, with shortcuts. */}
-      <section aria-label="Your balance" className="rounded-[26px] bg-hero p-5 text-on-hero shadow-lift sm:p-6">
+      <section aria-label="Your balance" className="hero-glow anim-rise rounded-card bg-hero p-5 text-on-hero shadow-lift sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-on-hero-2">Available to withdraw</p>
           <Link

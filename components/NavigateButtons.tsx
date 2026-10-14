@@ -19,7 +19,7 @@ export default function NavigateButtons({ lat, lng, big = false, quiet = false }
         href={google}
         target="_blank"
         rel="noopener noreferrer"
-        className={`inline-flex items-center justify-center gap-2 rounded-control px-4 font-semibold transition ${size} ${
+        className={`press inline-flex items-center justify-center gap-2 rounded-full px-5 font-semibold transition ${size} ${
           quiet ? 'text-action-deep ring-1 ring-action/50 hover:bg-action-wash' : 'bg-action text-on-action shadow-card hover:brightness-95'
         }`}
       >
@@ -29,7 +29,7 @@ export default function NavigateButtons({ lat, lng, big = false, quiet = false }
         href={waze}
         target="_blank"
         rel="noopener noreferrer"
-        className={`inline-flex items-center justify-center rounded-control px-4 font-semibold text-ink ring-1 ring-line-strong transition hover:bg-canvas ${size}`}
+        className={`press inline-flex items-center justify-center rounded-full px-5 font-semibold text-ink ring-1 ring-line-strong transition hover:bg-canvas ${size}`}
       >
         Waze
       </a>

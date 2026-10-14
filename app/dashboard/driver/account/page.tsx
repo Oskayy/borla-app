@@ -20,6 +20,7 @@ import { dateLabel } from '@/lib/format'
 import { NIGHT_NAMES } from '@/lib/availability'
 import { AVATAR_DOC, driverPhotoUrls } from '@/lib/driver-photos'
 import { AccountGroup, AccountRow } from '@/components/driver/AccountRow'
+import { ThemeSwitch } from '@/components/ThemeToggle'
 import PhotoUpload from '@/components/driver/PhotoUpload'
 import SignOutButton from '@/components/SignOutButton'
 
@@ -72,6 +73,9 @@ export default async function DriverAccountPage() {
       </section>
 
       <AccountGroup title="Settings">
+        <li className="overflow-hidden rounded-[16px]">
+          <ThemeSwitch />
+        </li>
         <AccountRow href="/dashboard/driver/account/security" icon={KeyRound} title="Sign-in and security" />
         <AccountRow href="/dashboard/driver/account/privacy" icon={Lock} title="Privacy and data" />
         <AccountRow href="/dashboard/driver/account/communication" icon={Bell} title="Communication" info="Alerts on this phone when stops are added to your route." />

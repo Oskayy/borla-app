@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AlertTriangle, CalendarDays, Check, ChevronDown, Flag, Moon, Phone, Wallet } from 'lucide-react'
+import { AlertTriangle, CalendarDays, Check, ChevronDown, ChevronRight, Flag, Moon, Phone, Wallet } from 'lucide-react'
 import ConfirmPickupButton from '@/app/dashboard/driver/confirm-pickup-button'
 import ConfirmDisposalButton from '@/app/dashboard/driver/confirm-disposal-button'
 import DriverOnlineToggle, { HeroLink } from '@/components/DriverOnlineToggle'
@@ -61,11 +61,11 @@ export interface TonightProps {
 
 type Stop = TripGroup['orders'][number]
 
-// A stop's state in a word, with the role colour of whose hands it is in.
+// A stop's state in a word, in the shared status colours (amber = on board or new, blue = with Trashit).
 function stopState(o: Stop): { text: string; cls: string } {
-  if (o.status === 'PICKED_UP') return { text: 'On board', cls: 'bg-driver-wash text-driver-deep' }
-  if (o.status === 'DISPOSAL_PENDING') return { text: 'Unload being checked', cls: 'bg-ops-wash text-ops-deep' }
-  if (o.status === 'ASSIGNED' && !o.accepted) return { text: 'New', cls: 'bg-action text-on-action' }
+  if (o.status === 'PICKED_UP') return { text: 'On board', cls: 'bg-warn-wash text-warn-deep' }
+  if (o.status === 'DISPOSAL_PENDING') return { text: 'Unload being checked', cls: 'bg-info-wash text-info' }
+  if (o.status === 'ASSIGNED' && !o.accepted) return { text: 'New', cls: 'bg-highlight text-on-highlight' }
   return { text: 'To collect', cls: 'bg-surface text-ink-2 ring-1 ring-line-strong' }
 }
 
@@ -76,18 +76,18 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
   const done = tripDone(g)
   const collected = g.orders.filter((o) => o.status === 'PICKED_UP')
   const toCollect = g.orders.filter((o) => o.status === 'ASSIGNED').length
-  const badge = done ? { text: 'Done', cls: 'bg-customer-wash text-customer-deep' } : current ? { text: 'Now', cls: 'bg-ops-wash text-ops-deep' } : { text: 'Next', cls: 'bg-canvas text-ink-2 ring-1 ring-line' }
+  const badge = done ? { text: 'Done', cls: 'bg-ok-wash text-ok-deep' } : current ? { text: 'Now', cls: 'bg-highlight text-on-highlight' } : { text: 'Next', cls: 'bg-canvas text-ink-2 ring-1 ring-line' }
   const accepted = g.orders.filter((o) => o.status !== 'ASSIGNED' || o.accepted).length
   const picked = g.orders.filter((o) => o.status !== 'ASSIGNED').length
   const n = g.orders.length
 
   return (
-    <details open={!done} className={`group overflow-hidden rounded-card bg-surface ${current ? 'ring-2 ring-ink' : ''}`}>
+    <details open={!done} className={`anim-rise group overflow-hidden rounded-card bg-surface ${current ? 'ring-2 ring-action-strong' : 'ring-1 ring-line'}`}>
       {/* Trip header: always visible; tap to fold a finished trip away. */}
       <summary className="flex cursor-pointer list-none items-center gap-3.5 px-4 pb-3 pt-4 sm:px-5 [&::-webkit-details-marker]:hidden">
         <span
           className={`grid size-12 shrink-0 place-items-center rounded-full text-lg font-bold tabular-nums ${
-            done ? 'bg-customer-wash text-customer-deep' : current ? 'bg-action text-on-action' : 'bg-canvas text-ink'
+            done ? 'bg-ok-wash text-ok-deep' : current ? 'bg-action text-on-action' : 'bg-canvas text-ink'
           }`}
         >
           {done ? <Check aria-hidden className="size-5" strokeWidth={3} /> : g.tripNumber}
@@ -126,7 +126,10 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-action text-sm font-bold tabular-nums text-on-action">{firstStopNo + i}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-lg font-semibold leading-snug">{order.address}</p>
+                    <Link href={`/dashboard/driver/stop/${order.id}`} className="group/stop inline-flex items-start gap-1 text-lg font-semibold leading-snug hover:underline">
+                      {order.address}
+                      <ChevronRight aria-hidden className="mt-1 size-4 shrink-0 text-ink-3 transition group-hover/stop:translate-x-0.5" />
+                    </Link>
                     <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${st.cls}`}>{st.text}</span>
                   </div>
                   {order.bins && <p className="mt-0.5 text-sm text-ink-3">{order.bins}</p>}
@@ -144,8 +147,8 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
               </div>
 
               {order.status === 'ASSIGNED' && order.approximate && (
-                <p className="mt-3 flex items-start gap-2 rounded-control bg-driver-wash p-3 text-sm">
-                  <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-driver-deep" />
+                <p className="mt-3 flex items-start gap-2 rounded-control bg-warn-wash p-3 text-sm">
+                  <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warn-deep" />
                   <span>
                     No exact pin.{' '}
                     {order.customerPhone && (
@@ -180,15 +183,15 @@ function TripCard({ g, firstStopNo, current, currentStopId }: { g: TripGroup; fi
       </ol>
 
       {/* Then unload: the last step of the trip, in the same card. */}
-      <div className={`m-2.5 rounded-[18px] px-4 py-4 sm:m-3 sm:px-5 ${g.site ? 'bg-ops-wash' : 'bg-danger-wash'}`}>
+      <div className={`m-2.5 rounded-[18px] px-4 py-4 sm:m-3 sm:px-5 ${g.site ? 'bg-info-wash' : 'bg-danger-wash'}`}>
         {g.site ? (
           <>
             <div className="flex items-start gap-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ops text-white">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-info text-white">
                 <Flag aria-hidden className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ops-deep">Then unload at</p>
+                <p className="text-sm font-semibold text-info">Then unload at</p>
                 <p className="text-lg font-semibold leading-snug">{g.site.name}</p>
                 <p className="mt-0.5 text-sm text-ink-3">
                   {g.site.hours}

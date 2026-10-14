@@ -1,6 +1,7 @@
 'use client'
 
-import { AlertTriangle, Flag, MapPin, Phone } from 'lucide-react'
+import Link from 'next/link'
+import { AlertTriangle, ChevronRight, Flag, MapPin, Phone } from 'lucide-react'
 import NavigateButtons from '@/components/NavigateButtons'
 import { AcceptAllButton, AcceptCountdown } from '@/components/StopResponse'
 import { useLivePosition } from '@/lib/use-live-position'
@@ -29,7 +30,7 @@ export default function NextStopCard({
 
   if (next.kind === 'accept') {
     return (
-      <section className={`${card} bg-surface ring-2 ring-ink`}>
+      <section className={`${card} anim-rise bg-surface ring-2 ring-action-strong`}>
         <p className={`${kicker} text-ink-2`}>New stops for you</p>
         <p className="mt-1 text-xl font-bold tracking-tight">
           {next.count === 1 ? 'You have 1 new stop.' : `You have ${next.count} new stops.`}
@@ -61,8 +62,8 @@ export default function NextStopCard({
 
   if (next.kind === 'site') {
     return (
-      <section className={`${card} bg-ops-wash`}>
-        <p className={`${kicker} text-ops-deep`}>
+      <section className={`${card} anim-rise bg-info-wash`}>
+        <p className={`${kicker} text-info`}>
           <Flag aria-hidden className="size-4" /> Next: unload (trip {next.tripNumber})
         </p>
         <p className="mb-4 mt-1 text-2xl font-bold tracking-tight">{next.name}</p>
@@ -77,14 +78,14 @@ export default function NextStopCard({
   }
 
   return (
-    <section className={`${card} bg-surface`}>
+    <section className={`${card} anim-rise bg-surface ring-1 ring-line`}>
       <p className={`${kicker} text-ink-2`}>
         <MapPin aria-hidden className="size-4" /> Next: stop {next.stopNumber} (trip {next.tripNumber})
       </p>
       <p className="mb-4 mt-1 text-2xl font-bold leading-tight tracking-tight">{next.address}</p>
       {next.approximate && (
-        <p className="mb-4 flex items-start gap-2.5 rounded-control bg-driver-wash p-3.5 text-[15px] text-ink">
-          <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0 text-driver-deep" />
+        <p className="mb-4 flex items-start gap-2.5 rounded-control bg-warn-wash p-3.5 text-[15px] text-ink">
+          <AlertTriangle aria-hidden className="mt-0.5 size-5 shrink-0 text-warn-deep" />
           <span>
             This customer didn&apos;t pin their gate, so the location is only approximate.
             {customerPhone && (
@@ -104,6 +105,12 @@ export default function NextStopCard({
       ) : (
         <p className="text-danger">No map position for this stop. Call the customer or ops.</p>
       )}
+      <Link
+        href={`/dashboard/driver/stop/${next.orderId}`}
+        className="press mt-2.5 flex min-h-12 items-center justify-center gap-1.5 rounded-full font-semibold text-ink ring-1 ring-line-strong hover:bg-canvas"
+      >
+        Open stop to confirm pickup <ChevronRight aria-hidden className="size-4" />
+      </Link>
       <p className="mt-3 text-xs text-ink-3">{startNote}</p>
     </section>
   )

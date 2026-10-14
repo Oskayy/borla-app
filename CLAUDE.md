@@ -164,7 +164,9 @@ dispatch stress test so far was a simulation of the planner only.
 
 **Frontend** (full plan: Frontend Enhancement Plan; redesign build plan in 7 steps: 1 foundation (done 14 Oct), 2 logo and
 launch screen (on hold, Collins wants to improve it), 3 customer app (done 14 Oct: home with the live 3D pin map, booking one question per screen, order timeline, icon rail,
-dark mode switch), 4 driver app (Collins decides when reached),
+dark mode switch), 4 driver app (done 14 Oct: Home tab with tonight's job, 3D area map and tips (our own data, plus tonight's weather from Open-Meteo and nearest fuel from
+OpenStreetMap/Overpass: free, no keys, `lib/driver-tips.ts`, sent only the zone centre or a rounded point, cached, streamed in); full-screen
+stop page with the pickup photo panel; Tonight, Earnings and Account restyled),
 5 admin console, 6 website (the scroll-driven landing tour) and older screens, 7 final checks). Done earlier: dark/light theme, loading and error screens,
 animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
 account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:

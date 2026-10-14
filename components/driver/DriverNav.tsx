@@ -2,14 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Moon, User, Wallet } from 'lucide-react'
+import { House, Moon, User, Wallet } from 'lucide-react'
 import TabBar from '@/components/kit/TabBar'
 
 const BASE = '/dashboard/driver'
 
 // Vehicle, availability, statistics and statements live under Account.
 const LINKS: { href: string; label: string; icon: typeof Moon; exact?: boolean; also?: string[] }[] = [
-  { href: BASE, label: 'Tonight', icon: Moon, exact: true },
+  { href: `${BASE}/home`, label: 'Home', icon: House },
+  { href: BASE, label: 'Tonight', icon: Moon, exact: true, also: [`${BASE}/stop/`] },
   { href: `${BASE}/earnings`, label: 'Earnings', icon: Wallet },
   {
     href: `${BASE}/account`,

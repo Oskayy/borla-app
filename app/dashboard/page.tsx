@@ -42,7 +42,7 @@ export default async function DashboardPage() {
       redirect('/dashboard/driver/verification')
     }
 
-    redirect('/dashboard/driver')
+    redirect('/dashboard/driver/home')
   }
 
   const opsRoles = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE', 'SUPPORT', 'COMPLIANCE', 'ANALYST']

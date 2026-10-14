@@ -96,7 +96,7 @@ export default function DriverOnlineToggle({
   // The dark "hero" card at the top of Tonight: status, the switch (top right), the night in numbers, then
   // the shortcuts passed in as children.
   return (
-    <section aria-label="Your shift" className="rounded-[26px] bg-hero p-5 text-on-hero shadow-lift sm:p-6">
+    <section aria-label="Your shift" className="hero-glow rounded-card bg-hero p-5 text-on-hero shadow-lift sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-on-hero-2">
@@ -104,7 +104,7 @@ export default function DriverOnlineToggle({
             {overrideUntil && ` · extra hours until ${new Date(overrideUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}
           </p>
           <p className="mt-1.5 flex items-center gap-2.5 text-[28px] font-bold leading-tight tracking-[-0.02em]">
-            <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${online ? 'bg-[#4ade80] shadow-[0_0_0_4px_rgb(74_222_128/0.2)]' : 'bg-on-hero-2'}`} />
+            <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${online ? 'animate-pulse bg-[#4ade80] shadow-[0_0_0_4px_rgb(74_222_128/0.2)]' : 'bg-on-hero-2'}`} />
             {online ? 'Online' : 'Offline'}
           </p>
           {summary && <p className="mt-1 text-[15px] text-on-hero-2">{summary}</p>}
