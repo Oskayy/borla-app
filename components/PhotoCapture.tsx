@@ -60,11 +60,12 @@ export default function PhotoCapture({ onCapture, label = "Take Photo", buttonCl
         type="file"
         accept="image/*"
         capture="environment"
+        aria-label={label}
         onChange={handleFileSelected}
         style={{ display: "none" }}
       />
       {error && (
-        <p role="status" style={{ color: "#b42318", fontSize: "0.85rem", marginTop: 6 }}>{error}</p>
+        <p role="status" style={{ color: "var(--color-danger)", fontSize: "0.85rem", marginTop: 6 }}>{error}</p>
       )}
     </div>
   );

@@ -122,6 +122,7 @@ export default function PhotoUpload({
         ref={input}
         type="file"
         accept="image/*"
+        aria-label={label}
         className="sr-only"
         tabIndex={-1}
         onChange={(e) => {

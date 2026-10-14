@@ -78,6 +78,7 @@ export default function VehicleImageUpload({ vehicleId, imagePath }: { vehicleId
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        aria-label="Vehicle picture"
         className="sr-only"
         tabIndex={-1}
         onChange={(e) => {

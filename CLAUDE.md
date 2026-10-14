@@ -21,6 +21,8 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   `params` is a Promise, `proxy.ts` is the middleware. Check `node_modules/next/dist/docs/` before guessing.
 - Before calling work done: `npm run build` passes (it runs `prisma generate` + `next build`), `npm run lint` and `npm test`.
   `TEST_BASE_URL=http://localhost:3000 npm test` also checks every API route refuses signed-out callers.
+  `npm run test:a11y` (Playwright + axe-core, e2e/) checks the main pages in light and dark mode for serious WCAG 2.2 AA
+  problems; most reliable with the dev server already running and `TEST_BASE_URL` set to it.
 
 ## Business rules (placeholders are editable in the ops screens)
 

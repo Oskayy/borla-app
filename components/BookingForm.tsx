@@ -10,6 +10,7 @@ import BinIllustration from '@/components/BinIllustration'
 import { AlertCircle, Check, Home as HomeIcon, Lock, MapPin, MapPinOff, Minus, Moon, Plus, Recycle, Trash2 } from 'lucide-react'
 import PhotoCapture from '@/components/PhotoCapture'
 import PinPicker from '@/components/PinPicker'
+import { FieldError, fieldA11y } from '@/components/FormErrors'
 import { BUTTON_PRIMARY, BUTTON_QUIET, Card, FIELD, PageHeader } from '@/components/ui'
 
 interface BinSizeOption {
@@ -81,6 +82,18 @@ function BookingFormInner({
   const [gpsLng, setGpsLng] = useState<number | null>(null)
   const [quote, setQuote] = useState<Quote | null>(null)
   const [error, setError] = useState('')
+  // Which part of the form the error is about (shown under it too, and focused): place | pin | bins | photo.
+  const [errorField, setErrorField] = useState<string | null>(null)
+  function fail(field: string, text: string) {
+    setError(text)
+    setErrorField(field)
+    requestAnimationFrame(() => {
+      const el = document.getElementById(field)
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el?.focus({ preventScroll: true })
+    })
+  }
+  const fieldError = (field: string) => (errorField === field ? error : undefined)
   const [loading, setLoading] = useState(false)
 
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -112,19 +125,20 @@ function BookingFormInner({
 
   async function getQuote() {
     if (!useHome && !address.trim()) {
-      setError('Please describe the pickup place, with a landmark')
+      fail('place', 'Please describe the pickup place, with a landmark')
       return
     }
     if (!useHome && !pin) {
-      setError('Please place the pin on the pickup spot on the map')
+      fail('pin', 'Please place the pin on the pickup spot on the map')
       return
     }
     if (totalBins < 1) {
-      setError('Please choose at least one bin')
+      fail('bins', 'Please choose at least one bin')
       return
     }
 
     setError('')
+    setErrorField(null)
     setLoading(true)
     try {
       const res = await fetch(guest ? '/api/pricing/quote-public' : '/api/pricing/quote', {
@@ -169,19 +183,20 @@ function BookingFormInner({
 
   async function confirmBooking() {
     if (!useHome && !address.trim()) {
-      setError('Please describe the pickup place, with a landmark')
+      fail('place', 'Please describe the pickup place, with a landmark')
       return
     }
     if (!useHome && !pin) {
-      setError('Please place the pin on the pickup spot on the map')
+      fail('pin', 'Please place the pin on the pickup spot on the map')
       return
     }
     if (!file) {
-      setError('Please add a photo of your waste before continuing')
+      fail('photo', 'Please add a photo of your waste before continuing')
       return
     }
 
     setError('')
+    setErrorField(null)
     setLoading(true)
 
     const orderRes = await fetch('/api/orders/create', {
@@ -238,6 +253,7 @@ function BookingFormInner({
   async function confirmAddressAndPay() {
     if (!pendingConfirm) return
     setError('')
+    setErrorField(null)
     setLoading(true)
     await payNow(pendingConfirm.orderId)
   }
@@ -387,6 +403,7 @@ function BookingFormInner({
                   </label>
                   <input
                     id="place"
+                    {...fieldA11y('place', fieldError('place'))}
                     placeholder="e.g. House 12, blue gate, near Chemu SHS, Tema Comm. 4"
                     value={address}
                     onChange={(e) => {
@@ -395,9 +412,16 @@ function BookingFormInner({
                     }}
                     className={`${FIELD} mt-1.5`}
                   />
+                  <FieldError id="place" text={fieldError('place')} />
                 </div>
                 <p className="text-sm text-ink-2">Put the pin exactly on the gate where the bins will be. Your driver goes to this pin.</p>
-                <div className="overflow-hidden rounded-card ring-1 ring-line">
+                <div
+                  id="pin"
+                  tabIndex={-1}
+                  aria-label="Pickup pin on the map"
+                  {...fieldA11y('pin', fieldError('pin'))}
+                  className={`overflow-hidden rounded-card outline-none ring-1 ${fieldError('pin') ? 'ring-2 ring-danger' : 'ring-line'}`}
+                >
                   <PinPicker
                     pin={pin}
                     height={280}
@@ -407,13 +431,17 @@ function BookingFormInner({
                     }}
                   />
                 </div>
+                <FieldError id="pin" text={fieldError('pin')} />
               </div>
             )}
           </Card>
 
           {/* 2. Bins */}
           <Card>
-            <h2 className={label}>2. How many bins?</h2>
+            <h2 id="bins" tabIndex={-1} className={`${label} outline-none`}>
+              2. How many bins?
+            </h2>
+            <FieldError id="bins" text={fieldError('bins')} />
             {sizes.length === 0 ? (
               <p className="mt-3 text-sm text-danger">Booking is not available right now. Please try again later.</p>
             ) : (
@@ -515,7 +543,10 @@ function BookingFormInner({
           {/* 4. Photo (once they have an account) */}
           {!guest && (
           <Card>
-            <h2 className={label}>4. Photo of your waste</h2>
+            <h2 id="photo" tabIndex={-1} className={`${label} outline-none`}>
+              4. Photo of your waste
+            </h2>
+            <FieldError id="photo" text={fieldError('photo')} />
             <p className="mt-1 text-sm text-ink-2">Required. It helps your driver know what to expect.</p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <PhotoCapture

@@ -8,6 +8,11 @@ import PasswordInput from '@/components/PasswordInput'
 import AuthShell, { AUTH_BUTTON, AUTH_FIELD, AuthTabs, ErrorLine } from '@/components/auth/AuthShell'
 import { useClientValue } from '@/lib/use-client-value'
 import { draftRaw } from '@/lib/booking-draft'
+import { ErrorSummary, FieldError, fieldA11y, type FieldProblem } from '@/components/FormErrors'
+
+// The same checks the server makes (app/api/auth/signup/route.ts), so mistakes show under each field first.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_RE = /^\+?[0-9 ()-]{9,20}$/
 
 function checkStrength(password: string) {
   return [
@@ -55,6 +60,8 @@ export default function SignupPage() {
   const [ageConfirmedFor, setAgeConfirmedFor] = useState<string | null>(null)
   const ageConfirmed = ageConfirmedFor === role
   const [error, setError] = useState('')
+  const [problems, setProblems] = useState<FieldProblem[]>([])
+  const [attempt, setAttempt] = useState(0)
   const [loading, setLoading] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
 
@@ -68,12 +75,15 @@ export default function SignupPage() {
     e.preventDefault()
     setError('')
 
-    if (!allPass) {
-      setError('Please meet all the password rules below before continuing')
-      return
-    }
-    if (!ageConfirmed) {
-      setError(role === 'DRIVER' ? 'Please confirm you are 18 or older' : 'Please confirm your age')
+    const found: FieldProblem[] = []
+    if (!name.trim()) found.push({ field: 'name', text: 'Enter your full name' })
+    if (!PHONE_RE.test(phone.trim())) found.push({ field: 'phone', text: 'Enter a phone number, like 024 412 3456' })
+    if (!EMAIL_RE.test(email.trim())) found.push({ field: 'email', text: 'Enter an email address, like you@example.com' })
+    if (!allPass) found.push({ field: 'password', text: 'Choose a password that meets all the rules below it' })
+    if (!ageConfirmed) found.push({ field: 'age', text: role === 'DRIVER' ? 'Confirm you are 18 or older' : 'Confirm your age' })
+    setProblems(found)
+    if (found.length > 0) {
+      setAttempt((n) => n + 1)
       return
     }
 
@@ -127,6 +137,7 @@ export default function SignupPage() {
   }
 
   const field = AUTH_FIELD
+  const problem = (id: string) => problems.find((p) => p.field === id)?.text
   const label = 'text-sm font-medium text-ink-2'
 
   return (
@@ -137,7 +148,8 @@ export default function SignupPage() {
         {pricedFirst ? 'Your pickup is saved. Create your account to book it; it takes about a minute.' : 'It takes about a minute.'}
       </p>
 
-      <form onSubmit={handleSignup} className="mt-6 grid gap-4">
+      <form onSubmit={handleSignup} noValidate className="mt-6 grid gap-4">
+        <ErrorSummary problems={problems} attempt={attempt} />
         <fieldset>
           <legend className={label}>What do you want to do?</legend>
           <div className="mt-1.5 grid grid-cols-2 gap-2.5">
@@ -183,8 +195,10 @@ export default function SignupPage() {
             onChange={(e) => setName(e.target.value)}
             required
             autoComplete="name"
+            {...fieldA11y('name', problem('name'))}
             className={`${field} mt-1.5`}
           />
+          <FieldError id="name" text={problem('name')} />
         </div>
         <div>
           <label htmlFor="phone" className={label}>
@@ -199,9 +213,10 @@ export default function SignupPage() {
             onChange={(e) => setPhone(e.target.value)}
             required
             autoComplete="tel"
-            aria-describedby="phone-hint"
+            {...fieldA11y('phone', problem('phone'), 'phone-hint')}
             className={`${field} mt-1.5`}
           />
+          <FieldError id="phone" text={problem('phone')} />
           <p id="phone-hint" className="mt-1.5 text-xs text-ink-3">
             {role === 'DRIVER' ? 'Dispatch and customers can reach you on this number.' : 'Your driver can call you on this number if needed.'}
           </p>
@@ -218,8 +233,10 @@ export default function SignupPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
+            {...fieldA11y('email', problem('email'))}
             className={`${field} mt-1.5`}
           />
+          <FieldError id="email" text={problem('email')} />
         </div>
         <div>
           <label htmlFor="password" className={label}>
@@ -228,7 +245,8 @@ export default function SignupPage() {
           <div className="mt-1.5">
             <PasswordInput
               id="password"
-              describedBy="password-rules"
+              describedBy={problem('password') ? 'password-error password-rules' : 'password-rules'}
+              invalid={!!problem('password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -236,6 +254,7 @@ export default function SignupPage() {
               className={field}
             />
           </div>
+          <FieldError id="password" text={problem('password')} />
           <ul id="password-rules" className="-mt-1 grid gap-1 text-xs" aria-label="Password rules">
             {strengthChecks.map((c) => (
               <li key={c.label} className={`flex items-center gap-1.5 ${c.pass ? 'text-customer-deep' : 'text-ink-3'}`}>
@@ -247,9 +266,12 @@ export default function SignupPage() {
           </ul>
         </div>
 
+        <div>
         <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[15px] leading-snug text-ink">
           <input
+            id="age"
             type="checkbox"
+            {...fieldA11y('age', problem('age'))}
             checked={ageConfirmed}
             onChange={(e) => setAgeConfirmedFor(e.target.checked ? role : null)}
             required
@@ -261,6 +283,8 @@ export default function SignupPage() {
               : 'I am 18 or older, or I am 16 or 17 and my parent or guardian has agreed to me using Trashit.'}
           </span>
         </label>
+        <FieldError id="age" text={problem('age')} />
+        </div>
 
         <ErrorLine text={error} />
         <button type="submit" disabled={loading} className={AUTH_BUTTON}>

@@ -402,7 +402,7 @@ export default async function Home() {
             <p className="mx-auto mt-4 max-w-xl text-lg text-white">Pin your gate, choose your bins and pay with MoMo.</p>
             <Link
               href="/book"
-              className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-control bg-white px-6 font-semibold text-customer-deep shadow-card transition hover:bg-customer-wash"
+              className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-control bg-white px-6 font-semibold text-[#0b6646] shadow-card transition hover:bg-white/90"
             >
               Book tonight&apos;s pickup <ArrowRight aria-hidden className="size-4" />
             </Link>

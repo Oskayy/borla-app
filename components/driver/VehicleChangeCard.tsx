@@ -109,6 +109,7 @@ export default function VehicleChangeCard({
               type="file"
               accept="image/*"
               capture="environment"
+              aria-label="Photo of the new vehicle"
               className="sr-only"
               tabIndex={-1}
               onChange={(e) => {
