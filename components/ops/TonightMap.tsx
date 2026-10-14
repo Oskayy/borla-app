@@ -24,9 +24,9 @@ export default function TonightMap({ routes }: { routes: MapRoute[] }) {
                 type="button"
                 onClick={() => setSelected(on ? null : r.driverId)}
                 aria-pressed={on}
-                className={`press flex w-full items-center gap-3 rounded-card bg-surface p-3.5 text-left transition ${on ? 'ring-2 ring-driver' : 'ring-1 ring-line hover:ring-line-strong'}`}
+                className={`press flex w-full items-center gap-3 rounded-card bg-surface p-3.5 text-left transition ${on ? 'ring-2 ring-warn' : 'ring-1 ring-line hover:ring-line-strong'}`}
               >
-                <span className={`grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold ${on ? 'bg-driver text-night' : 'bg-night text-white'}`}>{r.initials}</span>
+                <span className={`grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold ${on ? 'bg-warn text-hero' : 'bg-hero text-white'}`}>{r.initials}</span>
                 <span className="min-w-0">
                   <span className="block truncate font-semibold">{r.name}</span>
                   <span className="block text-sm text-ink-3">

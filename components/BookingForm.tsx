@@ -313,7 +313,7 @@ function BookingFormInner({
         <PageHeader title="Double-check your address" />
         <Card>
           <p className="flex items-start gap-3 text-[15px] leading-relaxed text-ink">
-            <MapPinOff aria-hidden className="mt-0.5 size-5 shrink-0 text-driver-deep" />
+            <MapPinOff aria-hidden className="mt-0.5 size-5 shrink-0 text-warn-deep" />
             <span>
               Your photo&apos;s location is about <strong>{Math.round(pendingConfirm.distanceMeters)} m</strong> from the
               pickup address (<strong>{pickupAddress}</strong>). This can happen if your phone&apos;s location is briefly
@@ -322,7 +322,7 @@ function BookingFormInner({
           </p>
 
           {rq && (
-            <p className="mt-4 rounded-control bg-driver-wash p-4 text-[15px] text-ink">
+            <p className="mt-4 rounded-control bg-warn-wash p-4 text-[15px] text-ink">
               Your photo was taken in <strong>{rq.zoneName}</strong>, where pickups cost more. The price has been updated
               from <strong className="tabular-nums">GHS {rq.oldPrice.toFixed(2)}</strong> to{' '}
               <strong className="tabular-nums">GHS {rq.newPrice.toFixed(2)}</strong>.

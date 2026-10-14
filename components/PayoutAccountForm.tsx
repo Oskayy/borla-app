@@ -113,7 +113,7 @@ export default function PayoutAccountForm({
             className={FIELD}
           />
           {replacing && (
-            <p id="payout-hold" className="flex items-start gap-2 text-sm text-driver-deep">
+            <p id="payout-hold" className="flex items-start gap-2 text-sm text-warn-deep">
               <ShieldAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
               Changing your wallet pauses withdrawals for 24 hours, and we&apos;ll alert you about the change.
             </p>
@@ -128,7 +128,7 @@ export default function PayoutAccountForm({
         </button>
       )}
       {msg && (
-        <p id="payout-msg" role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-customer-deep' : 'text-danger'}`}>
+        <p id="payout-msg" role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-deep' : 'text-danger'}`}>
           {msg.text}
         </p>
       )}

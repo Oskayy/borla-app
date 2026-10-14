@@ -175,7 +175,7 @@ export default function OptimizeForm({
             const on = selected.includes(order.id)
             return (
               <li key={order.id}>
-                <label className={`flex cursor-pointer items-start gap-3 p-4 transition sm:px-5 ${on ? 'bg-ops-wash/60' : 'hover:bg-canvas'}`}>
+                <label className={`flex cursor-pointer items-start gap-3 p-4 transition sm:px-5 ${on ? 'bg-action-wash/60' : 'hover:bg-canvas'}`}>
                   <input type="checkbox" checked={on} onChange={() => toggle(order.id)} className="mt-1 size-4 shrink-0 accent-[var(--color-ops)]" />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2 font-medium">
@@ -222,7 +222,7 @@ export default function OptimizeForm({
               <label
                 key={driver.id}
                 className={`flex cursor-pointer items-start gap-3 rounded-control p-3.5 ring-1 transition ${
-                  on ? 'bg-ops-wash/60 ring-2 ring-ops' : 'ring-line hover:bg-canvas'
+                  on ? 'bg-action-wash/60 ring-2 ring-action-deep' : 'ring-line hover:bg-canvas'
                 }`}
               >
                 <input type="radio" name="driver" checked={on} onChange={() => chooseDriver(driver.id)} className="mt-1 size-4 shrink-0 accent-[var(--color-ops)]" />
@@ -230,7 +230,7 @@ export default function OptimizeForm({
                   <span className="flex flex-wrap items-center gap-2 font-medium">
                     {driver.name}
                     {fit.eligible ? (
-                      <span className="rounded-full bg-ops-wash px-2 py-0.5 text-xs font-semibold text-ops-deep">Can take these</span>
+                      <span className="rounded-full bg-action-wash px-2 py-0.5 text-xs font-semibold text-action-deep">Can take these</span>
                     ) : (
                       <span className="text-sm font-normal text-danger">{fit.reasons.join(' · ')}</span>
                     )}

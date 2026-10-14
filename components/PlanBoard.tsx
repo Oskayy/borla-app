@@ -13,7 +13,7 @@ import { durationLabel } from '@/lib/trip-time'
 // The map only loads in the browser, after the rest of the board (it's the heaviest part of the page).
 const AssignMap = dynamic(() => import('@/components/ops/AssignMap'), {
   ssr: false,
-  loading: () => <div className="h-full min-h-[420px] animate-pulse rounded-card bg-line/60" />,
+  loading: () => <div className="h-full min-h-[420px] skeleton rounded-card" />,
 })
 
 const initialsOf = (name: string) =>
@@ -306,7 +306,7 @@ export default function PlanBoard({
         <ul aria-live="polite" className="grid gap-1.5 rounded-card bg-surface p-4 ring-1 ring-line">
           {messages.map((m, i) => (
             <li key={i} className={`flex items-start gap-2 text-sm ${m.ok ? 'text-ink' : 'text-danger'}`}>
-              {m.ok ? <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0 text-ops" /> : <XCircle aria-hidden className="mt-0.5 size-4 shrink-0" />}
+              {m.ok ? <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0 text-action-deep" /> : <XCircle aria-hidden className="mt-0.5 size-4 shrink-0" />}
               {m.text}
             </li>
           ))}
@@ -339,7 +339,7 @@ export default function PlanBoard({
             key={p.driverId}
             aria-label={d.name}
             className={`rounded-card bg-surface p-5 transition sm:p-6 ${
-              selected === p.driverId ? 'ring-2 ring-driver' : hasProblems ? 'ring-1 ring-danger/40' : 'ring-1 ring-line hover:ring-line-strong'
+              selected === p.driverId ? 'ring-2 ring-warn' : hasProblems ? 'ring-1 ring-danger/40' : 'ring-1 ring-line hover:ring-line-strong'
             }`}
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -354,14 +354,14 @@ export default function PlanBoard({
                       setPhoneView('map')
                     }}
                     className={`press inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold ring-1 transition ${
-                      selected === p.driverId ? 'bg-driver text-night ring-driver' : 'text-ink-2 ring-line-strong hover:bg-canvas'
+                      selected === p.driverId ? 'bg-selected text-on-selected ring-selected' : 'text-ink-2 ring-line-strong hover:bg-canvas'
                     }`}
                   >
                     <MapIcon aria-hidden className="size-3.5" /> {selected === p.driverId ? 'On the map' : 'Show on map'}
                   </button>
                   {shiftRunning && (
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${d.available ? 'bg-driver-wash text-driver-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${d.available ? 'bg-ok-wash text-ok-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
                     >
                       {d.available ? 'Online' : 'Offline'}
                     </span>
@@ -381,7 +381,7 @@ export default function PlanBoard({
                     </div>
                     <div className="mt-1 h-2 overflow-hidden rounded-full bg-line" aria-hidden>
                       <span
-                        className={`block h-full rounded-full ${p.minutes > d.minutesLeft ? 'bg-danger' : 'bg-ops'}`}
+                        className={`block h-full rounded-full transition-[width] duration-500 ${p.minutes > d.minutesLeft ? 'bg-danger' : 'bg-highlight'}`}
                         style={{ width: `${Math.min(100, d.minutesLeft > 0 ? (p.minutes / d.minutesLeft) * 100 : 100)}%` }}
                       />
                     </div>
@@ -398,7 +398,7 @@ export default function PlanBoard({
                   </div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-line" aria-hidden>
                     <span
-                      className={`block h-full rounded-full ${used > cap ? 'bg-danger' : 'bg-driver'}`}
+                      className={`block h-full rounded-full transition-[width] duration-500 ${used > cap ? 'bg-danger' : 'bg-action-strong'}`}
                       style={{ width: `${Math.min(100, cap ? (used / cap) * 100 : 0)}%` }}
                     />
                   </div>
@@ -450,7 +450,7 @@ export default function PlanBoard({
                       return (
                         <li key={id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5">
                           <span className="flex min-w-0 flex-1 basis-64 items-start gap-3">
-                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-customer text-xs font-semibold tabular-nums text-white">
+                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-action-strong text-xs font-semibold tabular-nums text-white">
                               {i + 1}
                             </span>
                             <span className="min-w-0 text-[15px]">
@@ -466,7 +466,7 @@ export default function PlanBoard({
                     })}
                     <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5">
                       <span className="flex min-w-0 flex-1 basis-64 items-start gap-3">
-                        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-ops-wash text-ops-deep">
+                        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-info-wash text-info">
                           <Flag aria-hidden className="size-3.5" />
                         </span>
                         <span className="min-w-0 text-[15px]">

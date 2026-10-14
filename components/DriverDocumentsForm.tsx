@@ -77,7 +77,7 @@ export default function DriverDocumentsForm({
         {types.map((t) => (
           <li key={t.code} className="flex flex-wrap items-center gap-4 rounded-card bg-surface p-4 ring-1 ring-line sm:p-5">
             <span
-              className={`grid size-11 shrink-0 place-items-center rounded-full ${have[t.code] ? 'bg-customer-wash text-customer-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
+              className={`grid size-11 shrink-0 place-items-center rounded-full ${have[t.code] ? 'bg-ok-wash text-ok-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
             >
               {have[t.code] ? <Check aria-hidden className="size-5" strokeWidth={3} /> : <Camera aria-hidden className="size-5" />}
             </span>
@@ -86,7 +86,7 @@ export default function DriverDocumentsForm({
                 {t.label} {!t.required && <span className="text-sm font-normal text-ink-3">(optional)</span>}
               </span>
               <span className="block text-sm text-ink-3">{t.hint}</span>
-              {have[t.code] && <span className="block text-sm font-medium text-customer-deep">Uploaded</span>}
+              {have[t.code] && <span className="block text-sm font-medium text-ok-deep">Uploaded</span>}
             </span>
             <input
               ref={(el) => {

@@ -38,7 +38,7 @@ export default function RuleActions({ kind, id, active, label }: { kind: 'payout
             if (confirm(`Make "${label}" the active ${kind} rule? It applies to new ${kind === 'payout' ? 'pickups and unloads' : 'quotes'} from now on.`))
               call({ method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'activate' }) })
           }}
-          className="min-h-10 rounded-control px-3 text-sm font-semibold text-ops-deep ring-1 ring-ops/40 transition hover:bg-ops-wash disabled:opacity-60"
+          className="min-h-10 rounded-control px-3 text-sm font-semibold text-action-deep ring-1 ring-action-deep/40 transition hover:bg-action-wash disabled:opacity-60"
         >
           Make active
         </button>

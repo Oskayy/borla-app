@@ -58,7 +58,7 @@ export default function DisposalReviewClient({ groups, canRefund = false }: { gr
   if (groups.length === 0) {
     return (
       <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
-        <CheckCircle2 aria-hidden className="size-5 text-ops" /> Nothing to check. Every unload so far was confirmed at the site.
+        <CheckCircle2 aria-hidden className="size-5 text-action-deep" /> Nothing to check. Every unload so far was confirmed at the site.
       </p>
     )
   }
@@ -93,7 +93,7 @@ export default function DisposalReviewClient({ groups, canRefund = false }: { gr
               </div>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
                 {g.driverPhone && (
-                  <a href={`tel:${g.driverPhone}`} className="inline-flex items-center gap-1 font-medium text-ops-deep hover:underline">
+                  <a href={`tel:${g.driverPhone}`} className="inline-flex items-center gap-1 font-medium text-action-deep hover:underline">
                     <Phone aria-hidden className="size-3.5" /> {g.driverPhone}
                   </a>
                 )}
@@ -161,7 +161,7 @@ export default function DisposalReviewClient({ groups, canRefund = false }: { gr
                   )
                 )}
               </div>
-              <p aria-live="polite" className={`mt-2 text-sm ${msg?.ok ? 'text-ops-deep' : 'text-danger'}`}>
+              <p aria-live="polite" className={`mt-2 text-sm ${msg?.ok ? 'text-action-deep' : 'text-danger'}`}>
                 {msg?.text}
               </p>
             </div>

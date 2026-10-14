@@ -14,12 +14,12 @@ export interface MapRoute {
   planned?: boolean // a suggestion not yet approved (dashed); otherwise already given to the driver (solid)
 }
 
-// Colours follow the Legend Rule: driver amber, customer green, disposal site indigo; other routes recede to slate.
-const AMBER = '#f0a43a'
-const GREEN = '#12825a'
-const INDIGO = '#4b40e0'
+// Colours follow the shared status colours: driver amber, customer green, disposal site blue; other routes recede to slate.
+const AMBER = '#e0a23c'
+const GREEN = '#2f7a3a'
+const INDIGO = '#2b57a3'
 const SLATE = '#94a3b8'
-const NIGHT = '#0e1726'
+const NIGHT = '#233a1e'
 
 function esc(t: string) {
   return t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
@@ -192,13 +192,13 @@ function MapView({
       <div ref={box} style={{ position: 'absolute', inset: 0 }} />
       <div className="absolute bottom-3 left-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/95 px-3 py-2 text-xs font-medium shadow-card ring-1 ring-line backdrop-blur">
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-driver" aria-hidden /> Driver
+          <span className="size-2.5 rounded-full bg-warn" aria-hidden /> Driver
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-customer" aria-hidden /> Pickup
+          <span className="size-2.5 rounded-full bg-ok-strong" aria-hidden /> Pickup
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-ops" aria-hidden /> Disposal site
+          <span className="size-2.5 rounded-sm bg-action-strong" aria-hidden /> Disposal site
         </span>
         {routes.some((r) => r.planned) && (
           <span className="flex items-center gap-1.5">

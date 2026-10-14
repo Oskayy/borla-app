@@ -113,7 +113,7 @@ export default async function AssignOrdersPage() {
         {orders.length === 0 && (
           <>
             <p className="flex items-center gap-2.5 rounded-card bg-surface p-5 text-[15px] text-ink-2 ring-1 ring-line">
-              <CheckCircle2 aria-hidden className="size-5 text-ops" /> No paid orders waiting for a driver.
+              <CheckCircle2 aria-hidden className="size-5 text-action-deep" /> No paid orders waiting for a driver.
               {assigned.length > 0 && (assigned.length === 1 ? " Tonight's route is on the map." : " Tonight's routes are on the map.")}
             </p>
             {assigned.length > 0 && <TonightMap routes={assigned} />}
@@ -131,7 +131,7 @@ export default async function AssignOrdersPage() {
             />
 
             <details className="group mt-4">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-[15px] font-semibold text-ops-deep">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-[15px] font-semibold text-action-deep">
                 <ChevronRight aria-hidden className="size-4 transition group-open:rotate-90" /> Assign manually instead
               </summary>
               <div className="mt-3">

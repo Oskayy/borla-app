@@ -83,9 +83,9 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
   return (
     <div className="grid gap-8">
       {secret && (
-        <div role="alert" className="rounded-card bg-ops-wash p-5 ring-1 ring-ops/30">
+        <div role="alert" className="rounded-card bg-action-wash p-5 ring-1 ring-action-deep/30">
           <p className="flex items-center gap-2 font-semibold">
-            <KeyRound aria-hidden className="size-4 text-ops-deep" /> Temporary password for {secret.who}
+            <KeyRound aria-hidden className="size-4 text-action-deep" /> Temporary password for {secret.who}
           </p>
           <p className="my-3 select-all rounded-control bg-surface px-4 py-3 font-mono text-lg tracking-wide ring-1 ring-line">{secret.password}</p>
           <p className="text-sm text-ink-2">

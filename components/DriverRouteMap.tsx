@@ -45,8 +45,8 @@ export default function DriverRouteMap({
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!
     // Follows the app's light or dark mode (read once; the map is rebuilt when the page reloads).
     const dark = document.documentElement.dataset.theme === 'dark'
-    const ink = dark ? '#f4f4f5' : '#111113'
-    const paper = dark ? '#0a0a0b' : '#ffffff'
+    const ink = dark ? '#7fc8a9' : '#1e5a45'
+    const paper = dark ? '#0b1210' : '#ffffff'
 
     const m = new mapboxgl.Map({
       container: container.current,
@@ -76,7 +76,7 @@ export default function DriverRouteMap({
         } else {
           el.innerHTML =
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
-          el.style.cssText = `width:30px;height:30px;border-radius:15px;background:${p.done ? '#9a9aa3' : '#2f62d0'};display:flex;align-items:center;justify-content:center;border:2px solid ${paper};box-shadow:0 1px 4px rgba(0,0,0,.4)`
+          el.style.cssText = `width:30px;height:30px;border-radius:15px;background:${p.done ? '#9a9aa3' : '#2b57a3'};display:flex;align-items:center;justify-content:center;border:2px solid ${paper};box-shadow:0 1px 4px rgba(0,0,0,.4)`
         }
         new mapboxgl.Marker({ element: el })
           .setLngLat([p.lng, p.lat])
@@ -116,7 +116,7 @@ export default function DriverRouteMap({
         meMarker.current.setLngLat([position.lng, position.lat])
       }
     } else if (!homeMarker.current && !meMarker.current) {
-      homeMarker.current = new mapboxgl.Marker({ color: '#666666' })
+      homeMarker.current = new mapboxgl.Marker({ color: '#c98a4e' })
         .setLngLat([start.lng, start.lat])
         .setPopup(new mapboxgl.Popup({ offset: 25 }).setText('Your home base (waiting for your GPS)'))
         .addTo(m)

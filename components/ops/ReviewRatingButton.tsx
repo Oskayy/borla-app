@@ -28,7 +28,7 @@ export default function ReviewRatingButton({ ratingId }: { ratingId: string }) {
         type="button"
         onClick={review}
         disabled={busy}
-        className="inline-flex min-h-11 items-center rounded-control px-4 text-sm font-semibold text-ops-deep ring-1 ring-ops/40 hover:bg-ops-wash disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-control px-4 text-sm font-semibold text-action-deep ring-1 ring-action-deep/40 hover:bg-action-wash disabled:opacity-60"
       >
         {busy ? 'Saving…' : 'Mark reviewed'}
       </button>

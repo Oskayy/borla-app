@@ -20,7 +20,7 @@ function Stars({ value }: { value: number }) {
   return (
     <span className="inline-flex items-center gap-0.5" aria-label={`${value} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} aria-hidden className={`size-4 ${n <= Math.round(value) ? 'fill-driver text-driver' : 'text-line-strong'}`} />
+        <Star key={n} aria-hidden className={`size-4 ${n <= Math.round(value) ? 'fill-warn text-warn' : 'text-line-strong'}`} />
       ))}
     </span>
   )

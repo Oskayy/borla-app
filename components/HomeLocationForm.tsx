@@ -141,13 +141,13 @@ export default function HomeLocationForm({ zones, initial }: { zones: Zone[]; in
 
       {pin && (
         <label className="flex cursor-pointer items-start gap-3 rounded-control bg-canvas p-3.5 text-[15px]">
-          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-1 size-4 accent-customer" />
+          <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} className="mt-1 size-4 accent-[var(--color-action-deep)]" />
           <span>I zoomed in and the pin is on my house or gate</span>
         </label>
       )}
 
       {info && (
-        <p role="status" className="text-sm text-customer-deep">
+        <p role="status" className="text-sm text-ok-deep">
           {info}
         </p>
       )}

@@ -61,7 +61,7 @@ export default function VehicleChangeReviews({ rows }: { rows: VehicleChangeRow[
           <li key={r.id} className={PANEL}>
             <h3 className="text-lg font-semibold tracking-tight">{r.name}</h3>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
-              <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 font-medium text-ops-deep hover:underline">
+              <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 font-medium text-action-deep hover:underline">
                 <Phone aria-hidden className="size-3.5" /> {r.phone}
               </a>
               {r.plate && <span>Plate {r.plate}</span>}

@@ -214,7 +214,7 @@ export default async function FinancePage() {
               return (
                 <li key={r.id} className={PANEL}>
                   <p className="flex items-center gap-2 font-semibold">
-                    {r.ok ? <CheckCircle2 aria-hidden className="size-5 text-ops" /> : <XCircle aria-hidden className="size-5 text-danger" />}
+                    {r.ok ? <CheckCircle2 aria-hidden className="size-5 text-action-deep" /> : <XCircle aria-hidden className="size-5 text-danger" />}
                     {dateLabel(`${r.day}T12:00:00Z`)}: {r.ok ? 'everything matches' : 'differences found'}
                     {r.reviewedAt && <span className="font-normal text-ink-3">· checked: {r.reviewNote}</span>}
                   </p>

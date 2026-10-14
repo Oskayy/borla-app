@@ -223,7 +223,7 @@ export default function DriverProfileSetupForm({
           })}
         </div>
         {changingVehicle && (
-          <p className="mt-3 rounded-control bg-driver-wash p-3.5 text-[15px] text-ink">
+          <p className="mt-3 rounded-control bg-warn-wash p-3.5 text-[15px] text-ink">
             A new vehicle needs Trashit&apos;s approval. After you save, add a photo of it and send it. Until it&apos;s approved, you keep
             working with your {currentVehicle.name.toLowerCase()}.
           </p>
@@ -332,7 +332,7 @@ export default function DriverProfileSetupForm({
           />
         </div>
         {matchInfo && (
-          <p role="status" className="mt-2 text-sm text-customer-deep">
+          <p role="status" className="mt-2 text-sm text-ok-deep">
             {matchInfo}
           </p>
         )}

@@ -167,7 +167,8 @@ launch screen (on hold, Collins wants to improve it), 3 customer app (done 14 Oc
 dark mode switch), 4 driver app (done 14 Oct: Home tab with tonight's job, 3D area map and tips (our own data, plus tonight's weather from Open-Meteo and nearest fuel from
 OpenStreetMap/Overpass: free, no keys, `lib/driver-tips.ts`, sent only the zone centre or a rounded point, cached, streamed in); full-screen
 stop page with the pickup photo panel; Tonight, Earnings and Account restyled),
-5 admin console, 6 website (the scroll-driven landing tour) and older screens, 7 final checks). Done earlier: dark/light theme, loading and error screens,
+5 admin console (done 14 Oct: icon rail with hover names, live progress card, Needs you, exceptions as a list
+beside a detail panel, plan board and maps in moss and sky; not yet seen on screen: ops needs a staff 2FA login), 6 website (the scroll-driven landing tour) and older screens, 7 final checks). Done earlier: dark/light theme, loading and error screens,
 animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
 account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:
 the remaining accessibility items (contrast, tap targets, labels), shadcn/ui, and speed (`next/image`, lazy maps,

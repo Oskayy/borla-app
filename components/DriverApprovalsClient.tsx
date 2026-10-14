@@ -28,7 +28,7 @@ export function DocPhoto({ url, label }: { url: string | null; label: string }) 
     <figure className="w-40 shrink-0">
       <figcaption className="mb-1 text-xs font-medium text-ink-3">{label}</figcaption>
       {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-control ring-1 ring-line hover:ring-ops">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-control ring-1 ring-line hover:ring-action-deep">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={url} alt={label} className="aspect-[4/3] w-full object-cover" />
         </a>
@@ -74,7 +74,7 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
           <div className="min-w-0">
             <h3 className="text-lg font-semibold tracking-tight">{r.name}</h3>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
-              <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 font-medium text-ops-deep hover:underline">
+              <a href={`tel:${r.phone}`} className="inline-flex items-center gap-1 font-medium text-action-deep hover:underline">
                 <Phone aria-hidden className="size-3.5" /> {r.phone}
               </a>
               {r.email && <span>{r.email}</span>}

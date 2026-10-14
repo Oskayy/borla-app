@@ -10,6 +10,7 @@ import { worksNight } from '@/lib/availability'
 import { REFUND_ROLES } from '@/lib/refunds'
 import { PAYOUT_ROLES } from '@/lib/wallet-server'
 import { OPS_SECTIONS, canOpen, type QueueKey } from '@/lib/ops-nav'
+import HeroCard from '@/components/kit/HeroCard'
 import { queueCounts } from '@/lib/ops-queue'
 
 export const dynamic = 'force-dynamic'
@@ -60,12 +61,13 @@ function onlineNow(drivers: { isOnline: boolean; onlineOverrideUntil: Date | nul
   return drivers.filter((d) => isDriverAvailable(d, now, settings)).length
 }
 
-// Stages of tonight's orders, each in the colour of whose hands it is in (the Legend Rule).
+// Stages of tonight's orders in the shared status colours (on the dark card): sky = waiting on Trashit,
+// amber = with a driver, light amber = collected, white = done.
 const STAGES = [
-  { key: 'waiting', label: 'Waiting for a driver', bar: 'bg-customer', statuses: ['PAID', 'READY_FOR_BATCH'] },
-  { key: 'withDriver', label: 'With a driver', bar: 'bg-driver', statuses: ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW'] },
-  { key: 'collected', label: 'Collected, not unloaded', bar: 'bg-driver-deep', statuses: ['PICKED_UP', 'DISPOSAL_PENDING'] },
-  { key: 'unloaded', label: 'Unloaded and verified', bar: 'bg-ops', statuses: ['DISPOSAL_VERIFIED', 'COMPLETED'] },
+  { key: 'waiting', label: 'Waiting for a driver', bar: 'bg-highlight', statuses: ['PAID', 'READY_FOR_BATCH'] },
+  { key: 'withDriver', label: 'With a driver', bar: 'bg-warn', statuses: ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW'] },
+  { key: 'collected', label: 'Collected, not unloaded', bar: 'bg-warn/55', statuses: ['PICKED_UP', 'DISPOSAL_PENDING'] },
+  { key: 'unloaded', label: 'Unloaded and verified', bar: 'bg-white', statuses: ['DISPOSAL_VERIFIED', 'COMPLETED'] },
 ] as const
 
 export default async function OpsOverview() {
@@ -130,102 +132,106 @@ export default async function OpsOverview() {
   const working = drivers.filter((d) => worksNight(d, night)).length
   const online = onlineNow(drivers, settings)
 
+  const done = stageCounts.find((s) => s.key === 'unloaded')?.count ?? 0
+
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-[clamp(1.6rem,2.4vw,2rem)] font-bold leading-tight tracking-[-0.025em]">Tonight, {label}</h1>
-          <p className="mt-1 text-[15px] text-ink-2">What needs a person comes first, then how the night is going.</p>
-        </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium ring-1 ring-line">
-          <Moon aria-hidden className="size-4 text-ops" />
-          {running ? 'Shift running' : 'Shift'} · {windowLabel(settings)}
-        </span>
+    <div className="grid gap-6">
+      <div>
+        <h1 className="text-[clamp(1.6rem,2.4vw,2rem)] font-bold leading-tight tracking-[-0.025em]">Tonight, {label}</h1>
+        <p className="mt-1 text-[15px] text-ink-2">How the night is going, then what needs a person.</p>
       </div>
 
-      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
-        <section aria-labelledby="attention" className="rounded-card bg-surface ring-1 ring-line">
-          <h2 id="attention" className="px-5 pt-5 text-base font-semibold tracking-tight sm:px-6">
-            Needs attention
-          </h2>
-          {waiting.length === 0 ? (
-            <p className="flex items-center gap-2.5 px-5 pb-6 pt-3 text-[15px] text-ink-2 sm:px-6">
-              <CheckCircle2 aria-hidden className="size-5 text-ops" /> All clear. Nothing is waiting for you right now.
+      {/* The live progress card: tonight's orders by stage, and drivers online. */}
+      <HeroCard aria-labelledby="orders" className="anim-rise grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-8">
+        <div className="grid gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-center gap-2 text-sm text-on-hero-2">
+              <Moon aria-hidden className="size-4 text-highlight" /> {running ? 'Shift running' : 'Shift'} · {windowLabel(settings)}
             </p>
-          ) : (
-            <ul className="mt-2 divide-y divide-line">
-              {waiting.map((a) => (
-                <li key={a.key}>
-                  <Link href={a.href} className="group flex items-center gap-4 px-5 py-4 transition hover:bg-canvas sm:px-6">
-                    <span
-                      className={`grid size-10 shrink-0 place-items-center rounded-full ${
-                        a.key === 'needsDriver' || a.key === 'exceptions' ? 'bg-danger-wash text-danger' : 'bg-ops-wash text-ops-deep'
-                      }`}
-                    >
-                      <a.icon aria-hidden className="size-[18px]" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold tabular-nums">{a.title(a.count)}</span>
-                      <span className="block text-sm text-ink-3">{a.hint}</span>
-                    </span>
-                    <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-3 transition group-hover:translate-x-0.5 group-hover:text-ink" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <div className="grid gap-6">
-          <section aria-labelledby="orders" className="rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 id="orders" className="text-base font-semibold tracking-tight">
-                Tonight&apos;s orders
-              </h2>
-              <span className="text-2xl font-bold tabular-nums tracking-tight">{totalTonight}</span>
-            </div>
-            {totalTonight > 0 && (
-              <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-line" aria-hidden>
-                {stageCounts
-                  .filter((s) => s.count > 0)
-                  .map((s) => (
-                    <span key={s.key} className={`${s.bar} h-full`} style={{ width: `${(s.count / totalTonight) * 100}%` }} />
-                  ))}
-              </div>
+            {running && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-highlight">
+                <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-highlight" /> Live
+              </span>
             )}
-            <dl className="mt-4 grid gap-2.5 text-[15px]">
-              {stageCounts.map((s) => (
-                <div key={s.key} className="flex items-center gap-3">
-                  <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${s.bar}`} />
-                  <dt className="flex-1 text-ink-2">{s.label}</dt>
-                  <dd className="font-semibold tabular-nums">{s.count}</dd>
-                </div>
-              ))}
-            </dl>
-            {totalTonight === 0 && <p className="mt-3 text-sm text-ink-3">No orders booked for tonight yet.</p>}
-          </section>
-
-          <section aria-labelledby="drivers" className="rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
-            <h2 id="drivers" className="text-base font-semibold tracking-tight">
-              Drivers
-            </h2>
-            <dl className="mt-4 grid grid-cols-3 gap-4">
-              <div>
-                <dt className="text-sm text-ink-3">Online now</dt>
-                <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight">{online}</dd>
+          </div>
+          <h2 id="orders" className="flex flex-wrap items-baseline gap-x-3 text-[clamp(2rem,4vw,2.75rem)] font-bold leading-none tracking-tight">
+            <span className="tabular-nums">{done}</span>
+            <span className="text-lg font-semibold text-on-hero-2">
+              of {totalTonight} {totalTonight === 1 ? 'order' : 'orders'} done
+            </span>
+          </h2>
+          {totalTonight > 0 ? (
+            <div className="flex h-3 overflow-hidden rounded-full bg-white/12" aria-hidden>
+              {stageCounts
+                .filter((s) => s.count > 0)
+                .map((s) => (
+                  <span key={s.key} className={`${s.bar} h-full transition-[width] duration-700`} style={{ width: `${(s.count / totalTonight) * 100}%` }} />
+                ))}
+            </div>
+          ) : (
+            <p className="text-sm text-on-hero-2">No orders booked for tonight yet.</p>
+          )}
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+            {stageCounts.map((s) => (
+              <div key={s.key}>
+                <dt className="flex items-center gap-1.5 text-on-hero-2">
+                  <span aria-hidden className={`size-2 shrink-0 rounded-full ${s.bar}`} /> {s.label}
+                </dt>
+                <dd className="mt-0.5 text-xl font-bold tabular-nums">{s.count}</dd>
               </div>
-              <div>
-                <dt className="text-sm text-ink-3">Working tonight</dt>
-                <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight">{working}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-ink-3">Approved</dt>
-                <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight">{drivers.length}</dd>
-              </div>
-            </dl>
-          </section>
+            ))}
+          </dl>
         </div>
-      </div>
+        <dl aria-label="Drivers" className="grid grid-cols-3 content-start gap-3 rounded-[18px] bg-white/6 p-4 lg:grid-cols-1">
+          <div>
+            <dt className="text-sm text-on-hero-2">Online now</dt>
+            <dd className="mt-0.5 text-3xl font-bold tabular-nums tracking-tight text-highlight">{online}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-on-hero-2">Working tonight</dt>
+            <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight">{working}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-on-hero-2">Approved</dt>
+            <dd className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight">{drivers.length}</dd>
+          </div>
+        </dl>
+      </HeroCard>
+
+      <section aria-labelledby="attention" className="rounded-card bg-surface ring-1 ring-line">
+        <h2 id="attention" className="flex items-center gap-2 px-5 pt-5 text-base font-semibold tracking-tight sm:px-6">
+          Needs you
+          {waiting.length > 0 && (
+            <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold tabular-nums text-white">{waiting.reduce((n, a) => n + a.count, 0)}</span>
+          )}
+        </h2>
+        {waiting.length === 0 ? (
+          <p className="flex items-center gap-2.5 px-5 pb-6 pt-3 text-[15px] text-ink-2 sm:px-6">
+            <CheckCircle2 aria-hidden className="size-5 text-ok-deep" /> All clear. Nothing is waiting for you right now.
+          </p>
+        ) : (
+          <ul className="anim-stagger grid gap-2 p-3 pt-2 sm:grid-cols-2">
+            {waiting.map((a) => (
+              <li key={a.key}>
+                <Link href={a.href} className="lift group flex h-full items-center gap-4 rounded-[18px] bg-canvas px-4 py-4">
+                  <span
+                    className={`grid size-10 shrink-0 place-items-center rounded-full ${
+                      a.key === 'needsDriver' || a.key === 'exceptions' ? 'bg-danger-wash text-danger' : 'bg-action-wash text-action-deep'
+                    }`}
+                  >
+                    <a.icon aria-hidden className="size-[18px]" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold tabular-nums">{a.title(a.count)}</span>
+                    <span className="block text-sm text-ink-3">{a.hint}</span>
+                  </span>
+                  <ChevronRight aria-hidden className="size-4 shrink-0 text-ink-3 transition group-hover:translate-x-0.5 group-hover:text-ink" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

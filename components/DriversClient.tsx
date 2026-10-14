@@ -67,12 +67,12 @@ function GhanaCard({ d }: { d: DriverRow }) {
           <IdCard aria-hidden className="size-4" /> {d.ghanaCard ? `Ghana Card ${d.ghanaCard}` : 'No Ghana Card number'}
         </span>
         {d.cardPhotoUrl && (
-          <a href={d.cardPhotoUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-ops-deep hover:underline">
+          <a href={d.cardPhotoUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-action-deep hover:underline">
             Open old card photo
           </a>
         )}
         {!open && (
-          <button type="button" onClick={() => setOpen(true)} className="min-h-9 font-semibold text-ops-deep hover:underline">
+          <button type="button" onClick={() => setOpen(true)} className="min-h-9 font-semibold text-action-deep hover:underline">
             {d.ghanaCard ? 'Correct' : 'Add number'}
           </button>
         )}
@@ -160,14 +160,14 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
           <li key={d.id} className={`flex flex-wrap items-start justify-between gap-4 p-4 sm:px-5 ${d.active ? '' : 'bg-canvas/60'}`}>
             <div className="min-w-0 flex-1 basis-72">
               <p className="flex flex-wrap items-center gap-2">
-                <span className={`size-2.5 shrink-0 rounded-full ${d.online ? 'bg-driver' : 'bg-line-strong'}`} aria-hidden />
+                <span className={`size-2.5 shrink-0 rounded-full ${d.online ? 'bg-warn' : 'bg-line-strong'}`} aria-hidden />
                 <span className="font-semibold">{d.name}</span>
                 <span className="sr-only">{d.online ? 'online' : 'offline'}</span>
                 {!d.active && <Chip tone="danger">Paused</Chip>}
                 {d.online && <Chip tone="driver">Online</Chip>}
               </p>
               <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
-                <a href={`tel:${d.phone}`} className="inline-flex items-center gap-1 font-medium text-ops-deep hover:underline">
+                <a href={`tel:${d.phone}`} className="inline-flex items-center gap-1 font-medium text-action-deep hover:underline">
                   <Phone aria-hidden className="size-3.5" /> {d.phone}
                 </a>
                 <span>
@@ -188,7 +188,7 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
                 </p>
               )}
               {d.overrideUntil && (
-                <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-driver-deep">
+                <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-warn-deep">
                   <Clock aria-hidden className="size-3.5" /> Extra hours allowed until {clock(d.overrideUntil)}
                 </p>
               )}

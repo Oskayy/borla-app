@@ -96,7 +96,7 @@ export default function WithdrawalsClient({ open, recent, transfersOn = true }: 
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px]">
                     <span className="font-semibold">{w.driverName}</span>
                     {w.driverPhone && (
-                      <a href={`tel:${w.driverPhone}`} className="inline-flex items-center gap-1 text-sm font-medium text-ops-deep hover:underline">
+                      <a href={`tel:${w.driverPhone}`} className="inline-flex items-center gap-1 text-sm font-medium text-action-deep hover:underline">
                         <Phone aria-hidden className="size-3.5" /> {w.driverPhone}
                       </a>
                     )}

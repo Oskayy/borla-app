@@ -62,10 +62,10 @@ export default async function WithdrawalsPage() {
         lead="Drivers are paid automatically every morning; large payouts, wallets changed in the last 24 hours, and cash-outs Paystack couldn't cover wait here. Send pays through Paystack from your Paystack balance. If Paystack transfers aren't on for your account yet, pay from your MoMo business wallet and use Mark paid with the transaction ID; a different finance user then confirms it."
       />
       {!transfersOn && (
-        <p className="mb-5 rounded-card bg-ops-wash p-4 text-[15px] text-ink ring-1 ring-ops/30">
+        <p className="mb-5 rounded-card bg-action-wash p-4 text-[15px] text-ink ring-1 ring-action-deep/30">
           Paystack transfers are switched off, so payouts aren&apos;t sent automatically and <strong>Send</strong> is unavailable. Pay each one
           from your MoMo business wallet, then use <strong>Mark paid</strong> with the transaction ID; a different finance user confirms it.{' '}
-          <Link href="/ops/finance#h-transfers" className="font-semibold text-ops-deep underline underline-offset-2">
+          <Link href="/ops/finance#h-transfers" className="font-semibold text-action-deep underline underline-offset-2">
             Switch transfers on
           </Link>{' '}
           once Paystack allows them.

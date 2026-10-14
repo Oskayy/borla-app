@@ -118,8 +118,8 @@ export default function SiteMap({
             })),
         },
       })
-      m.addLayer({ id: 'zones-fill', type: 'fill', source: 'zones', paint: { 'fill-color': '#0F3D3E', 'fill-opacity': 0.06 } })
-      m.addLayer({ id: 'zones-line', type: 'line', source: 'zones', paint: { 'line-color': '#0F3D3E', 'line-width': 1, 'line-opacity': 0.4 } })
+      m.addLayer({ id: 'zones-fill', type: 'fill', source: 'zones', paint: { 'fill-color': '#233a1e', 'fill-opacity': 0.06 } })
+      m.addLayer({ id: 'zones-line', type: 'line', source: 'zones', paint: { 'line-color': '#233a1e', 'line-width': 1, 'line-opacity': 0.4 } })
 
       // Site geofences.
       m.addSource('geofences', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -203,7 +203,7 @@ export default function SiteMap({
       return
     }
 
-    if (!editMarker.current) editMarker.current = new mapboxgl.Marker({ color: '#0F3D3E' })
+    if (!editMarker.current) editMarker.current = new mapboxgl.Marker({ color: '#233a1e' })
     editMarker.current.setLngLat([editPin.lng, editPin.lat]).addTo(m)
     source?.setData({
       type: 'FeatureCollection',

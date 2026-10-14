@@ -70,7 +70,7 @@ export default function WithdrawForm({ available, walletLabel, freeToday }: { av
         </button>
       </div>
       {msg && (
-        <p id="withdraw-msg" role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-customer-deep' : 'text-danger'}`}>
+        <p id="withdraw-msg" role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-deep' : 'text-danger'}`}>
           {msg.text}
         </p>
       )}

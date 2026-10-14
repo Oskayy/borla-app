@@ -52,7 +52,7 @@ export default function ZoneMultiplierEditor({
               setInput(String(value))
               setEditing(true)
             }}
-            className="min-h-9 font-semibold text-ops-deep hover:underline"
+            className="min-h-9 font-semibold text-action-deep hover:underline"
           >
             Change
           </button>
