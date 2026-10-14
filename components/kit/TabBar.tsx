@@ -37,7 +37,7 @@ export default function TabBar({ tabs, label, className = 'lg:hidden' }: { tabs:
                 aria-current={on ? 'page' : undefined}
                 aria-label={on ? undefined : tab.label}
                 className={`press flex h-12 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-[background-color,color,padding,width] duration-300 ease-[var(--ease-out)] ${
-                  on ? 'bg-hero px-5 text-on-hero' : 'w-14 text-ink-3 hover:text-ink'
+                  on ? 'bg-selected px-5 text-on-selected' : 'w-14 text-ink-3 hover:text-ink'
                 }`}
               >
                 <Icon aria-hidden className="size-[22px] shrink-0" strokeWidth={on ? 2.3 : 2} />

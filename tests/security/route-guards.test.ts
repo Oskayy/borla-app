@@ -17,6 +17,8 @@ function routeFiles(dir: string): string[] {
 const PUBLIC_ROUTES: Record<string, string[]> = {
   'auth/login': ['isRateLimited('],
   'auth/signup': ['isRateLimited(', 'SELF_SERVICE_ROLES'],
+  // Finishing an account started with Google: signed in, but no Trashit profile yet.
+  'auth/complete-signup': ['auth.getUser()', 'isRateLimited(', 'SELF_SERVICE_ROLES'],
   'auth/request-reset': ['isRateLimited('],
   'auth/resend-confirmation': ['isRateLimited('],
   'auth/reset-password': ['auth.getUser()', 'enforceRateLimit('],

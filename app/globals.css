@@ -33,6 +33,9 @@
   --color-on-hero-2: #bfd8c3;
   --color-highlight: #9be07a;
   --color-on-highlight: #0e1511;
+  /* Selected tab, rail item and avatar: the hero colour in light mode, a lifted green in dark mode. */
+  --color-selected: #163320;
+  --color-on-selected: #ffffff;
 
   /* Status. */
   --color-info: #2a55a8;
@@ -160,6 +163,7 @@ p { text-wrap: pretty; }
   --color-on-hero-2: #a9c2af;
   --color-highlight: #9be07a;
   --color-on-highlight: #0c110e;
+  --color-selected: #33553c;
   --color-info: #a3c0ff;
   --color-info-wash: rgb(107 155 255 / 0.14);
   --color-warn: #f5b04a;
@@ -199,6 +203,7 @@ p { text-wrap: pretty; }
   --color-on-hero-2: #a9c9ba;
   --color-highlight: #d9a06b;
   --color-on-highlight: #1b140c;
+  --color-selected: #123a2e;
   --color-ok: #1e7a45;
   --color-ok-deep: #1d6a3b;
   --color-focus: #1e5a45;
@@ -229,6 +234,7 @@ p { text-wrap: pretty; }
   --color-on-hero-2: #a3c2b4;
   --color-highlight: #e3b07e;
   --color-on-highlight: #1b140c;
+  --color-selected: #2b5547;
   --color-ok: #8fd4a8;
   --color-ok-deep: #8fd4a8;
   --color-ok-wash: rgb(127 200 169 / 0.14);
@@ -258,6 +264,7 @@ p { text-wrap: pretty; }
   --color-on-hero-2: #b8cdb0;
   --color-highlight: #9cc9e4;
   --color-on-highlight: #10202b;
+  --color-selected: #233a1e;
   --color-focus: #3e6630;
   background: var(--color-canvas);
   color: var(--color-ink);
@@ -283,6 +290,7 @@ p { text-wrap: pretty; }
   --color-on-hero-2: #a9bea2;
   --color-highlight: #9cc9e4;
   --color-on-highlight: #0d120c;
+  --color-selected: #3a5733;
   --color-focus: #a8cf8f;
 }
 
@@ -491,4 +499,35 @@ dialog.sheet::backdrop { background: rgb(8 14 10 / 0.5); animation: fade 240ms e
   .anim-rise, .anim-pop, .anim-note, .anim-stagger > *, dialog.sheet[open] { animation: fade 160ms ease both; }
   .lift, .lift:hover { transition: none; transform: none; }
   .skeleton::after, .hero-glow::before { animation: none; }
+}
+
+/* The customer's pin on the 3D map: drops in, then a soft ring pulses under it. */
+@keyframes pin-drop { 0% { opacity: 0; transform: translateY(-40px) rotate(-45deg); } 70% { opacity: 1; transform: translateY(3px) rotate(-45deg); } 100% { opacity: 1; transform: rotate(-45deg); } }
+@keyframes pin-ring { from { opacity: 0.8; transform: scale(0.4); } to { opacity: 0; transform: scale(1.6); } }
+.pin3d { position: relative; width: 40px; height: 52px; pointer-events: none; }
+.pin3d-drop {
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50% 50% 50% 6px;
+  background: #163320;
+  box-shadow: 0 10px 20px -8px rgb(0 0 0 / 0.55), inset 0 0 0 11px #163320, inset 0 0 0 30px #9be07a;
+  transform: rotate(-45deg);
+  animation: pin-drop 620ms var(--ease-spring) 300ms both;
+}
+.pin3d-ring {
+  position: absolute;
+  left: 2px;
+  bottom: -6px;
+  width: 36px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgb(22 51 32 / 0.5);
+  animation: pin-ring 2.2s ease-out 900ms infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pin3d-drop { animation: fade 200ms ease both; }
+  .pin3d-ring { animation: none; opacity: 0; }
 }

@@ -7,6 +7,7 @@ import { ArrowRight, Check, Circle, Home, MailCheck, Truck } from 'lucide-react'
 import PasswordInput from '@/components/PasswordInput'
 import AuthShell, { AUTH_BUTTON, AUTH_FIELD, AuthTabs, ErrorLine } from '@/components/auth/AuthShell'
 import { useClientValue } from '@/lib/use-client-value'
+import SocialSignIn from '@/components/auth/SocialSignIn'
 import { draftRaw } from '@/lib/booking-draft'
 import { ErrorSummary, FieldError, fieldA11y, type FieldProblem } from '@/components/FormErrors'
 
@@ -148,6 +149,7 @@ export default function SignupPage() {
         {pricedFirst ? 'Your pickup is saved. Create your account to book it; it takes about a minute.' : 'It takes about a minute.'}
       </p>
 
+      <SocialSignIn next={`/signup/finish?role=${role}`} />
       <form onSubmit={handleSignup} noValidate className="mt-6 grid gap-4">
         <ErrorSummary problems={problems} attempt={attempt} />
         <fieldset>

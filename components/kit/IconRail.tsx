@@ -7,6 +7,7 @@ import { isTabActive, type Tab } from '@/components/kit/TabBar'
 export interface RailItem extends Tab {
   count?: number // things waiting there
   urgent?: boolean // waiting work is a problem now (red badge)
+  countText?: string // what the count means, for screen readers (default "waiting")
 }
 
 // Desktop: a narrow rail of icons. Each name shows beside its icon on hover or keyboard focus, and is
@@ -26,9 +27,9 @@ export default function IconRail({ items, label, top, bottom }: { items: RailIte
                 <Link
                   href={item.href}
                   aria-current={on ? 'page' : undefined}
-                  aria-label={item.count ? `${item.label} (${item.count} waiting)` : item.label}
+                  aria-label={item.count ? `${item.label} (${item.count} ${item.countText ?? 'waiting'})` : item.label}
                   className={`press relative grid size-12 place-items-center rounded-[16px] transition-colors duration-200 ${
-                    on ? 'bg-hero text-on-hero shadow-card' : 'text-ink-2 hover:bg-surface hover:text-ink'
+                    on ? 'bg-selected text-on-selected shadow-card' : 'text-ink-2 hover:bg-surface hover:text-ink'
                   }`}
                 >
                   <Icon aria-hidden className="size-[21px]" strokeWidth={on ? 2.3 : 2} />
@@ -45,7 +46,7 @@ export default function IconRail({ items, label, top, bottom }: { items: RailIte
                 </Link>
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-40 -translate-y-1/2 translate-x-[-4px] whitespace-nowrap rounded-full bg-hero px-3 py-1.5 text-[13px] font-semibold text-on-hero opacity-0 shadow-lift transition duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:translate-x-0 group-focus-within:opacity-100"
+                  className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-40 -translate-y-1/2 translate-x-[-4px] whitespace-nowrap rounded-full bg-selected px-3 py-1.5 text-[13px] font-semibold text-on-selected opacity-0 shadow-lift transition duration-150 group-hover:translate-x-0 group-hover:opacity-100 group-focus-within:translate-x-0 group-focus-within:opacity-100"
                 >
                   {item.label}
                 </span>

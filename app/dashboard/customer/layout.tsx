@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Bell, Headphones, MapPin } from 'lucide-react'
+import { Bell, MapPin } from 'lucide-react'
 import ThemeToggle from '@/components/ThemeToggle'
 import Logo from '@/components/Logo'
-import { BottomTabs, SidebarNav } from '@/components/customer/CustomerNav'
+import { BottomTabs, CustomerRail } from '@/components/customer/CustomerNav'
 import ResumeBooking from '@/components/customer/ResumeBooking'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
-import { SUPPORT, supportHref } from '@/lib/support'
+import { supportHref } from '@/lib/support'
 import { todayLabel } from '@/lib/format'
 
 // The customer workspace frame: sidebar and top bar on desktop, top bar and bottom tabs on phones.
@@ -34,36 +34,15 @@ export default async function CustomerLayout({ children }: { children: React.Rea
   const help = supportHref()
 
   return (
-    <div data-surface="new" className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[260px_1fr]">
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line bg-surface px-4 py-5 lg:flex">
-        <Link href="/dashboard/customer" aria-label="Trashit home" className="px-2">
-          <Logo height={28} />
-        </Link>
-        <nav aria-label="Customer" className="mt-8 flex-1">
-          <SidebarNav unread={unread} />
-        </nav>
-        {help && (
-          <a href={help} className="mb-4 flex items-start gap-3 rounded-card bg-customer-wash p-4 text-sm text-customer-deep hover:brightness-[0.98]">
-            <Headphones aria-hidden className="mt-0.5 size-5 shrink-0" />
-            <span>
-              <span className="block font-semibold">Need help?</span>
-              <span className="text-ink-2">Talk to the Trashit team{SUPPORT.whatsapp ? ' on WhatsApp' : ''}.</span>
-            </span>
-          </a>
-        )}
-        <Link href="/dashboard/customer/profile" className="flex items-center gap-3 rounded-control p-2 hover:bg-canvas">
-          <span className="grid size-9 place-items-center rounded-full bg-customer text-sm font-semibold text-white">{initials}</span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold">{me.name}</span>
-            <span className="block text-xs text-ink-3">Customer</span>
-          </span>
-        </Link>
+    <div data-surface="new" className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[84px_1fr]">
+      {/* Desktop: the icon rail */}
+      <aside className="sticky top-0 hidden h-dvh border-r border-line lg:block">
+        <CustomerRail unread={unread} initials={initials} help={help} />
       </aside>
 
       <div className="min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur-md">
           <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6 lg:px-8">
             <Link href="/dashboard/customer" aria-label="Trashit home" className="lg:hidden">
               <Logo height={26} />
@@ -73,7 +52,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
                 href="/dashboard/customer/home-location"
                 className="hidden items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-ink-2 hover:bg-canvas sm:inline-flex"
               >
-                <MapPin aria-hidden className="size-4 text-customer" /> {area}
+                <MapPin aria-hidden className="size-4 text-action-deep" /> {area}
               </Link>
             )}
             <span className="ml-auto hidden text-sm text-ink-3 sm:block">{today}</span>
@@ -90,7 +69,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
                 </span>
               )}
             </Link>
-            <Link href="/dashboard/customer/profile" aria-label="Your profile" className="grid size-9 place-items-center rounded-full bg-customer text-sm font-semibold text-white lg:hidden">
+            <Link href="/dashboard/customer/profile" aria-label="Your profile" className="grid size-9 place-items-center rounded-full bg-selected text-sm font-semibold text-on-selected lg:hidden">
               {initials}
             </Link>
           </div>

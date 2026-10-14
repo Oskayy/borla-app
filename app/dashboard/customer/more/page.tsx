@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Bell, ChevronRight, Headphones, MapPin, Settings, User } from 'lucide-react'
 import { PageHeader } from '@/components/ui'
 import { supportHref } from '@/lib/support'
+import { ThemeSwitch } from '@/components/ThemeToggle'
 
 // Phones: the account pages that don't fit in the bottom tabs.
 const LINKS = [
@@ -16,11 +17,14 @@ export default function MorePage() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="Your account" />
-      <ul className="overflow-hidden rounded-card bg-surface ring-1 ring-line divide-y divide-line">
+      <ul className="anim-rise overflow-hidden rounded-card bg-surface ring-1 ring-line divide-y divide-line">
+        <li>
+          <ThemeSwitch />
+        </li>
         {LINKS.map(({ href, label, text, icon: Icon }) => (
           <li key={href}>
             <Link href={href} className="flex min-h-16 items-center gap-3.5 px-4 hover:bg-canvas">
-              <Icon aria-hidden className="size-5 shrink-0 text-customer" />
+              <Icon aria-hidden className="size-5 shrink-0 text-action-deep" />
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold">{label}</span>
                 <span className="block text-sm text-ink-3">{text}</span>
@@ -32,7 +36,7 @@ export default function MorePage() {
         {help && (
           <li>
             <a href={help} className="flex min-h-16 items-center gap-3.5 px-4 hover:bg-canvas">
-              <Headphones aria-hidden className="size-5 shrink-0 text-customer" />
+              <Headphones aria-hidden className="size-5 shrink-0 text-action-deep" />
               <span className="min-w-0 flex-1">
                 <span className="block font-semibold">Help and support</span>
                 <span className="block text-sm text-ink-3">Talk to the Trashit team</span>

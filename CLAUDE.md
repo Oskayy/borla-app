@@ -98,7 +98,8 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 `DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
 `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_MAPBOX_TOKEN`, `PAYSTACK_SECRET_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
-`VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `ARKESEL_API_KEY`, `SMS_SENDER_ID`.
+`VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, `ARKESEL_API_KEY`, `SMS_SENDER_ID`,
+`NEXT_PUBLIC_OAUTH_PROVIDERS` (not a secret: which "Continue with …" buttons show, e.g. `google`; empty = none).
 
 ## Open work (as of 13 Oct 2026)
 
@@ -130,6 +131,13 @@ for a few seconds: if a migration or script says "Can't reach database server", 
   drivers for the numbers and enter them on the ops Drivers page (Add number).
 - The test driver account must never be approved (dispatch would send it real orders).
 
+**Sign in with Google (built 14 Oct 2026, not switched on yet):** `lib/oauth.ts`, `components/auth/SocialSignIn.tsx`; new
+accounts finish on `/signup/finish` (role, phone, age) via `/api/auth/complete-signup`; staff still enter their 2FA code.
+To switch on: Google Cloud OAuth client (redirect URI `https://<project>.supabase.co/auth/v1/callback`), then Supabase →
+Authentication → Providers → Google, then `NEXT_PUBLIC_OAUTH_PROVIDERS=google` in `.env` and on Vercel. Apple, Microsoft
+(`azure`) and Facebook work the same way. Turn email confirmation on before launch: with it off, someone could register a
+password account on another person's Gmail address before they first use Google.
+
 **Parked: Arkesel SMS.** `ARKESEL_API_KEY` and `SMS_SENDER_ID` are not set, on purpose. The app runs without them (SMS
 skipped, one `[sms] SMS is off` warning; in-app and push alerts still go out). Needed before launch and before security
 fix F1 (which texts the old MoMo number). Email confirmation is deliberately **off** while testing with made-up emails.
@@ -155,7 +163,8 @@ dispatch stress test so far was a simulation of the planner only.
 - Confirm `NEXT_PUBLIC_SITE_URL` is set on Vercel and Supabase's redirect allow-list has only the real domain.
 
 **Frontend** (full plan: Frontend Enhancement Plan; redesign build plan in 7 steps: 1 foundation (done 14 Oct), 2 logo and
-launch screen (on hold, Collins wants to improve it), 3 customer app, 4 driver app (Collins decides 3 and 4 when reached),
+launch screen (on hold, Collins wants to improve it), 3 customer app (done 14 Oct: home with the live 3D pin map, booking one question per screen, order timeline, icon rail,
+dark mode switch), 4 driver app (Collins decides when reached),
 5 admin console, 6 website (the scroll-driven landing tour) and older screens, 7 final checks). Done earlier: dark/light theme, loading and error screens,
 animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
 account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:

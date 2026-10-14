@@ -15,7 +15,11 @@ export default async function DashboardPage() {
     where: { id: user.id },
   })
 
-  if (!dbUser || !dbUser.active) {
+  // Signed in with Google (or another provider) for the first time: finish the account first.
+  if (!dbUser) {
+    redirect('/signup/finish')
+  }
+  if (!dbUser.active) {
     redirect('/login')
   }
 

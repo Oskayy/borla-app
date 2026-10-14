@@ -9,6 +9,7 @@ import { customerCancelCheck } from '@/lib/refunds'
 import { binsText, CUSTOMER_STAGES, customerStatus, ghs, type OrderSnapshot } from '@/lib/order-status'
 import { dateLabel, dateTimeLabel } from '@/lib/format'
 import { BUTTON_QUIET, Card, CardTitle, StatusPill } from '@/components/ui'
+import HeroCard from '@/components/kit/HeroCard'
 import CancelOrderButton from '@/components/CancelOrderButton'
 import RateOrder from '@/components/customer/RateOrder'
 import { canRate } from '@/lib/ratings'
@@ -62,7 +63,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     return (
       <Card className="text-center">
         <p className="font-semibold">Order not found</p>
-        <Link href="/dashboard/customer/orders" className="mt-3 inline-block text-sm font-semibold text-customer-deep hover:underline">
+        <Link href="/dashboard/customer/orders" className="mt-3 inline-block text-sm font-semibold text-action-deep hover:underline">
           Back to my orders
         </Link>
       </Card>
@@ -96,11 +97,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         {waitingForNight && (
           <EnableAlerts compact message="Paid and booked. Want a message when a driver is assigned and when your bins are collected?" />
         )}
-        <Card>
+        <HeroCard aria-label="Pickup progress">
           <p className="text-lg font-semibold tracking-tight">{status.message}</p>
           {collection && waitingForNight && (
-            <p className="mt-3 flex items-start gap-2.5 rounded-control bg-ops-wash p-3.5 text-sm text-ink">
-              <Moon aria-hidden className="mt-0.5 size-4 shrink-0 text-ops" />
+            <p className="mt-3 flex items-start gap-2.5 rounded-[16px] bg-white/8 p-3.5 text-sm text-on-hero">
+              <Moon aria-hidden className="mt-0.5 size-4 shrink-0 text-highlight" />
               <span>
                 <strong className="font-semibold">Collection: {collection}.</strong> Please put your bins out before the collection starts.
               </span>
@@ -115,18 +116,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 return (
                   <li key={label} className="relative flex gap-4 pb-6 last:pb-0">
                     {i < CUSTOMER_STAGES.length - 1 && (
-                      <span aria-hidden className={`absolute left-[13px] top-7 h-[calc(100%-1.75rem)] w-0.5 ${i < status.stage ? 'bg-customer' : 'bg-line'}`} />
+                      <span aria-hidden className={`absolute left-[13px] top-7 h-[calc(100%-1.75rem)] w-0.5 ${i < status.stage ? 'bg-highlight' : 'bg-white/15'}`} />
                     )}
                     <span
                       className={`relative grid size-7 shrink-0 place-items-center rounded-full ${
-                        done ? 'bg-customer text-white' : 'bg-surface text-ink-3 ring-2 ring-line'
+                        done ? 'anim-pop bg-highlight text-on-highlight' : 'bg-hero text-on-hero-2 ring-2 ring-white/20'
                       }`}
                     >
                       {done ? <Check aria-hidden className="size-4" strokeWidth={3} /> : <span className="text-xs font-semibold">{i + 1}</span>}
                     </span>
                     <span className="pt-0.5">
-                      <span className={`block font-semibold ${done ? 'text-ink' : 'text-ink-3'}`}>{label}</span>
-                      {done && t && <span className="block text-sm text-ink-3">{dateTimeLabel(t)}</span>}
+                      <span className={`block font-semibold ${done ? 'text-on-hero' : 'text-on-hero-2'}`}>{label}</span>
+                      {done && t && <span className="block text-sm text-on-hero-2">{dateTimeLabel(t)}</span>}
                       <span className="sr-only">{done ? '(done)' : '(not yet)'}</span>
                     </span>
                   </li>
@@ -134,7 +135,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               })}
             </ol>
           )}
-        </Card>
+        </HeroCard>
 
         {rateable && order.driver && (
           <Card>
@@ -146,7 +147,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <p className="text-sm text-ink-3">Your rating</p>
             <p className="mt-1 flex items-center gap-0.5" aria-label={`${order.rating.stars} out of 5 stars`}>
               {[1, 2, 3, 4, 5].map((n) => (
-                <Star key={n} aria-hidden className={`size-5 ${n <= order.rating!.stars ? 'fill-driver text-driver' : 'text-line-strong'}`} />
+                <Star key={n} aria-hidden className={`size-5 ${n <= order.rating!.stars ? 'fill-warn text-warn' : 'text-line-strong'}`} />
               ))}
             </p>
             {order.rating.comment && <p className="mt-2 text-[15px] text-ink-2">&ldquo;{order.rating.comment}&rdquo;</p>}
@@ -177,7 +178,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <div className="sm:col-span-2">
                 <dt className="text-sm text-ink-3">Driver</dt>
                 <dd className="mt-1 flex items-center gap-2.5 font-medium">
-                  <span className="grid size-8 place-items-center rounded-full bg-driver text-night">
+                  <span className="grid size-8 place-items-center rounded-full bg-hero text-highlight">
                     <Truck aria-hidden className="size-4" />
                   </span>
                   {order.driver.name.split(/\s+/)[0]}

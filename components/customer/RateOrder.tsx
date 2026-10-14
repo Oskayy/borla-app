@@ -62,7 +62,7 @@ export default function RateOrder({ orderId, driverName }: { orderId: string; dr
                 className="peer sr-only"
               />
               <span className="grid size-12 place-items-center rounded-control peer-focus-visible:ring-3 peer-focus-visible:ring-action/40">
-                <Star aria-hidden className={`size-8 transition ${n <= stars ? 'fill-driver text-driver' : 'text-line-strong'}`} />
+                <Star aria-hidden className={`size-8 transition duration-200 ease-[var(--ease-spring)] ${n <= stars ? 'scale-110 fill-warn text-warn' : 'text-line-strong hover:scale-105'}`} />
               </span>
               <span className="sr-only">
                 {n} {n === 1 ? 'star' : 'stars'}, {WORDS[n]}

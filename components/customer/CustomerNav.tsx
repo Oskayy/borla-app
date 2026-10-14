@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import TabBar from '@/components/kit/TabBar'
-import { Bell, CalendarPlus, Home, LayoutList, MapPin, Menu, Settings, User } from 'lucide-react'
+import { Bell, CalendarPlus, Headphones, Home, LayoutList, MapPin, Menu, Settings, User } from 'lucide-react'
+import Logo from '@/components/Logo'
+import IconRail, { type RailItem } from '@/components/kit/IconRail'
 
 const BASE = '/dashboard/customer'
 
@@ -17,39 +18,31 @@ export const CUSTOMER_LINKS = [
   { href: `${BASE}/settings`, label: 'Settings', icon: Settings },
 ]
 
-function isActive(pathname: string, href: string, exact?: boolean) {
-  return exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
-}
-
-// Desktop sidebar links.
-export function SidebarNav({ unread }: { unread: number }) {
-  const pathname = usePathname()
+// Desktop: the shared icon rail (names show on hover and focus), with the logo on top and help and the profile below.
+export function CustomerRail({ unread, initials, help }: { unread: number; initials: string; help: string | null }) {
+  const items: RailItem[] = CUSTOMER_LINKS.map(({ badge, ...l }) => ({ ...l, count: badge ? unread : 0, countText: 'unread' }))
   return (
-    <ul className="grid gap-0.5">
-      {CUSTOMER_LINKS.map(({ href, label, icon: Icon, exact, badge }) => {
-        const on = isActive(pathname, href, exact)
-        return (
-          <li key={href}>
-            <Link
-              href={href}
-              aria-current={on ? 'page' : undefined}
-              className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[15px] font-medium transition ${
-                on ? 'bg-customer-wash text-customer-deep' : 'text-ink-2 hover:bg-canvas hover:text-ink'
-              }`}
-            >
-              <Icon aria-hidden className="size-[18px] shrink-0" />
-              <span className="flex-1">{label}</span>
-              {badge && unread > 0 && (
-                <span className="grid min-w-5 place-items-center rounded-full bg-customer px-1.5 text-[11px] font-semibold tabular-nums text-white">
-                  {unread > 9 ? '9+' : unread}
-                  <span className="sr-only"> unread</span>
-                </span>
-              )}
-            </Link>
-          </li>
-        )
-      })}
-    </ul>
+    <IconRail
+      label="Customer"
+      items={items}
+      top={
+        <Link href={BASE} aria-label="Trashit home" className="mb-3 grid size-12 place-items-center">
+          <Logo variant="mark" height={34} />
+        </Link>
+      }
+      bottom={
+        <div className="flex flex-col items-center gap-2">
+          {help && (
+            <a href={help} aria-label="Need help? Talk to the Trashit team" className="press grid size-12 place-items-center rounded-[16px] text-ink-2 hover:bg-surface hover:text-ink">
+              <Headphones aria-hidden className="size-[21px]" />
+            </a>
+          )}
+          <Link href={`${BASE}/profile`} aria-label="Your profile" className="press grid size-11 place-items-center rounded-full bg-selected text-sm font-semibold text-on-selected">
+            {initials}
+          </Link>
+        </div>
+      }
+    />
   )
 }
 

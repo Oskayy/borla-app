@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useClientValue } from '@/lib/use-client-value'
 import { clearDraft, draftRaw, parseDraft, saveDraft, type BookingDraft } from '@/lib/booking-draft'
 import BinIllustration from '@/components/BinIllustration'
-import { AlertCircle, Check, Home as HomeIcon, Lock, MapPin, MapPinOff, Minus, Moon, Plus, Recycle, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Home as HomeIcon, Lock, MapPin, MapPinOff, Minus, Moon, Plus, Recycle, Trash2 } from 'lucide-react'
 import PhotoCapture from '@/components/PhotoCapture'
 import PinPicker from '@/components/PinPicker'
 import { FieldError, fieldA11y } from '@/components/FormErrors'
@@ -43,6 +43,9 @@ interface Quote {
 
 const MAX_PER_SIZE = 20
 
+// Which step each field lives on, so an error can take the person back to it.
+const FIELD_STEP: Record<string, string> = { place: 'where', pin: 'where', bins: 'bins', photo: 'photo' }
+
 interface BookingFormProps {
   sizes: BinSizeOption[]
   home: { address: string } | null
@@ -67,6 +70,16 @@ function BookingFormInner({
   draft,
 }: BookingFormProps & { draft: BookingDraft | null }) {
   const router = useRouter()
+  // One question per screen. Guests price a pickup (no photo); customers book and pay.
+  const STEPS = [
+    { id: 'where', short: 'Where', title: 'Where should we collect?' },
+    { id: 'bins', short: 'Bins', title: 'How many bins?' },
+    { id: 'kind', short: 'Waste', title: 'What kind of waste?' },
+    ...(guest ? [] : [{ id: 'photo', short: 'Photo', title: 'A photo of your waste' }]),
+    { id: 'pay', short: guest ? 'Price' : 'Pay', title: guest ? 'Your price' : 'Check and pay' },
+  ]
+  const [step, setStep] = useState(0)
+  const [pricing, setPricing] = useState(false)
   const known = new Set(sizes.map((s) => s.code))
   // With a saved home, bookings use it by default (unless they priced a different place before signing up).
   const [useHome, setUseHome] = useState(!!home && !draft?.pin)
@@ -87,6 +100,8 @@ function BookingFormInner({
   function fail(field: string, text: string) {
     setError(text)
     setErrorField(field)
+    const at = STEPS.findIndex((s) => s.id === FIELD_STEP[field])
+    if (at >= 0) setStep(at)
     requestAnimationFrame(() => {
       const el = document.getElementById(field)
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
@@ -158,6 +173,25 @@ function BookingFormInner({
       setLoading(false)
     }
   }
+
+  // Live price while choosing bins (signed-in customers): worked out a moment after the last change.
+  useEffect(() => {
+    if (guest || STEPS[step]?.id !== 'bins' || totalBins < 1 || quote) return
+    if (!useHome && (!address.trim() || !pin)) return
+    const t = setTimeout(async () => {
+      setPricing(true)
+      try {
+        const res = await fetch('/api/pricing/quote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderBody()) })
+        if (res.ok) setQuote(await res.json())
+      } catch {
+        // the price is worked out again on the last step
+      } finally {
+        setPricing(false)
+      }
+    }, 700)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bins, step, quote, useHome, address, pin, wasteType, hazardous])
 
   async function payNow(orderId: string) {
     try {
@@ -260,6 +294,7 @@ function BookingFormInner({
 
   function goBackAndFixAddress() {
     setPendingConfirm(null)
+    setStep(0)
     setQuote(null)
     setFile(null)
     setGpsLat(null)
@@ -315,33 +350,72 @@ function BookingFormInner({
     router.push(path)
   }
 
-  const label = 'text-sm font-semibold text-ink'
   const optionCard = (on: boolean) =>
-    `flex cursor-pointer items-start gap-3 rounded-card border p-4 transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ops ${
-      on ? 'border-customer bg-customer-wash ring-3 ring-customer/15' : 'border-line-strong bg-surface hover:border-ink-3'
+    `lift flex cursor-pointer items-start gap-3 rounded-card p-4 ring-1 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus ${
+      on ? 'bg-action-wash ring-2 ring-action-deep' : 'bg-surface ring-line-strong'
     }`
+  const current = STEPS[step]
+  const last = step === STEPS.length - 1
+
+  // Next: check this step's answer, then move on (the price is worked out on the way to "Check and pay").
+  function next() {
+    if (current.id === 'where') {
+      if (!useHome && !address.trim()) return fail('place', 'Please describe the pickup place, with a landmark')
+      if (!useHome && !pin) return fail('pin', 'Please place the pin on the pickup spot on the map')
+    }
+    if (current.id === 'bins' && totalBins < 1) return fail('bins', 'Please choose at least one bin')
+    if (current.id === 'photo' && !file) return fail('photo', 'Please add a photo of your waste before continuing')
+    setError('')
+    setErrorField(null)
+    const to = step + 1
+    setStep(to)
+    if (STEPS[to]?.id === 'pay' && !quote) void getQuote()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  function back() {
+    setError('')
+    setErrorField(null)
+    setStep((s) => Math.max(0, s - 1))
+  }
 
   return (
-    <div>
-      {guest ? (
-        <PageHeader title="Price a pickup" lead="See your price and collection night first. You only need an account when you book." />
-      ) : (
-        <PageHeader title="Book a pickup" lead="Book any time. Collection happens overnight, and you see your collection night before you pay." />
-      )}
-      {!guest && draft && (
-        <p role="status" className="mb-5 flex items-start gap-2.5 rounded-card bg-customer-wash p-4 text-[15px] text-ink ring-1 ring-customer/20">
-          <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-customer-deep" strokeWidth={2.5} />
-          We kept the pickup you priced. Add a photo of your waste, check the price, then pay.
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-5">
+        <h1 className="text-[clamp(1.6rem,3vw,2rem)] font-bold leading-tight tracking-[-0.03em]">{guest ? 'Price a pickup' : 'Book a pickup'}</h1>
+        <p className="mt-1.5 text-[15px] text-ink-2">
+          {guest ? 'See your price and collection night first. You only need an account when you book.' : 'A few quick questions. You see your price and collection night before you pay.'}
+        </p>
+      </div>
+      {!guest && draft && step === 0 && (
+        <p role="status" className="anim-note mb-5 flex items-start gap-2.5 rounded-card bg-ok-wash p-4 text-[15px] text-ink ring-1 ring-ok/25">
+          <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-ok-deep" strokeWidth={2.5} />
+          We kept the pickup you priced. Check the details, add a photo of your waste, then pay.
         </p>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="grid gap-6">
-          {/* 1. Where */}
-          <Card>
-            <h2 className={label}>1. Where should we collect?</h2>
+      {/* Progress: one segment per question */}
+      <ol aria-label="Booking steps" className="mb-5 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }}>
+        {STEPS.map((s, i) => (
+          <li key={s.id} aria-current={i === step ? 'step' : undefined} className="min-w-0">
+            <span className={`block h-1.5 rounded-full transition-colors duration-300 ${i <= step ? 'bg-action-strong' : 'bg-line'}`} />
+            <span className={`mt-1.5 block truncate text-xs font-semibold ${i === step ? 'text-ink' : 'text-ink-3'}`}>{s.short}</span>
+            <span className="sr-only">{i < step ? '(done)' : i === step ? '(now)' : '(not yet)'}</span>
+          </li>
+        ))}
+      </ol>
+
+      <section key={current.id} aria-labelledby="step-title" className="anim-rise rounded-card bg-surface p-5 ring-1 ring-line sm:p-6">
+        <p className="text-sm font-semibold text-ink-3">
+          Step {step + 1} of {STEPS.length}
+        </p>
+        <h2 id="step-title" tabIndex={-1} className="mt-1 text-xl font-bold tracking-tight outline-none">
+          {current.title}
+        </h2>
+
+        {current.id === 'where' && (
+          <div className="mt-4">
             {home ? (
-              <div className="mt-3 grid gap-2.5" role="radiogroup" aria-label="Pickup address">
+              <div className="grid gap-2.5" role="radiogroup" aria-label="Pickup address">
                 <label className={optionCard(useHome)}>
                   <input
                     type="radio"
@@ -353,12 +427,12 @@ function BookingFormInner({
                     }}
                     className="sr-only"
                   />
-                  <HomeIcon aria-hidden className="mt-0.5 size-5 shrink-0 text-customer" />
+                  <HomeIcon aria-hidden className="mt-0.5 size-5 shrink-0 text-action-deep" />
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">My home</span>
                     <span className="block truncate text-sm text-ink-2">{home.address}</span>
                   </span>
-                  <Link href="/dashboard/customer/home-location" className="text-sm font-semibold text-customer-deep hover:underline">
+                  <Link href="/dashboard/customer/home-location" className="text-sm font-semibold text-action-deep hover:underline">
                     Change
                   </Link>
                 </label>
@@ -378,17 +452,17 @@ function BookingFormInner({
                 </label>
               </div>
             ) : homeNeedsCheck ? (
-              <p className="mt-3 rounded-control bg-driver-wash p-3.5 text-sm text-ink">
+              <p className="rounded-control bg-warn-wash p-3.5 text-sm text-ink">
                 Drivers go exactly to your pin, so please{' '}
-                <Link href="/dashboard/customer/home-location" className="font-semibold text-driver-deep underline underline-offset-2">
+                <Link href="/dashboard/customer/home-location" className="font-semibold text-warn-deep underline underline-offset-2">
                   check your home pin
                 </Link>{' '}
                 once. Until then, place a pin for this order below.
               </p>
             ) : guest ? null : (
-              <p className="mt-3 text-sm text-ink-2">
+              <p className="text-sm text-ink-2">
                 Tip:{' '}
-                <Link href="/dashboard/customer/home-location" className="font-semibold text-customer-deep hover:underline">
+                <Link href="/dashboard/customer/home-location" className="font-semibold text-action-deep hover:underline">
                   save your home pin
                 </Link>{' '}
                 once and you won&apos;t need to place a pin again.
@@ -434,13 +508,14 @@ function BookingFormInner({
                 <FieldError id="pin" text={fieldError('pin')} />
               </div>
             )}
-          </Card>
+          </div>
+        )}
 
-          {/* 2. Bins */}
-          <Card>
-            <h2 id="bins" tabIndex={-1} className={`${label} outline-none`}>
-              2. How many bins?
-            </h2>
+        {current.id === 'bins' && (
+          <div className="mt-4">
+            <p id="bins" tabIndex={-1} className="text-sm text-ink-2 outline-none">
+              Choose how many of each size you&apos;re putting out.
+            </p>
             <FieldError id="bins" text={fieldError('bins')} />
             {sizes.length === 0 ? (
               <p className="mt-3 text-sm text-danger">Booking is not available right now. Please try again later.</p>
@@ -451,7 +526,7 @@ function BookingFormInner({
                   return (
                     <li
                       key={size.code}
-                      className={`rounded-card border px-1.5 py-3.5 text-center transition sm:p-4 ${count > 0 ? 'border-customer bg-customer-wash' : 'border-line-strong'}`}
+                      className={`rounded-card px-1.5 py-3.5 text-center ring-1 transition sm:p-4 ${count > 0 ? 'bg-action-wash ring-2 ring-action-deep' : 'ring-line-strong'}`}
                     >
                       <BinIllustration litres={size.litres} active={count > 0} className="mx-auto h-24 w-auto text-ink" />
                       <p className="mt-1.5 font-semibold">{size.litres} L</p>
@@ -462,11 +537,11 @@ function BookingFormInner({
                           aria-label={`Remove one ${size.label.toLowerCase()}`}
                           onClick={() => setCount(size.code, count - 1)}
                           disabled={count === 0}
-                          className="grid size-10 place-items-center rounded-full bg-surface ring-1 ring-line-strong transition hover:bg-canvas disabled:opacity-40"
+                          className="press grid size-11 place-items-center rounded-full bg-surface ring-1 ring-line-strong hover:bg-canvas disabled:opacity-40"
                         >
                           <Minus aria-hidden className="size-4" />
                         </button>
-                        <span className="min-w-6 text-lg font-bold tabular-nums" aria-live="polite">
+                        <span key={count} className="anim-pop min-w-6 text-lg font-bold tabular-nums" aria-live="polite">
                           {count}
                         </span>
                         <button
@@ -474,7 +549,7 @@ function BookingFormInner({
                           aria-label={`Add one ${size.label.toLowerCase()}`}
                           onClick={() => setCount(size.code, count + 1)}
                           disabled={count >= MAX_PER_SIZE}
-                          className="grid size-10 place-items-center rounded-full bg-customer text-white transition hover:bg-customer-deep disabled:opacity-40"
+                          className="press grid size-11 place-items-center rounded-full bg-action text-on-action hover:brightness-105 disabled:opacity-40"
                         >
                           <Plus aria-hidden className="size-4" />
                         </button>
@@ -484,12 +559,19 @@ function BookingFormInner({
                 })}
               </ul>
             )}
-          </Card>
+            <p aria-live="polite" className="mt-4 flex items-baseline justify-between gap-3 rounded-[16px] bg-canvas px-4 py-3 text-sm">
+              <span className="text-ink-2">
+                {totalBins > 0 ? `${totalBins} bin${totalBins === 1 ? '' : 's'}` : 'No bins yet'}
+                {quote ? ` · ${quote.zoneName}` : ''}
+              </span>
+              <span className="text-lg font-bold tabular-nums">{quote ? `GHS ${quote.price.toFixed(2)}` : totalBins > 0 ? (pricing ? 'Pricing…' : 'Price on the last step') : ''}</span>
+            </p>
+          </div>
+        )}
 
-          {/* 3. What */}
-          <Card>
-            <h2 className={label}>3. What kind of waste?</h2>
-            <div className="mt-3 grid gap-2.5 sm:grid-cols-2" role="radiogroup" aria-label="Waste type">
+        {current.id === 'kind' && (
+          <div className="mt-4">
+            <div className="grid gap-2.5 sm:grid-cols-2" role="radiogroup" aria-label="Waste type">
               {[
                 { value: 'general', title: 'General waste', text: 'Everyday household rubbish' },
                 { value: 'recyclable', title: 'Recyclable', text: 'Separated plastics, cans, paper (discounted)' },
@@ -507,7 +589,7 @@ function BookingFormInner({
                     className="sr-only"
                   />
                   {w.value === 'recyclable' ? (
-                    <Recycle aria-hidden className="mt-0.5 size-5 shrink-0 text-customer" />
+                    <Recycle aria-hidden className="mt-0.5 size-5 shrink-0 text-action-deep" />
                   ) : (
                     <Trash2 aria-hidden className="mt-0.5 size-5 shrink-0 text-ink-2" />
                   )}
@@ -519,36 +601,35 @@ function BookingFormInner({
               ))}
             </div>
             {acceptHazardous ? (
-            <label className="mt-4 flex cursor-pointer items-start gap-3 text-[15px]">
-              <input
-                type="checkbox"
-                checked={hazardous}
-                onChange={(e) => {
-                  setHazardous(e.target.checked)
-                  changed()
-                }}
-                className="mt-1 size-4 accent-customer"
-              />
-              <span>
-                Contains hazardous items <span className="text-ink-2">(batteries, chemicals, paint, medical waste). An extra charge applies.</span>
-              </span>
-            </label>
+              <label className="mt-4 flex cursor-pointer items-start gap-3 text-[15px]">
+                <input
+                  type="checkbox"
+                  checked={hazardous}
+                  onChange={(e) => {
+                    setHazardous(e.target.checked)
+                    changed()
+                  }}
+                  className="mt-1 size-4 accent-[var(--color-action-deep)]"
+                />
+                <span>
+                  Contains hazardous items <span className="text-ink-2">(batteries, chemicals, paint, medical waste). An extra charge applies.</span>
+                </span>
+              </label>
             ) : (
               <p className="mt-4 text-sm text-ink-2">
                 We can&apos;t collect hazardous waste yet (batteries, chemicals, paint, medical waste). Please keep it out of your bins.
               </p>
             )}
-          </Card>
+          </div>
+        )}
 
-          {/* 4. Photo (once they have an account) */}
-          {!guest && (
-          <Card>
-            <h2 id="photo" tabIndex={-1} className={`${label} outline-none`}>
-              4. Photo of your waste
-            </h2>
+        {current.id === 'photo' && (
+          <div className="mt-4">
+            <p id="photo" tabIndex={-1} className="text-sm text-ink-2 outline-none">
+              Required. It helps your driver know what to expect.
+            </p>
             <FieldError id="photo" text={fieldError('photo')} />
-            <p className="mt-1 text-sm text-ink-2">Required. It helps your driver know what to expect.</p>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <PhotoCapture
                 label={file ? 'Retake photo' : 'Take a photo'}
                 buttonClassName={BUTTON_QUIET}
@@ -559,32 +640,54 @@ function BookingFormInner({
                 }}
               />
               {file && (
-                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-customer-deep">
+                <span className="anim-pop inline-flex items-center gap-1.5 text-sm font-semibold text-ok-deep">
                   <Check aria-hidden className="size-4" strokeWidth={3} /> Photo added
                 </span>
               )}
             </div>
-          </Card>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Price summary */}
-        <aside className="lg:sticky lg:top-24">
-          <Card>
-            <h2 className="text-base font-semibold">Your price</h2>
+        {current.id === 'pay' && (
+          <div className="mt-4">
+            <dl className="grid gap-2 rounded-[16px] bg-canvas p-4 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-3">Where</dt>
+                <dd className="min-w-0 truncate text-right font-medium">{useHome ? 'My home' : pickupAddress}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-ink-3">Waste</dt>
+                <dd className="font-medium">
+                  {wasteType === 'recyclable' ? 'Recyclable' : 'General'}
+                  {hazardous ? ', with hazardous items' : ''}
+                </dd>
+              </div>
+              {!guest && (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-ink-3">Photo</dt>
+                  <dd className="font-medium">{file ? 'Added' : 'Missing'}</dd>
+                </div>
+              )}
+            </dl>
+
             {!quote ? (
               <>
-                <p className="mt-2 text-sm text-ink-2">
-                  {totalBins > 0 ? `${totalBins} bin${totalBins === 1 ? '' : 's'} selected.` : 'Choose your bins, then get your price.'}
-                </p>
                 <ErrorText text={error} />
-                <button onClick={getQuote} disabled={loading || sizes.length === 0} className={`mt-5 w-full ${BUTTON_PRIMARY}`}>
-                  {loading ? 'Working out your price…' : 'Get price'}
-                </button>
+                {loading ? (
+                  <div className="mt-4 grid gap-2" role="status" aria-label="Working out your price">
+                    <span className="skeleton block h-5 w-2/3" />
+                    <span className="skeleton block h-5 w-1/2" />
+                    <span className="skeleton block h-9 w-full" />
+                  </div>
+                ) : (
+                  <button onClick={getQuote} disabled={sizes.length === 0} className={`mt-5 w-full ${BUTTON_PRIMARY}`}>
+                    Work out my price
+                  </button>
+                )}
               </>
             ) : (
               <>
-                <dl className="mt-3 grid gap-1.5 text-sm">
+                <dl className="anim-rise mt-4 grid gap-1.5 text-sm">
                   {quote.lines.map((l) => (
                     <div key={l.code} className="flex justify-between gap-3">
                       <dt className="text-ink-2">
@@ -594,7 +697,7 @@ function BookingFormInner({
                     </div>
                   ))}
                   {quote.recyclableDiscount > 0 && (
-                    <div className="flex justify-between gap-3 text-customer-deep">
+                    <div className="flex justify-between gap-3 text-ok-deep">
                       <dt>Recyclable discount</dt>
                       <dd className="tabular-nums">− GHS {quote.recyclableDiscount.toFixed(2)}</dd>
                     </div>
@@ -621,16 +724,16 @@ function BookingFormInner({
                   ))}
                   <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-line pt-3">
                     <dt className="font-semibold">Total</dt>
-                    <dd className="text-2xl font-bold tabular-nums tracking-tight">GHS {quote.price.toFixed(2)}</dd>
+                    <dd className="text-3xl font-bold tabular-nums tracking-tight">GHS {quote.price.toFixed(2)}</dd>
                   </div>
                 </dl>
                 <p className="mt-1 text-xs text-ink-3">Area: {quote.zoneName}</p>
 
-                <p className="mt-4 flex items-start gap-2.5 rounded-control bg-ops-wash p-3.5 text-sm">
-                  <Moon aria-hidden className="mt-0.5 size-4 shrink-0 text-ops" />
+                <p className="mt-4 flex items-start gap-2.5 rounded-[16px] bg-hero p-3.5 text-sm text-on-hero">
+                  <Moon aria-hidden className="mt-0.5 size-4 shrink-0 text-highlight" />
                   <span>
-                    <strong className="font-semibold">Collection: {quote.collectionLabel}.</strong> Please put your bins out before the
-                    collection starts.
+                    <strong className="font-semibold">Collection: {quote.collectionLabel}.</strong> Please put your bins out before the collection
+                    starts.
                   </span>
                 </p>
 
@@ -657,9 +760,26 @@ function BookingFormInner({
                 )}
               </>
             )}
-          </Card>
-        </aside>
-      </div>
+          </div>
+        )}
+
+        {current.id !== 'pay' && <ErrorText text={errorField ? '' : error} />}
+
+        <div className="mt-6 flex items-center justify-between gap-3">
+          {step > 0 ? (
+            <button type="button" onClick={back} className={BUTTON_QUIET}>
+              <ArrowLeft aria-hidden className="size-4" /> Back
+            </button>
+          ) : (
+            <span />
+          )}
+          {!last && (
+            <button type="button" onClick={next} disabled={current.id === 'bins' && sizes.length === 0} className={BUTTON_PRIMARY}>
+              Next <ArrowRight aria-hidden className="size-4" />
+            </button>
+          )}
+        </div>
+      </section>
     </div>
   )
 }

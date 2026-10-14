@@ -106,6 +106,24 @@ export function formatClock(minutes: number): string {
   return minutes === 0 ? `${text} (midnight)` : text
 }
 
+// 1140 -> "7pm", 1170 -> "7:30pm", 0 -> "midnight" (short, for sentences).
+export function shortClock(minutes: number): string {
+  if (minutes === 0) return 'midnight'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return `${h12}${m ? `:${String(m).padStart(2, '0')}` : ''}${h < 12 ? 'am' : 'pm'}`
+}
+
+// One line for the customer's Book button: what booking right now means, from the live shift settings.
+export function bookingHint(now: Date, s: ShiftSettings): string {
+  const b = classifyBooking(now, s)
+  const cutoff = shortClock(s.hardCutoffMinutes)
+  if (!b.isLate && b.shiftDate === b.localDate) return `Book by ${shortClock(s.planningSnapshotMinutes)} to join tonight's route. Late bookings until ${cutoff}.`
+  if (b.isLate) return `Tonight's route is planned, but late bookings are still collected tonight until ${cutoff}.`
+  return `Book now for tomorrow night's route.`
+}
+
 export function windowLabel(s: ShiftSettings): string {
   return `${formatClock(s.shiftStartMinutes)} – ${formatClock(s.shiftEndMinutes)}`
 }

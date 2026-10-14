@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import PasswordInput from '@/components/PasswordInput'
 import AuthShell, { AUTH_BUTTON, AUTH_FIELD, AuthTabs, ErrorLine } from '@/components/auth/AuthShell'
 import { useClientValue } from '@/lib/use-client-value'
+import SocialSignIn from '@/components/auth/SocialSignIn'
+import { createClient } from '@/utils/supabase/client'
 
 const LINK_ERRORS: Record<string, string> = {
   'confirm-link-invalid': 'That confirmation link has expired or was already used. Log in, or ask for a new link.',
   'reset-link-invalid': 'That password reset link has expired or was already used. Please ask for a new one.',
+  oauth: 'Signing in with that account didn’t finish. Please try again, or use your email and password.',
 }
 
 export default function LoginPage() {
@@ -43,6 +46,24 @@ export default function LoginPage() {
   const [code, setCode] = useState('')
 
   const router = useRouter()
+
+  // Signed in with Google (or another provider) on a staff account with 2FA: the session still needs the code.
+  useEffect(() => {
+    let stop = false
+    const supabase = createClient()
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(async ({ data }) => {
+      if (stop || !data || data.nextLevel !== 'aal2' || data.currentLevel === 'aal2') return
+      const { data: f } = await supabase.auth.mfa.listFactors()
+      const totp = f?.totp?.find((x) => x.status === 'verified')
+      if (!stop && totp) {
+        setFactorId(totp.id)
+        setMfaStep(true)
+      }
+    })
+    return () => {
+      stop = true
+    }
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -147,6 +168,7 @@ export default function LoginPage() {
           <AuthTabs current="signin" />
           <h1 className="mt-7 text-2xl font-bold tracking-tight">Welcome back</h1>
           <p className="mt-2 text-[15px] text-ink-2">Sign in to your pickups or your night&apos;s stops.</p>
+          <SocialSignIn next="/dashboard" />
           {notice && (
             <p role="status" className="mt-5 flex items-start gap-2 rounded-control bg-customer-wash px-3.5 py-3 text-sm text-customer-deep">
               <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0" /> {notice}

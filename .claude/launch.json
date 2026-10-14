@@ -4,8 +4,23 @@
     {
       "name": "trashit-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "trashit-dev-oauth",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "env": {
+        "NEXT_PUBLIC_OAUTH_PROVIDERS": "google"
+      }
     }
   ]
 }

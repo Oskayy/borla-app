@@ -51,12 +51,12 @@ export default async function OrderHistoryPage() {
           {groups.map((g) => (
             <section key={g.title}>
               <h2 className="mb-3 text-sm font-semibold text-ink-3">{g.title}</h2>
-              <ul className="overflow-hidden rounded-card bg-surface ring-1 ring-line divide-y divide-line">
+              <ul className="anim-stagger grid gap-2">
                 {g.items.map((o) => (
-                  <li key={o.id} className="flex items-center gap-2 pr-3">
+                  <li key={o.id} className="lift flex items-center gap-2 rounded-[18px] bg-surface pr-3 ring-1 ring-line">
                     <Link
                       href={`/dashboard/customer/orders/${o.id}`}
-                      className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-4 hover:bg-canvas sm:px-5"
+                      className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[18px] px-4 py-4 sm:px-5"
                     >
                       <span className="min-w-0 flex-1 basis-56">
                         <span className="block truncate font-semibold">{binsText(o.q) || 'Pickup'}</span>

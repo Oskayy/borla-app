@@ -10,7 +10,8 @@ const API = path.resolve(__dirname, '../../app/api')
 const DUMMY_ID = '11111111-1111-4111-8111-111111111111'
 
 // The login flow answers signed-out callers by design; its routes are guarded by rate limits instead.
-const LOGIN_FLOW = ['auth/login', 'auth/signup', 'auth/request-reset', 'auth/resend-confirmation']
+// The price check before signing up is public too (saves nothing, limited per IP; see route-guards.test.ts).
+const LOGIN_FLOW = ['auth/login', 'auth/signup', 'auth/request-reset', 'auth/resend-confirmation', 'pricing/quote-public']
 
 function routes(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

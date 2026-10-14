@@ -14,6 +14,11 @@ export async function GET(req: NextRequest) {
 
   const isReset = next.startsWith('/reset-password')
 
+  // Google or another provider sent the person back without signing them in (they cancelled, or it failed).
+  if (!code && searchParams.get('error')) {
+    return NextResponse.redirect(`${origin}/login?error=oauth`)
+  }
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
