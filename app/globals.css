@@ -98,6 +98,9 @@
 
 /* Legacy names, still used by app screens that have not been rebuilt yet. */
 :root {
+  --tour-dawn: #f1e6cf; /* the landing tour's morning sky */
+  --tour-dusk: #183a26;
+  --tour-first-light: #2c3a2a;
   --color-bg: var(--color-canvas);
   --color-primary: #163320;
   --color-accent: #e8a33d;
@@ -141,6 +144,9 @@ p { text-wrap: pretty; }
 /* ---- Customers and the website, dark ---- */
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --tour-dawn: #1a1810;
+  --tour-dusk: #0f1c14;
+  --tour-first-light: #151a12;
   --color-canvas: #0c110e;
   --color-surface: #151d18;
   --color-rail: #111813;
@@ -372,37 +378,6 @@ input, textarea, select { caret-color: var(--color-action-deep); }
   margin-right: 6px;
 }
 
-/* Landing: the night timeline steps light up as they scroll into view (browsers with scroll timelines).
-   Elsewhere, and with reduced motion, they are simply shown. */
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    @keyframes step-light {
-      from { opacity: 0.3; transform: translateY(10px); }
-      to { opacity: 1; transform: none; }
-    }
-    .night-step {
-      animation: step-light linear both;
-      animation-timeline: view();
-      animation-range: entry calc(var(--i, 0) * 9%) cover calc(28% + var(--i, 0) * 9%);
-    }
-  }
-}
-
-/* ---- Landing: the "how it works" hero flow ---- */
-@keyframes flow-signal { to { stroke-dashoffset: -28; } }
-.flow-signal { animation: flow-signal 0.7s linear infinite; }
-@keyframes flow-flash {
-  0%, 52% { opacity: 0; transform: scale(0.4); }
-  60% { opacity: 0.9; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.4); }
-}
-.flow-flash { transform-box: fill-box; transform-origin: center; animation: flow-flash 3.4s ease-out both; }
-@keyframes flow-screen { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.flow-screen { animation: flow-screen 0.45s var(--ease-out-expo) both; }
-@media (prefers-reduced-motion: reduce) {
-  .flow-signal, .flow-flash, .flow-screen { animation: none; }
-}
-
 /* Pressed feedback on every button (and links styled as buttons): a quick, small sink. */
 @media (prefers-reduced-motion: no-preference) {
   button:not(:disabled), .press { transition-property: transform, background-color, color, box-shadow, opacity; transition-duration: 120ms; }
@@ -550,3 +525,121 @@ dialog.sheet::backdrop { background: rgb(8 14 10 / 0.5); animation: fade 240ms e
 .mark3d-home { background: #c98a4e; border-radius: 10px; }
 .mark3d.is-done { background: #8a948f; }
 @media (prefers-reduced-motion: reduce) { .mark3d { animation: fade 200ms ease both; } }
+
+/* ---- Pointer effects (components/kit/PointerFx.tsx) ---- */
+.press:not(.absolute):not(.fixed):not(.sticky) { position: relative; }
+.fx-rip { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.fx-rip i { position: absolute; border-radius: 999px; background: currentColor; opacity: 0.18; transform: scale(0); animation: fx-rip 520ms ease-out forwards; }
+@keyframes fx-rip { to { transform: scale(1); opacity: 0; } }
+[data-tilt] {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 320ms var(--ease-out), box-shadow 260ms ease;
+  will-change: transform;
+}
+.sheen { position: relative; isolation: isolate; }
+.sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(420px circle at var(--gx, 50%) var(--gy, 0%), rgb(255 255 255 / 0.14), transparent 60%);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+.sheen:hover::after { opacity: 1; }
+[data-magnet] { translate: var(--mx, 0) var(--my, 0); transition: translate 260ms var(--ease-out), filter 160ms ease, box-shadow 200ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  [data-tilt] { transform: none !important; }
+  [data-magnet] { translate: none !important; }
+  .fx-rip { display: none; }
+}
+
+/* ---- Website: hero and the night tour (components/landing/*) ---- */
+@keyframes drift-a { to { transform: translate(120px, 60px) scale(1.15); } }
+@keyframes drift-b { to { transform: translate(-140px, 90px) scale(0.9); } }
+@keyframes drift-c { to { transform: translate(80px, -70px) scale(1.2); } }
+@keyframes word-up { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes wheel { 0% { opacity: 0; transform: translateY(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(12px); } }
+@keyframes twinkle { from { opacity: 0.35; } to { opacity: 1; } }
+@keyframes ring-pulse { from { opacity: 0.8; transform: scale(0.5); } to { opacity: 0; transform: scale(1.7); } }
+@keyframes dash-run { to { background-position: 40px 0; } }
+
+.aurora > b { position: absolute; border-radius: 999px; filter: blur(70px); opacity: 0.55; pointer-events: none; }
+.aurora > b:nth-child(1) { animation: drift-a 22s ease-in-out infinite alternate; }
+.aurora > b:nth-child(2) { animation: drift-b 26s ease-in-out infinite alternate; }
+.aurora > b:nth-child(3) { animation: drift-c 30s ease-in-out infinite alternate; }
+[data-spot].spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(520px circle at var(--sx, 50%) var(--sy, 35%), color-mix(in srgb, var(--color-highlight) 22%, transparent), transparent 65%);
+}
+.word { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.08em; }
+.word > span { display: inline-block; animation: word-up 820ms var(--ease-out-expo) both; }
+.scroll-cue::after { content: ""; position: absolute; left: 50%; top: 8px; width: 4px; height: 8px; margin-left: -2px; border-radius: 999px; background: currentColor; animation: wheel 1.8s ease-in-out infinite; }
+.stars-layer {
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 28% 42%, #fff 50%, transparent 51%),
+    radial-gradient(1.6px 1.6px at 46% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 63% 30%, #fff 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 78% 16%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 90% 44%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 36% 70%, #fff 50%, transparent 51%), radial-gradient(1.3px 1.3px at 8% 64%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 56% 58%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 70% 82%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 20% 90%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 84% 74%, #fff 50%, transparent 51%);
+  background-size: 640px 520px;
+  animation: twinkle 3.6s ease-in-out infinite alternate;
+}
+.pin-ring { animation: ring-pulse 2.2s ease-out infinite; }
+.road-dash { background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--color-highlight) 55%, transparent) 0 22px, transparent 22px 40px); animation: dash-run 1.2s linear infinite; }
+
+/* The tour never pins the page: everything rides on the scroll. Where scroll-driven animation is supported (and motion
+   is welcome), the route draws itself, the truck drives it at the middle of the screen, and each moment plays as it
+   arrives. Everywhere else it is shown finished. */
+.tour-route path.draw { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.tour-truck { display: none; }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes tour-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+    @keyframes tour-drive { from { top: 0%; } to { top: 100%; } }
+    @keyframes rise-in { from { opacity: 0; translate: 0 48px; scale: 0.96; filter: blur(6px); } to { opacity: 1; translate: 0 0; scale: 1; filter: blur(0); } }
+    @keyframes text-in { from { opacity: 0; translate: 0 28px; } to { opacity: 1; translate: 0 0; } }
+    @keyframes drift-up { from { translate: 0 60px; } to { translate: 0 -60px; } }
+    @keyframes pin-in { 0% { opacity: 0; translate: 0 -120px; } 70% { opacity: 1; translate: 0 6px; } 100% { opacity: 1; translate: 0 0; } }
+    @keyframes grow-x { from { scale: 0 1; } to { scale: 1 1; } }
+    @keyframes pop-in { from { opacity: 0; scale: 0.4; } to { opacity: 1; scale: 1; } }
+    @keyframes flash { 0%, 40% { opacity: 0; } 50% { opacity: 0.9; } 100% { opacity: 0; } }
+    @keyframes count-bins { from { --bins: 0; } to { --bins: 2; } }
+    @keyframes fade-out { to { opacity: 0; } }
+    @keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+    .tour { view-timeline: --tour block; }
+    .tour-route path.draw { animation: tour-draw linear both; animation-timeline: --tour; animation-range: cover 50vh cover calc(100% - 50vh); }
+    .tour-truck { display: grid; animation: tour-drive linear both; animation-timeline: --tour; animation-range: cover 50vh cover calc(100% - 50vh); }
+    .tour-moment { animation: rise-in linear both; animation-timeline: view(); animation-range: entry 0% entry 80%; }
+    .tour-text { animation: text-in linear both; animation-timeline: view(); animation-range: entry 10% entry 70%; }
+    .tour-drift { animation: drift-up linear both; animation-timeline: view(); animation-range: cover 0% cover 100%; }
+    .tour-pin { animation: pin-in linear both; animation-timeline: view(); animation-range: entry 30% cover 45%; }
+    .tour-grow { transform-origin: left; animation: grow-x linear both; animation-timeline: view(); animation-range: entry 40% cover 50%; }
+    .tour-pop { animation: pop-in linear both; animation-timeline: view(); animation-range: entry 70% cover 50%; }
+    .tour-pop-late { animation: pop-in linear both; animation-timeline: view(); animation-range: cover 40% cover 55%; }
+    .tour-flash { animation: flash linear both; animation-timeline: view(); animation-range: cover 30% cover 55%; }
+    .tour-count { animation: count-bins linear both; animation-timeline: view(); animation-range: entry 50% cover 45%; }
+    .tour-wipe { animation: wipe linear both; animation-timeline: view(); animation-range: cover 40% cover 55%; }
+    .tour-cue { animation: fade-out linear both; animation-timeline: view(); animation-range: exit 0% exit 60%; }
+  }
+}
+@property --bins { syntax: '<integer>'; inherits: true; initial-value: 2; }
+.bins-count::after { counter-reset: b var(--bins); content: counter(b); }
+@media (prefers-reduced-motion: reduce) {
+  .aurora > b, .word > span, .scroll-cue::after, .stars-layer, .pin-ring, .road-dash { animation: none; }
+}
+:root[data-theme="dark"] .aurora > b { opacity: 0.16; }
+
+/* FAQ answers slide open (browsers that can animate details; others just open). */
+@media (prefers-reduced-motion: no-preference) {
+  :root { interpolate-size: allow-keywords; }
+  details.faq::details-content { height: 0; overflow: clip; transition: height 320ms var(--ease-out), content-visibility 320ms allow-discrete; }
+  details.faq[open]::details-content { height: auto; }
+}

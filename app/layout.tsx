@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import Footer from "@/components/Footer";
+import PointerFx from "@/components/kit/PointerFx";
 
 // One typeface across the customer, driver and ops apps and the public site.
 const geist = Geist({
@@ -12,7 +13,7 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: "Trashit",
-  description: "Waste collection, done reliably.",
+  description: "Night-time refuse collection in Ghana: book by evening, collected overnight, with proof at every step.",
   applicationName: "Trashit",
   // Installed on an iPhone home screen, Trashit opens full screen like an app (and can receive alerts).
   appleWebApp: { capable: true, title: "Trashit", statusBarStyle: "default" },
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e1726",
+  themeColor: "#163320",
 };
 
 const THEME_SCRIPT = "try{var t=localStorage.getItem('trashit-theme');if(t!=='dark')t='light';document.documentElement.dataset.theme=t}catch(e){}"
@@ -44,6 +45,7 @@ export default function RootLayout({
         {children}
         <Footer />
         <CookieConsentBanner />
+        <PointerFx />
       </body>
     </html>
   );

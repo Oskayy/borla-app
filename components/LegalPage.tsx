@@ -1,3 +1,6 @@
+import { Info } from 'lucide-react'
+import SiteHeader from '@/components/landing/SiteHeader'
+
 export type LegalBlock =
   | { type: 'p'; text: string }
   | { type: 'bullets'; items: string[] }
@@ -8,57 +11,86 @@ export interface LegalSection {
   blocks: LegalBlock[]
 }
 
-export default function LegalPage({
-  title,
-  lastUpdated,
-  sections,
-}: {
-  title: string
-  lastUpdated: string
-  sections: LegalSection[]
-}) {
+const slug = (i: number, heading: string) =>
+  `${i + 1}-${heading
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 40)}`
+
+// The legal pages (privacy, terms, refunds, cookies), made for reading: the site header, a contents list that stays
+// in view on a computer, and text at a comfortable line length.
+export default function LegalPage({ title, lastUpdated, sections }: { title: string; lastUpdated: string; sections: LegalSection[] }) {
   return (
-    <div style={{ maxWidth: 720, margin: '40px auto', padding: '0 20px 60px' }}>
-      <h1 style={{ fontSize: 28, marginBottom: 4 }}>{title}</h1>
-      <p style={{ fontSize: 13, color: 'var(--color-ink-3)', marginBottom: 20 }}>Last updated: {lastUpdated}</p>
+    <div data-surface="new" className="min-h-dvh bg-canvas text-ink">
+      <SiteHeader />
+      <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6 sm:pt-14">
+        <header className="anim-rise max-w-3xl">
+          <h1 className="text-[clamp(2rem,4vw,3rem)] font-bold leading-[1.05] tracking-[-0.04em]">{title}</h1>
+          <p className="mt-3 text-sm text-ink-3">Last updated {lastUpdated}</p>
+          <p className="mt-6 flex items-start gap-3 rounded-card bg-warn-wash p-4 text-sm font-medium text-ink ring-1 ring-warn/30">
+            <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-warn-deep" />
+            Draft awaiting legal review. The registered company details and contact information will be added before launch.
+          </p>
+        </header>
 
-      <div className="panel" style={{ background: 'var(--color-danger-wash)', borderColor: 'var(--color-danger)', marginBottom: 28 }}>
-        <p style={{ fontSize: 13, color: 'var(--color-danger)', fontWeight: 600, margin: 0 }}>
-          Draft awaiting legal review. The registered company details and contact information will be added
-          before launch.
-        </p>
-      </div>
-
-      {sections.map((section, i) => (
-        <div key={i} style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 19, color: 'var(--color-ink)', marginBottom: 10 }}>{section.heading}</h2>
-          {section.blocks.map((block, j) => {
-            if (block.type === 'p') {
-              return (
-                <p key={j} style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 10, color: 'var(--color-ink-2)' }}>
-                  {block.text}
-                </p>
-              )
-            }
-            if (block.type === 'h2') {
-              return (
-                <h3 key={j} style={{ fontSize: 15, color: 'var(--color-ink)', margin: '12px 0 6px' }}>
-                  {block.text}
-                </h3>
-              )
-            }
-            return (
-              <ul key={j} style={{ margin: '0 0 10px', paddingLeft: 20 }}>
-                {block.items.map((item, k) => (
-                  <li key={k} style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--color-ink-2)', marginBottom: 4 }}>
-                    {item}
+        <div className="mt-12 grid gap-12 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <nav aria-label="Contents" className="hidden lg:block">
+            <div className="sticky top-28">
+              <p className="text-sm font-semibold text-ink-3">Contents</p>
+              <ol className="mt-3 grid gap-1 border-l border-line">
+                {sections.map((s, i) => (
+                  <li key={i}>
+                    <a
+                      href={`#${slug(i, s.heading)}`}
+                      className="-ml-px block border-l-2 border-transparent py-1.5 pl-4 text-sm text-ink-2 transition hover:border-action-deep hover:text-ink"
+                    >
+                      {s.heading}
+                    </a>
                   </li>
                 ))}
-              </ul>
-            )
-          })}
+              </ol>
+            </div>
+          </nav>
+
+          <article className="anim-stagger grid max-w-[70ch] gap-10">
+            {sections.map((section, i) => (
+              <section key={i} id={slug(i, section.heading)} aria-labelledby={`h-${i}`} className="scroll-mt-28">
+                <h2 id={`h-${i}`} className="text-[clamp(1.25rem,2vw,1.5rem)] font-bold tracking-[-0.02em]">
+                  {section.heading}
+                </h2>
+                <div className="mt-3 grid gap-3">
+                  {section.blocks.map((block, j) => {
+                    if (block.type === 'p') {
+                      return (
+                        <p key={j} className="text-[16px] leading-[1.7] text-ink-2">
+                          {block.text}
+                        </p>
+                      )
+                    }
+                    if (block.type === 'h2') {
+                      return (
+                        <h3 key={j} className="mt-2 text-[17px] font-semibold">
+                          {block.text}
+                        </h3>
+                      )
+                    }
+                    return (
+                      <ul key={j} className="grid gap-2 pl-5 marker:text-action-deep [list-style:disc]">
+                        {block.items.map((item, k) => (
+                          <li key={k} className="pl-1 text-[16px] leading-[1.7] text-ink-2">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+          </article>
         </div>
-      ))}
+      </div>
     </div>
   )
 }

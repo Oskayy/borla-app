@@ -170,7 +170,7 @@ export default function LoginPage() {
           <p className="mt-2 text-[15px] text-ink-2">Sign in to your pickups or your night&apos;s stops.</p>
           <SocialSignIn next="/dashboard" />
           {notice && (
-            <p role="status" className="mt-5 flex items-start gap-2 rounded-control bg-customer-wash px-3.5 py-3 text-sm text-customer-deep">
+            <p role="status" className="mt-5 flex items-start gap-2 rounded-control bg-ok-wash px-3.5 py-3 text-sm text-ok-deep">
               <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0" /> {notice}
             </p>
           )}
@@ -195,7 +195,7 @@ export default function LoginPage() {
                 <label htmlFor="password" className="text-sm font-medium text-ink-2">
                   Password
                 </label>
-                <Link href="/forgot-password" className="text-sm font-medium text-ops-deep hover:underline">
+                <Link href="/forgot-password" className="text-sm font-medium text-action-deep hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -214,9 +214,9 @@ export default function LoginPage() {
             {notConfirmed && (
               <p className="-mt-2 text-sm" aria-live="polite">
                 {resent ? (
-                  <span className="text-customer-deep">If that email needs confirming, a new link is on its way.</span>
+                  <span className="text-ok-deep">If that email needs confirming, a new link is on its way.</span>
                 ) : (
-                  <button type="button" onClick={resendConfirmation} className="font-medium text-ops-deep underline underline-offset-2">
+                  <button type="button" onClick={resendConfirmation} className="font-medium text-action-deep underline underline-offset-2">
                     Send the confirmation email again
                   </button>
                 )}

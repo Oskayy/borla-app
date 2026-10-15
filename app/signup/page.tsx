@@ -32,16 +32,16 @@ const SIGNUP_CHOICES = [
     title: 'I need pickups',
     text: 'Book and pay for collection at my gate',
     icon: Home,
-    on: 'border-customer bg-customer-wash ring-3 ring-customer/15',
-    chip: 'bg-customer text-white',
+    on: 'border-action-deep bg-action-wash ring-3 ring-action/30',
+    chip: 'bg-hero text-on-hero',
   },
   {
     value: 'DRIVER',
     title: 'I want to drive',
     text: 'Collect at night and get paid to MoMo',
     icon: Truck,
-    on: 'border-driver bg-driver-wash ring-3 ring-driver/20',
-    chip: 'bg-driver text-night',
+    on: 'border-[#1e5a45] bg-[#1e5a45]/10 ring-3 ring-[#1e5a45]/20',
+    chip: 'bg-[#d9a06b] text-[#1b140c]',
   },
 ]
 
@@ -119,7 +119,7 @@ export default function SignupPage() {
   if (checkEmail) {
     return (
       <AuthShell agreeVerb="creating an account">
-        <span className="grid size-12 place-items-center rounded-card bg-customer-wash text-customer-deep">
+        <span className="grid size-12 place-items-center rounded-card bg-ok-wash text-ok-deep">
           <MailCheck aria-hidden className="size-6" />
         </span>
         <h1 className="mt-6 text-2xl font-bold tracking-tight">Check your email</h1>
@@ -160,7 +160,7 @@ export default function SignupPage() {
               return (
                 <label
                   key={value}
-                  className={`relative flex cursor-pointer flex-col gap-2 rounded-card border p-3.5 transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ops ${
+                  className={`relative flex cursor-pointer flex-col gap-2 rounded-card border p-3.5 transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus ${
                     selected ? on : 'border-line-strong bg-surface hover:border-ink-3'
                   }`}
                 >
@@ -259,7 +259,7 @@ export default function SignupPage() {
           <FieldError id="password" text={problem('password')} />
           <ul id="password-rules" className="-mt-1 grid gap-1 text-xs" aria-label="Password rules">
             {strengthChecks.map((c) => (
-              <li key={c.label} className={`flex items-center gap-1.5 ${c.pass ? 'text-customer-deep' : 'text-ink-3'}`}>
+              <li key={c.label} className={`flex items-center gap-1.5 ${c.pass ? 'text-ok-deep' : 'text-ink-3'}`}>
                 {c.pass ? <Check aria-hidden className="size-3.5" strokeWidth={2.5} /> : <Circle aria-hidden className="size-3" />}
                 {c.label}
                 <span className="sr-only">{c.pass ? '(done)' : '(not yet)'}</span>
@@ -277,7 +277,7 @@ export default function SignupPage() {
             checked={ageConfirmed}
             onChange={(e) => setAgeConfirmedFor(e.target.checked ? role : null)}
             required
-            className="mt-0.5 size-5 shrink-0 accent-[var(--color-ops)]"
+            className="mt-0.5 size-5 shrink-0 accent-[var(--color-action-deep)]"
           />
           <span>
             {role === 'DRIVER'
@@ -295,7 +295,7 @@ export default function SignupPage() {
       </form>
       <p className="mt-6 text-sm text-ink-2">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-ops-deep hover:underline">
+        <Link href="/login" className="font-semibold text-action-deep hover:underline">
           Sign in
         </Link>
       </p>

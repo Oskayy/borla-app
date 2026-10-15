@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { Cookie } from 'lucide-react'
 import { useClientValue } from '@/lib/use-client-value'
 
 const STORAGE_KEY = 'borla_cookie_consent'
 
+// A small card that floats at the bottom until a choice is saved (bottom left on a computer).
 export default function CookieConsentBanner() {
   // Hidden on the server; shown in the browser until a choice is saved.
   const saved = useClientValue(() => {
@@ -18,13 +20,12 @@ export default function CookieConsentBanner() {
   const [chosen, setChosen] = useState(false)
   const visible = !saved && !chosen
 
-  function accept() {
-    localStorage.setItem(STORAGE_KEY, 'accepted')
-    setChosen(true)
-  }
-
-  function acceptEssentialOnly() {
-    localStorage.setItem(STORAGE_KEY, 'essential-only')
+  function choose(value: 'accepted' | 'essential-only') {
+    try {
+      localStorage.setItem(STORAGE_KEY, value)
+    } catch {
+      // private mode: the choice lasts until the page closes
+    }
     setChosen(true)
   }
 
@@ -32,40 +33,29 @@ export default function CookieConsentBanner() {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: '#0F3D3E',
-        color: '#fff',
-        padding: '16px 20px',
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: 16,
-        zIndex: 1000,
-      }}
+      role="region"
+      aria-label="Cookies"
+      className="anim-note fixed inset-x-3 bottom-3 z-[60] flex flex-col gap-4 rounded-[24px] bg-hero p-5 text-on-hero shadow-lift ring-1 ring-white/10 sm:inset-x-auto sm:bottom-5 sm:left-5 sm:max-w-md"
     >
-      <p style={{ fontSize: 13, margin: 0, flex: '1 1 260px' }}>
-        We only use cookies to keep you signed in and to remember your choices. No tracking or ads. See our{' '}
-        <Link href="/cookie-policy" style={{ color: '#E8A33D', textDecoration: 'underline' }}>
-          Cookie Policy
-        </Link>{' '}
-        for details.
+      <p className="flex items-start gap-3 text-sm leading-relaxed text-on-hero-2">
+        <Cookie aria-hidden className="mt-0.5 size-5 shrink-0 text-highlight" />
+        <span>
+          We only use cookies to keep you signed in and to remember your choices. No tracking or ads. See our{' '}
+          <Link href="/cookie-policy" className="font-semibold text-on-hero underline underline-offset-2">
+            Cookie Policy
+          </Link>{' '}
+          for details.
+        </span>
       </p>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="flex gap-2">
         <button
-          onClick={acceptEssentialOnly}
-          style={{ background: 'none', border: '1px solid #fff', color: '#fff', borderRadius: 4, padding: '8px 14px', fontSize: 13 }}
+          type="button"
+          onClick={() => choose('essential-only')}
+          className="press min-h-11 flex-1 rounded-full px-4 text-sm font-semibold text-on-hero ring-1 ring-white/30 hover:bg-white/10"
         >
           Essential only
         </button>
-        <button
-          onClick={accept}
-          className="btn-accent"
-          style={{ padding: '8px 14px', fontSize: 13 }}
-        >
+        <button type="button" onClick={() => choose('accepted')} className="press min-h-11 flex-1 rounded-full bg-highlight px-4 text-sm font-bold text-on-highlight">
           Accept all
         </button>
       </div>
