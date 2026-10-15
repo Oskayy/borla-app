@@ -36,8 +36,8 @@ export default async function CustomerLayout({ children }: { children: React.Rea
   return (
     <div data-surface="new" className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[84px_1fr]">
       {/* Desktop: the icon rail */}
-      <aside className="sticky top-0 hidden h-dvh border-r border-line lg:block">
-        <CustomerRail unread={unread} initials={initials} help={help} />
+      <aside className="sticky top-0 z-40 hidden h-dvh lg:block">
+        <CustomerRail unread={unread} initials={initials} name={me.name} help={help} />
       </aside>
 
       <div className="min-w-0">
@@ -56,11 +56,11 @@ export default async function CustomerLayout({ children }: { children: React.Rea
               </Link>
             )}
             <span className="ml-auto hidden text-sm text-ink-3 sm:block">{today}</span>
-            <ThemeToggle className="ml-auto ring-0 sm:ml-0" />
+            <ThemeToggle className="ml-auto sm:ml-0" />
             <Link
               href="/dashboard/customer/notifications"
               aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-              className="press relative grid size-11 place-items-center rounded-full text-ink-2 hover:bg-canvas"
+              className="press relative grid size-11 place-items-center rounded-full text-ink-2 ring-1 ring-line transition hover:bg-surface hover:text-ink"
             >
               <Bell aria-hidden className="size-5" />
               {unread > 0 && (

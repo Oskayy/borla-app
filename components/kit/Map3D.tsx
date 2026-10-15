@@ -46,7 +46,7 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
         config: { basemap: { lightPreset: dark() ? 'night' : 'day', showPointOfInterestLabels: false } },
         center: [list[0].lng, list[0].lat],
         zoom: one ? 16.4 : 13,
-        pitch: one ? 58 : 50,
+        pitch: 60,
         bearing: -24,
         interactive: false,
         attributionControl: false,
@@ -58,9 +58,12 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right')
     if (one) map.setPadding({ top: 56, bottom: 0, left: 0, right: 0 })
     else {
+      // Frame home and the stops (far-away sites may sit off the edge), close enough for the 3D buildings to show.
+      const near = list.filter((m) => m.kind !== 'site')
       const b = new mapboxgl.LngLatBounds()
-      list.forEach((m) => b.extend([m.lng, m.lat]))
-      map.fitBounds(b, { padding: { top: 60, bottom: 36, left: 40, right: 40 }, pitch: 50, bearing: -24, maxZoom: 16, duration: 0 })
+      ;(near.length ? near : list).forEach((m) => b.extend([m.lng, m.lat]))
+      const cam = map.cameraForBounds(b, { padding: { top: 60, bottom: 30, left: 40, right: 40 }, pitch: 60, bearing: -24, maxZoom: 16.6 })
+      map.jumpTo({ center: cam?.center ?? b.getCenter(), zoom: Math.max(15.1, cam?.zoom ?? 0), pitch: 60, bearing: -24 })
     }
 
     list.forEach((m, i) => {

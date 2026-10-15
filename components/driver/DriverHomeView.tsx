@@ -61,7 +61,7 @@ export default function DriverHomeView({ greeting, shiftLabel, status, headline,
           <h2 id="tips-title" className="px-0.5 text-sm font-semibold text-ink-3">
             For tonight
           </h2>
-          <ul className="grid gap-2.5 sm:grid-cols-2">
+          <ul className="grid grid-cols-2 gap-2.5 [&>li:last-child:nth-child(odd)]:col-span-2">
             {outsideTips}
             {tips.map(({ icon: Icon, title, text, href }) => {
               const body = (
@@ -76,11 +76,11 @@ export default function DriverHomeView({ greeting, shiftLabel, status, headline,
               return (
                 <li key={title}>
                   {href ? (
-                    <Link href={href} className="lift block h-full rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">
+                    <Link href={href} className="lift block h-full rounded-card bg-surface p-3.5 shadow-card ring-1 ring-line/70 sm:p-4">
                       {body}
                     </Link>
                   ) : (
-                    <div className="h-full rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">{body}</div>
+                    <div className="h-full rounded-card bg-surface p-3.5 shadow-card ring-1 ring-line/70 sm:p-4">{body}</div>
                   )}
                 </li>
               )

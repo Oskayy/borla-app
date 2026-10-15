@@ -36,7 +36,7 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-5xl">
       <PageHeader title="Settings" lead="Make Trashit work the way you want it to." />
-      <div className="anim-stagger grid items-start gap-6 lg:grid-cols-2">
+      <div className="anim-stagger grid gap-6 lg:grid-cols-2">
         <Card>
           <CardTitle>Sign-in and security</CardTitle>
           <div className="grid gap-1">
@@ -90,7 +90,7 @@ export default async function SettingsPage() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-2">
           <CardTitle>Sign out</CardTitle>
           <p className="mb-4 text-sm text-ink-2">Your pickups carry on as scheduled after you sign out.</p>
           <SignOutButton className={BUTTON_QUIET} />

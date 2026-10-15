@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
+import PhotoPreview from '@/components/kit/PhotoPreview'
 import { errorMessage } from '@/lib/errors'
 import { AlertCircle, Camera, Check } from 'lucide-react'
 import { flash } from '@/components/driver/Flash'
@@ -113,6 +114,7 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
           </span>
         )}
       </div>
+      <PhotoPreview file={file} label="Your pickup photo" />
       {error && (
         <p role="alert" className="flex items-start gap-1.5 text-sm text-danger">
           <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}

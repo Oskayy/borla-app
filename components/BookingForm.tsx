@@ -9,6 +9,7 @@ import { clearDraft, draftRaw, parseDraft, saveDraft, type BookingDraft } from '
 import BinIllustration from '@/components/BinIllustration'
 import { AlertCircle, ArrowLeft, ArrowRight, Check, Home as HomeIcon, Lock, MapPin, MapPinOff, Minus, Moon, Plus, Recycle, Trash2 } from 'lucide-react'
 import PhotoCapture from '@/components/PhotoCapture'
+import PhotoPreview from '@/components/kit/PhotoPreview'
 import PinPicker from '@/components/PinPicker'
 import { FieldError, fieldA11y } from '@/components/FormErrors'
 import { BUTTON_PRIMARY, BUTTON_QUIET, Card, FIELD, PageHeader } from '@/components/ui'
@@ -174,9 +175,10 @@ function BookingFormInner({
     }
   }
 
-  // Live price while choosing bins (signed-in customers): worked out a moment after the last change.
+  // Live price on the waste step (signed-in customers): worked out once bins and the kind of waste are chosen,
+  // a moment after the last change.
   useEffect(() => {
-    if (guest || STEPS[step]?.id !== 'bins' || totalBins < 1 || quote) return
+    if (guest || STEPS[step]?.id !== 'kind' || totalBins < 1 || quote) return
     if (!useHome && (!address.trim() || !pin)) return
     const t = setTimeout(async () => {
       setPricing(true)
@@ -560,13 +562,7 @@ function BookingFormInner({
                 })}
               </ul>
             )}
-            <p aria-live="polite" className="mt-4 flex items-baseline justify-between gap-3 rounded-[16px] bg-canvas px-4 py-3 text-sm">
-              <span className="text-ink-2">
-                {totalBins > 0 ? `${totalBins} bin${totalBins === 1 ? '' : 's'}` : 'No bins yet'}
-                {quote ? ` · ${quote.zoneName}` : ''}
-              </span>
-              <span className="text-lg font-bold tabular-nums">{quote ? `GHS ${quote.price.toFixed(2)}` : totalBins > 0 ? (pricing ? 'Pricing…' : 'Price on the last step') : ''}</span>
-            </p>
+            <p className="mt-4 text-sm text-ink-3">Next, tell us what kind of waste it is. Then you see your price.</p>
           </div>
         )}
 
@@ -621,6 +617,15 @@ function BookingFormInner({
                 We can&apos;t collect hazardous waste yet (batteries, chemicals, paint, medical waste). Please keep it out of your bins.
               </p>
             )}
+            <p aria-live="polite" className="mt-4 flex items-baseline justify-between gap-3 rounded-[16px] bg-canvas px-4 py-3 text-sm">
+              <span className="text-ink-2">
+                {`${totalBins} bin${totalBins === 1 ? '' : 's'}, ${wasteType === 'recyclable' ? 'recyclable' : 'general waste'}`}
+                {quote ? ` · ${quote.zoneName}` : ''}
+              </span>
+              <span key={quote?.price ?? 'none'} className="anim-pop text-lg font-bold tabular-nums">
+                {quote ? `GHS ${quote.price.toFixed(2)}` : guest ? 'Price on the last step' : 'Pricing…'}
+              </span>
+            </p>
           </div>
         )}
 
@@ -645,6 +650,9 @@ function BookingFormInner({
                   <Check aria-hidden className="size-4" strokeWidth={3} /> Photo added
                 </span>
               )}
+            </div>
+            <div className="mt-4 max-w-sm">
+              <PhotoPreview file={file} label="Your waste photo" />
             </div>
           </div>
         )}

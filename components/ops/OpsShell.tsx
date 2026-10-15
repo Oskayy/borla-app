@@ -34,6 +34,7 @@ import Logo from '@/components/Logo'
 import SignOutButton from '@/components/SignOutButton'
 import OpsAlerts from '@/components/OpsAlerts'
 import ThemeToggle from '@/components/ThemeToggle'
+import { RAIL_LABEL } from '@/components/kit/IconRail'
 
 const ICONS: Record<string, LucideIcon> = {
   AlertTriangle,
@@ -133,20 +134,19 @@ function Nav({ sections, onNavigate }: { sections: ShellSection[]; onNavigate?: 
   )
 }
 
-// Desktop: a narrow rail of icons in sections. The name shows beside an icon on hover or keyboard focus (a floating
-// label, so the rail can scroll without clipping it); counts show as badges, red where waiting work is urgent.
+// Desktop: a narrow rail of icons in sections that widens over the page while the mouse is on it (or the keyboard is
+// in it), showing section titles and each page's name, and folds back to icons when the mouse leaves. Counts show as
+// badges, red where waiting work is urgent.
 function Rail({ sections }: { sections: ShellSection[] }) {
   const pathname = usePathname()
-  const [tip, setTip] = useState<{ label: string; top: number } | null>(null)
-  const show = (label: string) => (e: React.SyntheticEvent<HTMLElement>) => {
-    const r = e.currentTarget.getBoundingClientRect()
-    setTip({ label, top: r.top + r.height / 2 })
-  }
   return (
-    <>
-      <nav aria-label="Ops" className="ops-scroll min-h-0 flex-1 overflow-y-auto px-[18px] pb-4" onScroll={() => setTip(null)}>
-        {sections.map((s, si) => (
-          <ul key={s.title} aria-label={s.title} className={`grid gap-1.5 ${si > 0 ? 'mt-3 border-t border-line pt-3' : ''}`}>
+    <nav aria-label="Ops" className="ops-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-[18px] pb-4">
+      {sections.map((s, si) => (
+        <div key={s.title} className={si > 0 ? 'mt-3 border-t border-line pt-3' : ''}>
+          <p aria-hidden className={`${RAIL_LABEL} h-0 px-3 text-xs text-ink-3 group-hover/rail:mb-1 group-hover/rail:h-auto group-has-[:focus-visible]/rail:mb-1 group-has-[:focus-visible]/rail:h-auto`}>
+            {s.title}
+          </p>
+          <ul aria-label={s.title} className="grid gap-1.5">
             {s.links.map((l) => {
               const on = isActive(pathname, l.href)
               const Icon = ICONS[l.icon] ?? LayoutDashboard
@@ -156,19 +156,18 @@ function Rail({ sections }: { sections: ShellSection[] }) {
                     href={l.href}
                     aria-current={on ? 'page' : undefined}
                     aria-label={l.count > 0 ? `${l.label} (${l.count} waiting)` : l.label}
-                    onMouseEnter={show(l.label)}
-                    onFocus={show(l.label)}
-                    onMouseLeave={() => setTip(null)}
-                    onBlur={() => setTip(null)}
-                    className={`press relative grid size-12 place-items-center rounded-[16px] transition-colors duration-200 ${
+                    className={`press relative flex h-12 w-full items-center gap-3 rounded-[16px] px-3 transition-colors duration-200 ${
                       on ? 'bg-selected text-on-selected shadow-card' : 'text-ink-2 hover:bg-surface hover:text-ink'
                     }`}
                   >
-                    <Icon aria-hidden className="size-[21px]" strokeWidth={on ? 2.3 : 2} />
+                    <Icon aria-hidden className="size-[22px] shrink-0" strokeWidth={on ? 2.3 : 2} />
+                    <span aria-hidden className={RAIL_LABEL}>
+                      {l.label}
+                    </span>
                     {l.count > 0 && (
                       <span
                         aria-hidden
-                        className={`absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold tabular-nums ring-2 ring-rail ${
+                        className={`absolute left-[30px] top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold tabular-nums ring-2 ring-rail group-hover/rail:left-auto group-hover/rail:right-3 group-hover/rail:top-3.5 ${
                           URGENT.has(l.href) ? 'bg-danger text-white' : 'bg-highlight text-on-highlight'
                         }`}
                       >
@@ -180,18 +179,9 @@ function Rail({ sections }: { sections: ShellSection[] }) {
               )
             })}
           </ul>
-        ))}
-      </nav>
-      {tip && (
-        <span
-          aria-hidden
-          className="anim-fade pointer-events-none fixed left-[94px] z-50 -translate-y-1/2 whitespace-nowrap rounded-full bg-selected px-3 py-1.5 text-[13px] font-semibold text-on-selected shadow-lift"
-          style={{ top: tip.top }}
-        >
-          {tip.label}
-        </span>
-      )}
-    </>
+        </div>
+      ))}
+    </nav>
   )
 }
 
@@ -377,9 +367,14 @@ export default function OpsShell({
 
   return (
     <div data-surface="new" className="theme-ops min-h-dvh bg-canvas">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[84px] flex-col items-stretch gap-3 border-r border-line bg-rail pt-5 lg:flex">
-        <Link href="/ops" aria-label="Trashit operations home" className="mx-auto mb-2 grid size-12 place-items-center">
-          <Logo variant="mark" height={34} />
+      <aside className="group/rail fixed inset-y-0 left-0 z-40 hidden w-[84px] flex-col items-stretch gap-3 overflow-hidden border-r border-line bg-rail pt-5 transition-[width,box-shadow] duration-300 ease-[var(--ease-out)] hover:w-[260px] hover:shadow-lift has-[:focus-visible]:w-[260px] has-[:focus-visible]:shadow-lift lg:flex">
+        <Link href="/ops" aria-label="Trashit operations home" className="mb-2 flex h-12 items-center gap-3 px-[22px]">
+          <span className="grid size-10 shrink-0 place-items-center">
+            <Logo variant="mark" height={34} />
+          </span>
+          <span aria-hidden className={`${RAIL_LABEL} text-lg font-extrabold tracking-tight`}>
+            Trashit ops
+          </span>
         </Link>
         <Rail sections={sections} />
       </aside>

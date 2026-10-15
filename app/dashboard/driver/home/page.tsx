@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
-import type { OrderStatus } from '@prisma/client'
 import { Suspense } from 'react'
-import { BellRing, Flame, Moon, Star, Wallet } from 'lucide-react'
+import { BellRing, Moon, Star, Wallet } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
@@ -17,8 +16,6 @@ import type { MapMarker } from '@/components/kit/Map3D'
 import OutsideTips, { OutsideTipsLoading } from '@/components/driver/OutsideTips'
 
 export const dynamic = 'force-dynamic'
-
-const PAID: OrderStatus[] = ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKED_UP', 'PICKUP_PENDING_REVIEW', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED']
 
 // Read outside the component: these use the clock.
 function nightOf(s: ShiftSettings) {
@@ -54,7 +51,7 @@ export default async function DriverHome() {
   // Outside services get the area (zone centre), or a rounded point near home: never the exact home pin.
   const area = profile.zone?.centerLat != null && profile.zone.centerLng != null ? { lat: profile.zone.centerLat, lng: profile.zone.centerLng } : home
 
-  const [orders, busiest, earned, stars, sites] = await Promise.all([
+  const [orders, earned, stars, sites] = await Promise.all([
     prisma.order.findMany({
       where: { driverId: user.id, status: { in: ['ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING'] } },
       select: {
@@ -75,10 +72,6 @@ export default async function DriverHome() {
       },
       orderBy: [{ routeStop: { route: { createdAt: 'asc' } } }, { routeStop: { sequence: 'asc' } }],
     }),
-    prisma.order.findMany({
-      where: { shiftDate: new Date(`${date}T00:00:00Z`), status: { in: PAID }, zoneId: { not: null } },
-      select: { zoneId: true },
-    }),
     prisma.ledgerEntry.findMany({
       where: { driverId: user.id, type: { in: DRIVER_LEDGER_TYPES }, createdAt: { gte: weekAgo } },
       select: { amount: true, amountPesewas: true },
@@ -87,11 +80,6 @@ export default async function DriverHome() {
     prisma.facility.findMany({ where: { active: true, lat: { not: null }, lng: { not: null } }, select: { id: true, name: true, lat: true, lng: true } }),
   ])
 
-  // The zone with the most pickups booked for tonight.
-  const perZone = new Map<string, number>()
-  for (const o of busiest) perZone.set(o.zoneId!, (perZone.get(o.zoneId!) ?? 0) + 1)
-  const [topZoneId, topCount] = [...perZone.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0]
-  const busiestZone = topZoneId ? await prisma.zone.findUnique({ where: { id: topZoneId }, select: { name: true } }) : null
   const firstName = profile.user.name.split(/\s+/)[0] ?? ''
   const online = isDriverAvailable(profile, now, settings)
   const offTonight = !worksNight(profile, date)
@@ -131,7 +119,6 @@ export default async function DriverHome() {
   const weekPesewas = earned.reduce((s, e) => s + (e.amountPesewas ?? Math.round(e.amount * 100)), 0)
   const rating = summarizeRatings(stars.map((r) => r.stars))
   const tips = [
-    busiestZone && { icon: Flame, title: 'Busiest area tonight', text: `${busiestZone.name}: ${topCount} ${topCount === 1 ? 'pickup' : 'pickups'} booked so far.` },
     { icon: Wallet, title: 'Your last 7 days', text: `GHS ${(weekPesewas / 100).toFixed(2)} earned. See Earnings for what you can cash out.`, href: '/dashboard/driver/earnings' },
     rating.average != null && { icon: Star, title: 'Your rating', text: `${rating.average.toFixed(1)} out of 5 from ${stars.length} ${stars.length === 1 ? 'customer' : 'customers'}.`, href: '/dashboard/driver/performance' },
     offTonight

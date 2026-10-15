@@ -3,7 +3,7 @@ import { nearbyFuel, nightWeather, weatherLine } from '@/lib/driver-tips'
 import { googleDirectionsUrl } from '@/lib/navigation'
 import type { ShiftSettings } from '@/lib/shift'
 
-const CARD = 'block h-full rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70'
+const CARD = 'block h-full rounded-card bg-surface p-3.5 shadow-card ring-1 ring-line/70 sm:p-4'
 
 function Body({ icon: Icon, title, text }: { icon: typeof Fuel; title: string; text: string }) {
   return (

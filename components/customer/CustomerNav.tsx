@@ -4,7 +4,7 @@ import Link from 'next/link'
 import TabBar from '@/components/kit/TabBar'
 import { Bell, CalendarPlus, Headphones, Home, LayoutList, MapPin, Menu, Settings, User } from 'lucide-react'
 import Logo from '@/components/Logo'
-import IconRail, { type RailItem } from '@/components/kit/IconRail'
+import IconRail, { RAIL_LABEL, type RailItem } from '@/components/kit/IconRail'
 
 const BASE = '/dashboard/customer'
 
@@ -18,27 +18,39 @@ export const CUSTOMER_LINKS = [
   { href: `${BASE}/settings`, label: 'Settings', icon: Settings },
 ]
 
-// Desktop: the shared icon rail (names show on hover and focus), with the logo on top and help and the profile below.
-export function CustomerRail({ unread, initials, help }: { unread: number; initials: string; help: string | null }) {
+// Desktop: the shared icon rail (it widens on hover to show the names), with the logo on top and help and the
+// profile below.
+export function CustomerRail({ unread, initials, name, help }: { unread: number; initials: string; name: string; help: string | null }) {
   const items: RailItem[] = CUSTOMER_LINKS.map(({ badge, ...l }) => ({ ...l, count: badge ? unread : 0, countText: 'unread' }))
   return (
     <IconRail
       label="Customer"
       items={items}
       top={
-        <Link href={BASE} aria-label="Trashit home" className="mb-3 grid size-12 place-items-center">
-          <Logo variant="mark" height={34} />
+        <Link href={BASE} aria-label="Trashit home" className="mb-3 flex h-12 items-center gap-3 px-1">
+          <span className="grid size-10 shrink-0 place-items-center">
+            <Logo variant="mark" height={34} />
+          </span>
+          <span aria-hidden className={`${RAIL_LABEL} text-lg font-extrabold tracking-tight`}>
+            Trashit
+          </span>
         </Link>
       }
       bottom={
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col gap-1.5">
           {help && (
-            <a href={help} aria-label="Need help? Talk to the Trashit team" className="press grid size-12 place-items-center rounded-[16px] text-ink-2 hover:bg-surface hover:text-ink">
-              <Headphones aria-hidden className="size-[21px]" />
+            <a href={help} aria-label="Need help? Talk to the Trashit team" className="press flex h-12 items-center gap-3 rounded-[16px] px-3 text-ink-2 hover:bg-surface hover:text-ink">
+              <Headphones aria-hidden className="size-[22px] shrink-0" />
+              <span aria-hidden className={RAIL_LABEL}>
+                Need help?
+              </span>
             </a>
           )}
-          <Link href={`${BASE}/profile`} aria-label="Your profile" className="press grid size-11 place-items-center rounded-full bg-selected text-sm font-semibold text-on-selected">
-            {initials}
+          <Link href={`${BASE}/profile`} aria-label="Your profile" className="press flex h-12 items-center gap-3 rounded-[16px] px-0.5 hover:bg-surface">
+            <span className="grid size-11 shrink-0 place-items-center rounded-full bg-selected text-sm font-semibold text-on-selected">{initials}</span>
+            <span aria-hidden className={RAIL_LABEL}>
+              {name}
+            </span>
           </Link>
         </div>
       }

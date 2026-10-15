@@ -11,6 +11,7 @@ import Chip from '@/components/kit/Chip'
 import HeroCard from '@/components/kit/HeroCard'
 import StepTrack from '@/components/kit/StepTrack'
 import PinMapCard from '@/components/customer/PinMapCard'
+import ShowAt from '@/components/kit/ShowAt'
 import EnableAlerts from '@/components/EnableAlerts'
 import InstallPrompt from '@/components/InstallPrompt'
 
@@ -132,6 +133,26 @@ export default async function CustomerHome() {
           </HeroCard>
         )}
 
+        <ShowAt query="(max-width: 1023px)">
+          {hasHome ? (
+            <PinMapCard lat={profile!.homeLat!} lng={profile!.homeLng!} place={place} />
+          ) : (
+            <section className="flex flex-wrap items-center gap-4 rounded-card bg-action-wash p-5 ring-1 ring-action-deep/15">
+              <MapPin aria-hidden className="size-6 shrink-0 text-action-deep" />
+              <div className="min-w-[13rem] flex-1">
+                <h2 className="font-semibold">Pin your gate once</h2>
+                <p className="text-sm text-ink-2">Every booking will use it, and your driver goes straight to it at night.</p>
+              </div>
+              <Link
+                href="/dashboard/customer/home-location"
+                className="press inline-flex min-h-11 items-center rounded-full bg-selected px-5 text-[15px] font-semibold text-on-selected"
+              >
+                Set my home pin
+              </Link>
+            </section>
+          )}
+        </ShowAt>
+
         <section aria-labelledby="earlier-title" className="grid gap-2">
           <div className="flex items-center justify-between px-0.5">
             <h2 id="earlier-title" className="text-sm font-semibold text-ink-3">
@@ -174,23 +195,25 @@ export default async function CustomerHome() {
       </div>
 
       <div className="anim-stagger grid gap-6">
-        {hasHome ? (
-          <PinMapCard lat={profile!.homeLat!} lng={profile!.homeLng!} place={place} />
-        ) : (
-          <section className="flex flex-wrap items-center gap-4 rounded-card bg-action-wash p-5 ring-1 ring-action-deep/15">
-            <MapPin aria-hidden className="size-6 shrink-0 text-action-deep" />
-            <div className="min-w-[13rem] flex-1">
-              <h2 className="font-semibold">Pin your gate once</h2>
-              <p className="text-sm text-ink-2">Every booking will use it, and your driver goes straight to it at night.</p>
-            </div>
-            <Link
-              href="/dashboard/customer/home-location"
-              className="press inline-flex min-h-11 items-center rounded-full bg-selected px-5 text-[15px] font-semibold text-on-selected"
-            >
-              Set my home pin
-            </Link>
-          </section>
-        )}
+        <ShowAt query="(min-width: 1024px)">
+          {hasHome ? (
+            <PinMapCard lat={profile!.homeLat!} lng={profile!.homeLng!} place={place} />
+          ) : (
+            <section className="flex flex-wrap items-center gap-4 rounded-card bg-action-wash p-5 ring-1 ring-action-deep/15">
+              <MapPin aria-hidden className="size-6 shrink-0 text-action-deep" />
+              <div className="min-w-[13rem] flex-1">
+                <h2 className="font-semibold">Pin your gate once</h2>
+                <p className="text-sm text-ink-2">Every booking will use it, and your driver goes straight to it at night.</p>
+              </div>
+              <Link
+                href="/dashboard/customer/home-location"
+                className="press inline-flex min-h-11 items-center rounded-full bg-selected px-5 text-[15px] font-semibold text-on-selected"
+              >
+                Set my home pin
+              </Link>
+            </section>
+          )}
+        </ShowAt>
 
         <dl className="grid grid-cols-2 gap-3">
           <div className="rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70">

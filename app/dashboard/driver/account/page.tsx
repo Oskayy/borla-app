@@ -54,7 +54,7 @@ export default async function DriverAccountPage() {
     .join('')
 
   return (
-    <div className="anim-stagger grid max-w-5xl gap-5 lg:grid-cols-2 lg:items-start">
+    <div className="anim-stagger grid max-w-5xl gap-5 lg:grid-cols-2">
       <h1 className="lg:col-span-2 text-[clamp(1.75rem,2.8vw,2.25rem)] font-bold leading-[1.1] tracking-[-0.03em]">Account</h1>
 
       <section aria-label="Profile" className="flex items-center gap-4 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 lg:col-span-2">
@@ -120,7 +120,7 @@ export default async function DriverAccountPage() {
         <AccountRow href="/dashboard/driver/performance" icon={BarChart3} title="Ratings, acceptance and missed stops" />
       </AccountGroup>
 
-      <div className="rounded-card bg-surface p-3 sm:p-4">
+      <div className="rounded-card bg-surface p-3 shadow-card ring-1 ring-line/70 sm:p-4 lg:col-span-2">
         <SignOutButton className="press flex min-h-12 w-full items-center gap-3 rounded-control px-2 text-[15px] font-medium text-danger hover:bg-danger-wash" />
       </div>
     </div>

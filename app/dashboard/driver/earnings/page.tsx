@@ -133,7 +133,7 @@ export default async function DriverEarningsPage() {
         </p>
       )}
 
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
         {/* One card: withdraw, and the wallet the money goes to. */}
         <Card className="scroll-mt-24" id="cash-out">
           <CardTitle>Withdraw to mobile money</CardTitle>

@@ -168,8 +168,9 @@ dark mode switch), 4 driver app (done 14 Oct: Home tab with tonight's job, 3D ar
 OpenStreetMap/Overpass: free, no keys, `lib/driver-tips.ts`, sent only the zone centre or a rounded point, cached, streamed in); full-screen
 stop page with the pickup photo panel; Tonight, Earnings and Account restyled),
 5 admin console (done 14 Oct: icon rail with hover names, live progress card, Needs you, exceptions as a list
-beside a detail panel, plan board and maps in moss and sky; not yet seen on screen: ops needs a staff 2FA login), 6 website (done 15 Oct: the landing tour flows with the scroll, never pinning the page: sky bands per chapter, a
-route that draws itself and a truck that drives it, moments that play as they arrive; new sign-in frame, legal pages,
+beside a detail panel, plan board and maps in moss and sky; not yet seen on screen: ops needs a staff 2FA login), 6 website (done 15 Oct: the landing tour is the canvas design's pinned story, `components/landing/NightStory.tsx` +
+`story.module.css`, CSS scroll-driven only: a 3D town, day to night to dawn, a route and truck, the booking card, then the
+next section slides up over it like a curtain; a still list without scroll timelines or with reduced motion; new sign-in frame, legal pages,
 footer, cookie banner; site-wide pointer effects in components/kit/PointerFx.tsx), 7 final checks). Done earlier: dark/light theme, loading and error screens,
 animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
 account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:
