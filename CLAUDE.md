@@ -171,12 +171,14 @@ stop page with the pickup photo panel; Tonight, Earnings and Account restyled),
 beside a detail panel, plan board and maps in moss and sky; not yet seen on screen: ops needs a staff 2FA login), 6 website (done 15 Oct: the landing tour is the canvas design's pinned story, `components/landing/NightStory.tsx` +
 `story.module.css`, CSS scroll-driven only: a 3D town, day to night to dawn, a route and truck, the booking card, then the
 next section slides up over it like a curtain; a still list without scroll timelines or with reduced motion; new sign-in frame, legal pages,
-footer, cookie banner; site-wide pointer effects in components/kit/PointerFx.tsx), 7 final checks). Done earlier: dark/light theme, loading and error screens,
+footer, cookie banner; site-wide pointer effects in components/kit/PointerFx.tsx), 7 final checks (done 15 Oct: every main
+page fits 320 px in Chromium and WebKit/iPhone Safari with no errors; Tailwind v4 needs Chrome 111+; Firefox could not
+run here; real phones still worth a test)). Done earlier: dark/light theme, loading and error screens,
 animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
 account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:
 the remaining accessibility items (contrast, tap targets, labels), shadcn/ui, and speed (`next/image`, lazy maps,
-offline-tolerant driver actions, web-vitals). Tested at 375 px and 1280 px wide; not yet on very small phones (320 px),
-iPhone Safari or older Android browsers.
+offline-tolerant driver actions, web-vitals). Tested at 320, 375, 390 and 1280 px wide.
+If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 
 ## Documents (on claude.ai)
 

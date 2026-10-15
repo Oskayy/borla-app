@@ -92,7 +92,7 @@ function TripCard({ g, firstStopNo, current }: { g: TripGroup; firstStopNo: numb
           </h3>
           <p className="truncate text-sm text-ink-3">
             {n} {n === 1 ? 'stop' : 'stops'}
-            {!done && g.minutes != null && ` · about ${durationLabel(g.minutes)}`} · unload at {g.site?.name ?? 'no site yet'}
+            {!done && g.minutes != null && ` · ${durationLabel(g.minutes)}`} · unload at {g.site?.name ?? 'no site yet'}
           </p>
         </div>
         <Chip tone={chip.tone}>{chip.text}</Chip>
@@ -208,7 +208,7 @@ export default function TonightView({
   const summary =
     orderCount === 0
       ? 'No stops on your list yet'
-      : `${orderCount} ${orderCount === 1 ? 'stop' : 'stops'} in ${groups.length} ${groups.length === 1 ? 'trip' : 'trips'}${minutesLeft > 0 ? ` · about ${durationLabel(minutesLeft)}` : ''}`
+      : `${orderCount} ${orderCount === 1 ? 'stop' : 'stops'} in ${groups.length} ${groups.length === 1 ? 'trip' : 'trips'}${minutesLeft > 0 ? ` · ${durationLabel(minutesLeft)}` : ''}`
   const firstStop: number[] = []
   groups.reduce((n, g) => (firstStop.push(n), n + g.orders.length), 1)
 

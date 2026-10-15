@@ -97,8 +97,9 @@ export default function DriverOnlineToggle({
   // the shortcuts passed in as children.
   return (
     <section aria-label="Your shift" className="hero-glow rounded-card bg-hero p-5 text-on-hero shadow-lift sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      {/* The button drops under the text on very small phones rather than squeezing it. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 basis-[10.5rem]">
           <p className="text-sm text-on-hero-2">
             Shift {shiftLabel}
             {overrideUntil && ` · extra hours until ${new Date(overrideUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`}
