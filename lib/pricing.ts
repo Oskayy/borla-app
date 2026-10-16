@@ -1,3 +1,4 @@
+import { homeLabel } from '@/lib/home-address'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings, getTaxRates } from '@/lib/settings'
 import { classifyBooking, describeCollection } from '@/lib/shift'
@@ -178,7 +179,7 @@ export async function quoteFromBooking(
   if (body?.useHome === true) {
     const home = await prisma.customerProfile.findUnique({
       where: { userId },
-      select: { address: true, homeLat: true, homeLng: true, homePinConfirmedAt: true },
+      select: { address: true, homeLandmark: true, homeLat: true, homeLng: true, homePinConfirmedAt: true },
     })
     if (!home || home.homeLat == null || home.homeLng == null) {
       return fail(400, 'Please set your home location first, or choose a different address for this order.')
@@ -186,7 +187,8 @@ export async function quoteFromBooking(
     if (!home.homePinConfirmedAt) {
       return fail(400, 'Please check the pin on your home location page first, so the driver finds your gate.')
     }
-    return quoteAtPoint(input, home.address, { lat: home.homeLat, lng: home.homeLng }, 'home_pin')
+    // The order shows the place and the landmark together, so drivers and ops see both.
+    return quoteAtPoint(input, homeLabel(home.address, home.homeLandmark), { lat: home.homeLat, lng: home.homeLng }, 'home_pin')
   }
 
   const address = cleanText(body?.address, 200)

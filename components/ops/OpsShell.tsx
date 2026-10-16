@@ -34,7 +34,7 @@ import Logo from '@/components/Logo'
 import SignOutButton from '@/components/SignOutButton'
 import OpsAlerts from '@/components/OpsAlerts'
 import ThemeToggle from '@/components/ThemeToggle'
-import { RAIL_LABEL } from '@/components/kit/IconRail'
+import { RAIL_LABEL, RAIL_OPEN, RailToggle, useRailToggle } from '@/components/kit/IconRail'
 
 const ICONS: Record<string, LucideIcon> = {
   AlertTriangle,
@@ -143,7 +143,7 @@ function Rail({ sections }: { sections: ShellSection[] }) {
     <nav aria-label="Ops" className="ops-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-[18px] pb-4">
       {sections.map((s, si) => (
         <div key={s.title} className={si > 0 ? 'mt-3 border-t border-line pt-3' : ''}>
-          <p aria-hidden className={`${RAIL_LABEL} h-0 px-3 text-xs text-ink-3 group-hover/rail:mb-1 group-hover/rail:h-auto group-has-[:focus-visible]/rail:mb-1 group-has-[:focus-visible]/rail:h-auto`}>
+          <p aria-hidden className={`${RAIL_LABEL} h-0 px-3 text-xs text-ink-3 group-hover/rail:mb-1 group-hover/rail:h-auto group-data-[open]/rail:mb-1 group-data-[open]/rail:h-auto group-has-[:focus-visible]/rail:mb-1 group-has-[:focus-visible]/rail:h-auto`}>
             {s.title}
           </p>
           <ul aria-label={s.title} className="grid gap-1.5">
@@ -167,7 +167,7 @@ function Rail({ sections }: { sections: ShellSection[] }) {
                     {l.count > 0 && (
                       <span
                         aria-hidden
-                        className={`absolute left-[30px] top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold tabular-nums ring-2 ring-rail group-hover/rail:left-auto group-hover/rail:right-3 group-hover/rail:top-3.5 ${
+                        className={`absolute left-[30px] top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold tabular-nums ring-2 ring-rail group-hover/rail:left-auto group-hover/rail:right-3 group-hover/rail:top-3.5 group-data-[open]/rail:left-auto group-data-[open]/rail:right-3 group-data-[open]/rail:top-3.5 ${
                           URGENT.has(l.href) ? 'bg-danger text-white' : 'bg-highlight text-on-highlight'
                         }`}
                       >
@@ -198,7 +198,7 @@ function ShiftPill({ shift }: { shift: ShellShift }) {
       ) : (
         <span className="text-xs text-ink-3">not running</span>
       )}
-      <span className="text-ink-3">
+      <span className="hidden text-ink-3 xl:inline">
         · {shift.online} {shift.online === 1 ? 'driver' : 'drivers'} online
       </span>
     </span>
@@ -246,11 +246,11 @@ function UserMenu({ name, role }: { name: string; role: string }) {
     <div ref={box} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="press flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 hover:bg-canvas">
         <span className="grid size-9 place-items-center rounded-full bg-selected text-sm font-semibold text-on-selected">{initials(name)}</span>
-        <span className="hidden text-left leading-tight sm:block">
+        <span className="hidden text-left leading-tight xl:block">
           <span className="block whitespace-nowrap text-sm font-semibold">{name}</span>
           <span className="block whitespace-nowrap text-xs text-ink-3">{role}</span>
         </span>
-        <ChevronDown aria-hidden className="hidden size-4 text-ink-3 sm:block" />
+        <ChevronDown aria-hidden className="hidden size-4 text-ink-3 xl:block" />
       </button>
       {open && (
         <div className="absolute right-0 top-full z-40 mt-2 w-56 overflow-hidden rounded-card bg-surface p-1.5 shadow-lift shadow-card ring-1 ring-line/70">
@@ -331,6 +331,7 @@ export default function OpsShell({
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
+  const { ref: railRef, open: railOpen, toggle: toggleRail, props: railProps } = useRailToggle()
 
   useEffect(() => {
     if (!open) return
@@ -367,7 +368,11 @@ export default function OpsShell({
 
   return (
     <div data-surface="new" className="theme-ops min-h-dvh bg-canvas">
-      <aside className="group/rail fixed inset-y-0 left-0 z-40 hidden w-[84px] flex-col items-stretch gap-3 overflow-hidden border-r border-line bg-rail pt-5 transition-[width,box-shadow] duration-300 ease-[var(--ease-out)] hover:w-[260px] hover:shadow-lift has-[:focus-visible]:w-[260px] has-[:focus-visible]:shadow-lift lg:flex">
+      <aside
+        ref={railRef}
+        {...railProps}
+        className={`group/rail fixed inset-y-0 left-0 z-40 hidden w-[84px] flex-col items-stretch gap-3 overflow-hidden border-r border-line bg-rail pt-5 transition-[width,box-shadow] duration-300 ease-[var(--ease-out)] hover:w-[260px] hover:shadow-lift has-[:focus-visible]:w-[260px] has-[:focus-visible]:shadow-lift data-[open]:w-[260px] lg:flex ${RAIL_OPEN}`}
+      >
         <Link href="/ops" aria-label="Trashit operations home" className="mb-2 flex h-12 items-center gap-3 px-[22px]">
           <span className="grid size-10 shrink-0 place-items-center">
             <Logo variant="mark" height={34} />
@@ -376,6 +381,9 @@ export default function OpsShell({
             Trashit ops
           </span>
         </Link>
+        <div className="hidden px-[18px] [@media(pointer:coarse)]:block">
+          <RailToggle open={railOpen} onToggle={toggleRail} />
+        </div>
         <Rail sections={sections} />
       </aside>
 
@@ -398,7 +406,7 @@ export default function OpsShell({
 
       <div className="lg:pl-[84px]">
         <header className="sticky top-0 z-20 border-b border-line bg-canvas/90 backdrop-blur-md">
-          <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 min-w-0 items-center gap-3 px-4 sm:px-6 lg:px-8">
             <button type="button" onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open} className="-ml-2 grid size-11 place-items-center rounded-control hover:bg-canvas lg:hidden">
               <Menu aria-hidden className="size-5" />
             </button>
@@ -433,7 +441,7 @@ export default function OpsShell({
               <OpsAlerts />
               <Link
                 href="/account/security"
-                className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold md:inline-flex ${
+                className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold xl:inline-flex ${
                   has2fa ? 'bg-ok-wash text-ok-deep' : 'bg-danger-wash text-danger'
                 }`}
               >
@@ -445,7 +453,8 @@ export default function OpsShell({
           </div>
         </header>
 
-        <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        {/* Pages with a reading width sit in the middle of the space; full-width pages are unaffected. */}
+        <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8 [&>*]:mx-auto">{children}</main>
       </div>
     </div>
   )

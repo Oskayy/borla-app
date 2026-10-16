@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Bell, MapPin } from 'lucide-react'
-import ThemeToggle from '@/components/ThemeToggle'
+import ThemeToggle, { AccountTheme } from '@/components/ThemeToggle'
+import { parseThemePrefs } from '@/lib/theme'
 import Logo from '@/components/Logo'
 import { BottomTabs, CustomerRail } from '@/components/customer/CustomerNav'
 import ResumeBooking from '@/components/customer/ResumeBooking'
+import RequireHomePin from '@/components/customer/RequireHomePin'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { supportHref } from '@/lib/support'
@@ -17,8 +19,8 @@ export default async function CustomerLayout({ children }: { children: React.Rea
   if (!user) redirect('/login')
 
   const [me, profile, unread] = await Promise.all([
-    prisma.user.findUnique({ where: { id: user.id }, select: { name: true, role: true, active: true } }),
-    prisma.customerProfile.findUnique({ where: { userId: user.id }, select: { address: true, zone: { select: { name: true } } } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { name: true, role: true, active: true, themePrefs: true } }),
+    prisma.customerProfile.findUnique({ where: { userId: user.id }, select: { address: true, homeLat: true, homePinConfirmedAt: true, zone: { select: { name: true } } } }),
     prisma.notification.count({ where: { userId: user.id, readAt: null } }),
   ])
   if (!me || !me.active) redirect('/login')
@@ -35,6 +37,9 @@ export default async function CustomerLayout({ children }: { children: React.Rea
 
   return (
     <div data-surface="new" className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[84px_1fr]">
+      <AccountTheme app="customer" saved={parseThemePrefs(me.themePrefs).customer ?? null} />
+      {/* New customers pin their home first. */}
+      <RequireHomePin hasPin={!!profile && profile.homeLat != null && !!profile.homePinConfirmedAt} />
       {/* Desktop: the icon rail */}
       <aside className="sticky top-0 z-40 hidden h-dvh lg:block">
         <CustomerRail unread={unread} initials={initials} name={me.name} help={help} />
@@ -75,7 +80,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8 [&>*]:mx-auto">{children}</main>
       </div>
 
       <BottomTabs />

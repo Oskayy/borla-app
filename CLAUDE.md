@@ -103,7 +103,7 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 ## Open work (as of 13 Oct 2026)
 
-**State (checked 13 Oct 2026):** all migrations applied (latest `20261013150000_attempt_fee_setting`); build, lint and tests
+**State (checked 13 Oct 2026):** all migrations applied (latest `20261016120000_landmark_and_theme`, applied 16 Oct); build, lint and tests
 pass; work committed and pushed. The payment flow rewrite (steps 2–7) is live. Paystack is still in **test mode**.
 The local `.env` and Vercel both use the new `sb_secret_` Supabase key. The database pooler sometimes drops a connection
 for a few seconds: if a migration or script says "Can't reach database server", wait and run it again.
@@ -182,6 +182,13 @@ the remaining accessibility items (contrast, tap targets, labels) and shadcn/ui.
 web-vitals go to `/api/vitals` and appear as `[vitals]` lines in the server log (nothing stored); driver pickups and
 unloads without signal are kept on the phone and sent later (`lib/outbox.ts`, `components/driver/OutboxBar.tsx`; the
 server keeps the photo time, `lib/taken-at.ts`, and treats a repeat as done). Tested at 320, 375, 390 and 1280 px wide.
+UX fixes (16 Oct): a new customer's first step is the Home pin page (`components/customer/RequireHomePin.tsx`); the
+home is an area or street plus a separate **landmark** (`CustomerProfile.homeLandmark`), shown together on orders as
+"place · landmark" (`lib/home-address.ts`). Dark mode is per app (website, customer, driver, ops) on the device and saved
+on the account (`User.themePrefs`, `lib/theme.ts`, `/api/account/theme`). Signing out opens the landing page; the
+customer sign-out is on "Your account" and at the foot of the rail. Rails have a "Show names" button on touch screens.
+A **driver's licence photo is required** to send an application (drivers approved earlier keep their approval). Public
+pages draw their own footer (the global `Footer` is no longer used).
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 
 ## Documents (on claude.ai)

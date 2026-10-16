@@ -16,16 +16,22 @@ export default async function HomeLocationPage() {
     prisma.zone.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
   ])
 
-  const initial = profile ? { address: profile.address, lat: profile.homeLat, lng: profile.homeLng } : null
+  const initial = profile ? { address: profile.address, landmark: profile.homeLandmark ?? '', lat: profile.homeLat, lng: profile.homeLng } : null
+  // A new customer lands here first (components/customer/RequireHomePin.tsx) and goes home once it is saved.
+  const setup = !profile || profile.homeLat == null || !profile.homePinConfirmedAt
 
   return (
     <div className="max-w-4xl">
       <PageHeader
-        title="Home pin"
-        lead="Set this once and every pickup uses it. You can still choose a different place for a single order. The shaded circles show where we collect."
+        title={setup ? 'First, pin your home' : 'Home pin'}
+        lead={
+          setup
+            ? 'Welcome to Trashit. Before your first booking, show us where to collect: your area, a landmark drivers can see at night, and a pin on your gate. It takes a minute, and every pickup uses it.'
+            : 'Set this once and every pickup uses it. You can still choose a different place for a single order.'
+        }
       />
       <Card>
-        <HomeLocationForm zones={zones} initial={initial} />
+        <HomeLocationForm zones={zones} initial={initial} setup={setup} />
       </Card>
     </div>
   )

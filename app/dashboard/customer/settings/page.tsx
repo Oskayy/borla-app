@@ -5,7 +5,6 @@ import { createClient } from '@/utils/supabase/server'
 import { BUTTON_QUIET, Card, CardTitle, PageHeader } from '@/components/ui'
 import EnableAlerts from '@/components/EnableAlerts'
 import InstallPrompt from '@/components/InstallPrompt'
-import SignOutButton from '@/components/SignOutButton'
 import DeleteAccount from '@/components/customer/DeleteAccount'
 
 export const dynamic = 'force-dynamic'
@@ -88,12 +87,6 @@ export default async function SettingsPage() {
           <div className="mt-6 border-t border-line pt-5">
             <DeleteAccount />
           </div>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardTitle>Sign out</CardTitle>
-          <p className="mb-4 text-sm text-ink-2">Your pickups carry on as scheduled after you sign out.</p>
-          <SignOutButton className={BUTTON_QUIET} />
         </Card>
       </div>
     </div>

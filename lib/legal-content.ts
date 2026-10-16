@@ -308,7 +308,7 @@ export const cookiePolicySections: LegalSection[] = [
       { type: 'h2', text: "Functional" },
       { type: 'p', text: "These only remember choices you make, and stay on your device. We don’t use them to follow you." },
       { type: 'bullets', items: [
-        "Light or dark theme (trashit-theme).",
+        "Light or dark theme, chosen separately for the website and each app (trashit-theme:site, :customer, :driver, :ops). When you are signed in, the choice is also saved with your account so it follows you to your other devices.",
         "A pickup you priced before signing in (trashit-booking-draft): the address, pin and bins, so they aren’t lost while you create an account. It is ignored after 24 hours and removed once you book.",
         "That you closed the \"install the app\" suggestion (trashit-install-dismissed).",
         "Drivers only: short confirmation messages after an action (trashit-flash), cleared when the tab is closed.",

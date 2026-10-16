@@ -181,8 +181,14 @@
 @keyframes tk3 { 0%, 90% { opacity: 0; scale: .5; } 91%, 100% { opacity: 1; scale: 1; } }
 @keyframes tk4 { 0%, 93% { opacity: 0; scale: .5; } 94%, 100% { opacity: 1; scale: 1; } }
 
-/* Phones: the scene on top, the caption below, a small card. */
-@media (max-width: 767px) {
+/* Mid-size wide screens (laptops, tablets on their side): the card takes more of the scene, so the town moves left
+   and down to keep the pickup, its label and the route clear of it. */
+@media (min-width: 768px) and (max-width: 1439px) and (orientation: landscape) {
+  .cam { translate: -16% 9%; scale: .92; }
+}
+
+/* Phones and upright tablets: the scene on top, the caption below, a small card. */
+@media (max-width: 767px), (max-width: 1100px) and (orientation: portrait) {
   .stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; padding-top: 64px; }
   .world { grid-row: 1; min-height: 0; margin-left: 0; mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
   .cam { scale: .52; }
@@ -207,4 +213,27 @@
   .tagc { font-size: 22px; padding: 9px 14px; }
   .alert { top: 74px; width: 300px; margin-left: -150px; }
   .moon { display: none; }
+}
+
+/* Upright tablets: the same arrangement with a bigger scene and a full-size card, and the town shifted left and down so
+   the route and the pickup stay clear of the card. */
+@media (min-width: 768px) and (max-width: 1100px) and (orientation: portrait) {
+  .cam { scale: .9; translate: -12% 14%; }
+  .card { width: 300px; right: 24px; top: 92px; padding: 20px; min-height: 320px; border-radius: 26px; }
+  .panel { inset: 20px; gap: 10px; }
+  .panel h4 { font-size: 19px; }
+  .k { font-size: 13px; }
+  .prow { padding: 10px 12px; font-size: 14px; border-radius: 14px; }
+  .prow small { font-size: 12px; }
+  .ct { min-width: 32px; height: 32px; }
+  .paybtn { height: 48px; font-size: 15px; }
+  .photo { height: 110px; }
+  .steps4 { gap: 9px; }
+  .steps4 li { font-size: 14px; gap: 10px; }
+  .alert { top: 92px; left: 32px; margin-left: 0; width: 320px; }
+  .caps { height: 250px; max-width: 640px; }
+  .capCol { padding: 0 40px 40px; }
+  .rail { left: 40px; right: 40px; }
+  .cap h3 { font-size: 40px; }
+  .cap p { font-size: 17px; }
 }

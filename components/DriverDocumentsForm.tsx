@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Camera, Check } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
@@ -16,16 +17,21 @@ interface DocType {
 export default function DriverDocumentsForm({
   types,
   uploaded,
+  previews = {},
   submitted,
 }: {
   types: DocType[]
   uploaded: Record<string, string> // type -> when it was uploaded
+  previews?: Record<string, string | null> // type -> a private link to the photo already sent
   submitted: boolean
 }) {
   const [have, setHave] = useState<Record<string, string>>(uploaded)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
+  // Photos taken on this visit show straight from the phone; earlier ones from their private link.
+  const [local, setLocal] = useState<Record<string, string>>({})
+  useEffect(() => () => Object.values(local).forEach((u) => URL.revokeObjectURL(u)), [local])
   const inputs = useRef<Record<string, HTMLInputElement | null>>({})
   const router = useRouter()
 
@@ -44,6 +50,7 @@ export default function DriverDocumentsForm({
         return
       }
       setHave((h) => ({ ...h, [code]: new Date().toISOString() }))
+      setLocal((l) => ({ ...l, [code]: URL.createObjectURL(file) }))
     } catch {
       setError('Could not reach Trashit. Please try again.')
     } finally {
@@ -76,11 +83,27 @@ export default function DriverDocumentsForm({
       <ul className="grid gap-3">
         {types.map((t) => (
           <li key={t.code} className="flex flex-wrap items-center gap-4 rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70 sm:p-5">
-            <span
-              className={`grid size-11 shrink-0 place-items-center rounded-full ${have[t.code] ? 'bg-ok-wash text-ok-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
-            >
-              {have[t.code] ? <Check aria-hidden className="size-5" strokeWidth={3} /> : <Camera aria-hidden className="size-5" />}
-            </span>
+            {have[t.code] && (local[t.code] ?? previews[t.code]) ? (
+              <span className="relative shrink-0">
+                <Image
+                  src={(local[t.code] ?? previews[t.code])!}
+                  alt={`Your ${t.label.toLowerCase()} photo`}
+                  width={128}
+                  height={128}
+                  unoptimized
+                  className="anim-pop size-16 rounded-[14px] object-cover ring-1 ring-line"
+                />
+                <span className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-ok-wash text-ok-deep ring-2 ring-surface">
+                  <Check aria-hidden className="size-3.5" strokeWidth={3} />
+                </span>
+              </span>
+            ) : (
+              <span
+                className={`grid size-11 shrink-0 place-items-center rounded-full ${have[t.code] ? 'bg-ok-wash text-ok-deep' : 'bg-canvas text-ink-3 ring-1 ring-line'}`}
+              >
+                {have[t.code] ? <Check aria-hidden className="size-5" strokeWidth={3} /> : <Camera aria-hidden className="size-5" />}
+              </span>
+            )}
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">
                 {t.label} {!t.required && <span className="text-sm font-normal text-ink-3">(optional)</span>}
@@ -104,7 +127,7 @@ export default function DriverDocumentsForm({
               }}
             />
             <button onClick={() => inputs.current[t.code]?.click()} disabled={busy !== null} className={BUTTON_QUIET}>
-              {busy === t.code ? 'Uploading…' : have[t.code] ? 'Replace' : 'Take photo'}
+              {busy === t.code ? 'Uploading…' : have[t.code] ? 'Retake' : 'Take photo'}
             </button>
           </li>
         ))}
@@ -116,7 +139,7 @@ export default function DriverDocumentsForm({
       )}
       {!submitted && (
         <button onClick={submit} disabled={sending || missingRequired.length > 0} className={`mt-2 w-full min-h-12 ${BUTTON_PRIMARY}`}>
-          {sending ? 'Sending…' : missingRequired.length > 0 ? `Add ${missingRequired.map((m) => m.label).join(', ')} first` : 'Send for review'}
+          {sending ? 'Sending…' : missingRequired.length > 0 ? `Add ${missingRequired.map((m) => m.label).join(' and ')} first` : 'Send for review'}
         </button>
       )}
     </div>

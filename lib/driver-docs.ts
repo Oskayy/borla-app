@@ -10,7 +10,8 @@ export const APPROVAL_ROLES: UserRole[] = ['SUPER_ADMIN', 'OPS_MANAGER', 'COMPLI
 export const DOC_TYPES: { code: string; label: string; hint: string; required: boolean; setup?: boolean }[] = [
   { code: 'profile_photo', label: 'Photo of you', hint: 'Your face, clearly visible, no sunglasses', required: true },
   { code: 'vehicle_photo', label: 'Your vehicle', hint: 'The whole vehicle, clearly visible', required: true, setup: true },
-  { code: 'drivers_licence', label: "Driver's licence", hint: 'If you have one', required: false },
+  // Required since 16 Oct 2026 (drivers approved before then keep their approval).
+  { code: 'drivers_licence', label: "Driver's licence", hint: 'The page with your photo, name and number, all readable', required: true },
 ]
 
 export function isDocType(code: unknown): code is string {

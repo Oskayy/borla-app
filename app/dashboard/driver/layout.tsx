@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { ChevronRight, ShieldAlert } from 'lucide-react'
 import DriverFrame from '@/components/driver/DriverFrame'
 import OutboxBar from '@/components/driver/OutboxBar'
+import { AccountTheme } from '@/components/ThemeToggle'
+import { parseThemePrefs } from '@/lib/theme'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
@@ -15,7 +17,7 @@ export default async function DriverLayout({ children }: { children: React.React
   if (!user) redirect('/login')
 
   const [me, profile, settings] = await Promise.all([
-    prisma.user.findUnique({ where: { id: user.id }, select: { name: true, role: true, active: true } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { name: true, role: true, active: true, themePrefs: true } }),
     prisma.driverProfile.findUnique({
       where: { userId: user.id },
       select: { vehiclePlate: true, vehicleTypeRef: { select: { name: true } }, vehicleType: true, approvalStatus: true, approvalNote: true, submittedAt: true },
@@ -39,6 +41,7 @@ export default async function DriverLayout({ children }: { children: React.React
       shift={windowLabel(settings)}
       notice={
         <>
+          <AccountTheme app="driver" saved={parseThemePrefs(me.themePrefs).driver ?? null} />
           {/* Pickups and unloads kept on the phone while there was no signal. */}
           <OutboxBar />
           {/* Until a driver is approved, every page says where the application stands. */}
@@ -61,7 +64,7 @@ export default async function DriverLayout({ children }: { children: React.React
                     ? profile.approvalNote ?? 'See what to fix, then send it again.'
                     : profile.submittedAt
                       ? "You'll get stops once Trashit approves you. You can set up your account meanwhile."
-                      : 'Add your Ghana Card number, plate, vehicle photo and a photo of you, then send them for review.'}
+                      : 'Add your Ghana Card number, plate, vehicle photo, a photo of you and your driver’s licence, then send them for review.'}
                 </span>
               </span>
               <ChevronRight aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-3" />

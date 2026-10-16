@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import SignOutButton from '@/components/SignOutButton'
 import TabBar from '@/components/kit/TabBar'
 import { Bell, CalendarPlus, Headphones, Home, LayoutList, MapPin, Menu, Settings, User } from 'lucide-react'
 import Logo from '@/components/Logo'
@@ -52,6 +53,12 @@ export function CustomerRail({ unread, initials, name, help }: { unread: number;
               {name}
             </span>
           </Link>
+          <SignOutButton
+            label="Sign out"
+            iconClassName="size-[22px]"
+            labelClassName={RAIL_LABEL}
+            className="press flex h-12 w-full items-center gap-3 rounded-[16px] px-3 text-danger hover:bg-danger-wash"
+          />
         </div>
       }
     />

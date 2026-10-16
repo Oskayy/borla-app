@@ -1,7 +1,23 @@
 // Ghana Card and number plate entry: drivers type them instead of photographing them.
 import { describe, expect, it } from 'vitest'
-import { maskGhanaCard, parseGhanaCard, parsePlate } from '@/lib/ghana-card'
+import { formatGhanaCardTyping, maskGhanaCard, parseGhanaCard, parsePlate } from '@/lib/ghana-card'
 import { DOC_TYPES, missingDocs } from '@/lib/driver-docs'
+
+describe('formatGhanaCardTyping', () => {
+  it('shapes the number as it is typed', () => {
+    expect(formatGhanaCardTyping('gha6788532')).toBe('GHA-6788532')
+    expect(formatGhanaCardTyping('GHA1234567890')).toBe('GHA-123456789-0')
+    expect(formatGhanaCardTyping('1234567890')).toBe('GHA-123456789-0')
+    expect(formatGhanaCardTyping('GHA-123 456 789-0 99')).toBe('GHA-123456789-0')
+  })
+  it('lets backspace and the first letters through', () => {
+    for (const v of ['', 'G', 'GH', 'GHA']) expect(formatGhanaCardTyping(v)).toBe(v)
+    expect(formatGhanaCardTyping('GHA-')).toBe('GHA')
+  })
+  it('always ends in a number the server accepts', () => {
+    expect(parseGhanaCard(formatGhanaCardTyping('gha 123456789 0'))).toBe('GHA-123456789-0')
+  })
+})
 
 describe('Ghana Card number', () => {
   it('accepts the usual ways people type it', () => {
@@ -34,8 +50,9 @@ describe('driver documents', () => {
   it('no longer asks for a photo of the Ghana Card', () => {
     expect(DOC_TYPES.some((d) => d.code === 'ghana_card')).toBe(false)
   })
-  it('still needs a photo of the driver and the vehicle', () => {
-    expect(missingDocs([])).toEqual(['Photo of you', 'Your vehicle'])
-    expect(missingDocs(['profile_photo', 'vehicle_photo'])).toEqual([])
+  it("needs a photo of the driver, the vehicle and the driver's licence", () => {
+    expect(missingDocs([])).toEqual(['Photo of you', 'Your vehicle', "Driver's licence"])
+    expect(missingDocs(['profile_photo', 'vehicle_photo'])).toEqual(["Driver's licence"])
+    expect(missingDocs(['profile_photo', 'vehicle_photo', 'drivers_licence'])).toEqual([])
   })
 })

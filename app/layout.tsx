@@ -2,9 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
-import Footer from "@/components/Footer";
 import PointerFx from "@/components/kit/PointerFx";
 import WebVitals from "@/components/WebVitals";
+import { ThemeByApp } from "@/components/ThemeToggle";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 // One typeface across the customer, driver and ops apps and the public site.
 const geist = Geist({
@@ -31,23 +32,21 @@ export const viewport: Viewport = {
   themeColor: "#163320",
 };
 
-const THEME_SCRIPT = "try{var t=localStorage.getItem('trashit-theme');if(t!=='dark')t='light';document.documentElement.dataset.theme=t}catch(e){}"
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Sets light or dark before the page paints (the saved choice; light until someone picks dark), so there is no flash. */}
+        {/* Sets light or dark before the page paints (this app's saved choice, lib/theme.ts; light until someone picks dark), so there is no flash. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className={geist.variable}>
         {children}
-        <Footer />
         <CookieConsentBanner />
         <PointerFx />
         <WebVitals />
+        <ThemeByApp />
       </body>
     </html>
   );

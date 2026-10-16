@@ -19,7 +19,7 @@ export async function GET() {
     prisma.user.findUnique({ where: { id }, select: { name: true, phone: true, email: true, createdAt: true } }),
     prisma.customerProfile.findUnique({
       where: { userId: id },
-      select: { address: true, homeLat: true, homeLng: true, homeUpdatedAt: true, zone: { select: { name: true } } },
+      select: { address: true, homeLat: true, homeLng: true, homeUpdatedAt: true, homeLandmark: true, zone: { select: { name: true } } },
     }),
     prisma.order.findMany({
       where: { customerId: id },
@@ -48,7 +48,7 @@ export async function GET() {
     exportedAt: new Date().toISOString(),
     about: 'Your Trashit data. Photos are not included in this file; ask Trashit support if you need copies.',
     account: me,
-    homePin: profile && { address: profile.address, lat: profile.homeLat, lng: profile.homeLng, area: profile.zone?.name ?? null, updatedAt: profile.homeUpdatedAt },
+    homePin: profile && { address: profile.address, landmark: profile.homeLandmark, lat: profile.homeLat, lng: profile.homeLng, area: profile.zone?.name ?? null, updatedAt: profile.homeUpdatedAt },
     orders: orders.map((o) => ({
       id: o.id,
       status: customerStatus(o.status).label,

@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import { AccountTheme } from '@/components/ThemeToggle'
+import { parseThemePrefs } from '@/lib/theme'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { STAFF_ROLES } from '@/lib/staff'
@@ -33,7 +35,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  const me = await prisma.user.findUnique({ where: { id: user.id }, select: { name: true, role: true, active: true, mustChangePassword: true } })
+  const me = await prisma.user.findUnique({ where: { id: user.id }, select: { name: true, role: true, active: true, mustChangePassword: true, themePrefs: true } })
   if (!me || !me.active) redirect('/login')
   if (!STAFF_ROLES.includes(me.role)) redirect('/dashboard')
   if (me.mustChangePassword) redirect('/reset-password?first=1')
@@ -47,11 +49,14 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   const has2fa = !!factors.data?.totp?.some((f) => f.status === 'verified')
 
   return (
+    <>
+    <AccountTheme app="ops" saved={parseThemePrefs(me.themePrefs).ops ?? null} />
     <OpsShell sections={sections} name={me.name} role={ROLE_NAMES[me.role] ?? me.role} health={health} has2fa={has2fa} shift={shift}>
       <div className="mx-auto max-w-7xl">
         <EnableAlerts compact message="Turn on alerts on this device so you hear when tonight's plan is ready or an order needs a driver." />
         {children}
       </div>
     </OpsShell>
+    </>
   )
 }

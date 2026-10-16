@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import { homeLabel } from '@/lib/home-address'
 import { useClientValue } from '@/lib/use-client-value'
 import { clearDraft, draftRaw, parseDraft, saveDraft, type BookingDraft } from '@/lib/booking-draft'
 import BinIllustration from '@/components/BinIllustration'
@@ -49,7 +50,7 @@ const FIELD_STEP: Record<string, string> = { place: 'where', pin: 'where', bins:
 
 interface BookingFormProps {
   sizes: BinSizeOption[]
-  home: { address: string } | null
+  home: { address: string; landmark?: string | null } | null
   homeNeedsCheck?: boolean // a home pin saved before pins had to be confirmed
   acceptHazardous?: boolean // ops setting: off until a disposal site takes hazardous waste
   guest?: boolean // no account yet: price a pickup, then create an account to book it
@@ -120,7 +121,7 @@ function BookingFormInner({
 
   const supabase = createClient()
   const totalBins = Object.values(bins).reduce((a, b) => a + b, 0)
-  const pickupAddress = useHome && home ? home.address : address
+  const pickupAddress = useHome && home ? homeLabel(home.address, home.landmark) : address
 
   // Any change to the order details makes the old price out of date.
   function changed() {
@@ -434,6 +435,7 @@ function BookingFormInner({
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">My home</span>
                     <span className="block truncate text-sm text-ink-2">{home.address}</span>
+                    {home.landmark && <span className="block truncate text-sm text-ink-3">Landmark: {home.landmark}</span>}
                   </span>
                   <Link href="/dashboard/customer/home-location" className="text-sm font-semibold text-action-deep hover:underline">
                     Change

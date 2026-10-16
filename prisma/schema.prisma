@@ -59,6 +59,7 @@ model User {
   driverDocuments    DriverDocument[]
   active             Boolean            @default(true) // false = suspended: cannot sign in or use the app
   mustChangePassword Boolean            @default(false) // staff created with a temporary password
+  themePrefs         Json? // dark or light per app: { site, customer, driver, ops } (lib/theme.ts)
 }
 
 model CustomerProfile {
@@ -72,6 +73,7 @@ model CustomerProfile {
   homeLng            Float?
   homeUpdatedAt      DateTime?
   homePinConfirmedAt DateTime? // the customer confirmed the pin sits on their house or gate
+  homeLandmark       String? // what drivers look for at night, e.g. "blue gate opposite Zenith Bank"
 }
 
 model DriverProfile {

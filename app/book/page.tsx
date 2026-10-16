@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { getAcceptHazardous } from '@/lib/settings'
 import BookingForm from '@/components/BookingForm'
 import SiteHeader from '@/components/landing/SiteHeader'
+import SiteFooter from '@/components/landing/SiteFooter'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Price a pickup · Trashit' }
@@ -22,11 +23,12 @@ export default async function TryBookingPage() {
   ])
 
   return (
-    <div data-surface="new" className="min-h-dvh bg-canvas text-ink">
+    <div data-surface="new" className="flex min-h-dvh flex-col bg-canvas text-ink">
       <SiteHeader />
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8">
         <BookingForm sizes={sizes} home={null} acceptHazardous={acceptHazardous} guest />
       </main>
+      <SiteFooter />
     </div>
   )
 }

@@ -12,7 +12,8 @@ const PinMap3D = dynamic(() => import('@/components/customer/PinMap3D'), {
 })
 
 // "Your pickup spot": the saved pin on a small 3D map, with a link to change it.
-export default function PinMapCard({ lat, lng, place }: { lat: number; lng: number; place: string }) {
+// `height`: 190 px on phones; the home page on a computer gives it more room.
+export default function PinMapCard({ lat, lng, place, height = 190 }: { lat: number; lng: number; place: string; height?: number }) {
   return (
     <section aria-labelledby="spot-title" className="grid gap-2">
       <div className="flex items-center justify-between px-0.5">
@@ -24,7 +25,7 @@ export default function PinMapCard({ lat, lng, place }: { lat: number; lng: numb
         </Link>
       </div>
       <div className="relative">
-        <PinMap3D lat={lat} lng={lng} label={`3D map of your saved pickup pin${place ? `, ${place}` : ''}`} />
+        <PinMap3D lat={lat} lng={lng} height={height} label={`3D map of your saved pickup pin${place ? `, ${place}` : ''}`} />
         {place && (
           <span className="absolute left-3 top-3 flex max-w-[75%] items-center gap-1.5 truncate rounded-full bg-surface px-3 py-1.5 text-xs font-semibold shadow-card">
             <MapPin aria-hidden className="size-3.5 shrink-0 text-action-deep" />

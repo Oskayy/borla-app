@@ -1,5 +1,6 @@
 import { Info } from 'lucide-react'
 import SiteHeader from '@/components/landing/SiteHeader'
+import SiteFooter from '@/components/landing/SiteFooter'
 
 export type LegalBlock =
   | { type: 'p'; text: string }
@@ -22,7 +23,7 @@ const slug = (i: number, heading: string) =>
 // in view on a computer, and text at a comfortable line length.
 export default function LegalPage({ title, lastUpdated, sections }: { title: string; lastUpdated: string; sections: LegalSection[] }) {
   return (
-    <div data-surface="new" className="min-h-dvh bg-canvas text-ink">
+    <div data-surface="new" className="flex min-h-dvh flex-col bg-canvas text-ink">
       <SiteHeader />
       <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6 sm:pt-14">
         <header className="anim-rise max-w-3xl">
@@ -91,6 +92,7 @@ export default function LegalPage({ title, lastUpdated, sections }: { title: str
           </article>
         </div>
       </div>
+      <SiteFooter />
     </div>
   )
 }

@@ -12,7 +12,6 @@ import HeroCard from '@/components/kit/HeroCard'
 import StepTrack from '@/components/kit/StepTrack'
 import PinMapCard from '@/components/customer/PinMapCard'
 import ShowAt from '@/components/kit/ShowAt'
-import EnableAlerts from '@/components/EnableAlerts'
 import InstallPrompt from '@/components/InstallPrompt'
 
 export const dynamic = 'force-dynamic'
@@ -197,7 +196,7 @@ export default async function CustomerHome() {
       <div className="anim-stagger grid gap-6">
         <ShowAt query="(min-width: 1024px)">
           {hasHome ? (
-            <PinMapCard lat={profile!.homeLat!} lng={profile!.homeLng!} place={place} />
+            <PinMapCard lat={profile!.homeLat!} lng={profile!.homeLng!} place={place} height={340} />
           ) : (
             <section className="flex flex-wrap items-center gap-4 rounded-card bg-action-wash p-5 ring-1 ring-action-deep/15">
               <MapPin aria-hidden className="size-6 shrink-0 text-action-deep" />
@@ -228,10 +227,9 @@ export default async function CustomerHome() {
           </div>
         </dl>
 
-        {/* Asked only once there's a paid pickup on the way: then an alert is worth having. */}
+        {/* Alerts are switched on in Settings; only the install offer shows here, once a pickup is on the way. */}
         {active && active.status !== 'PENDING_PAYMENT' && (
           <div className="grid gap-4 empty:hidden">
-            <EnableAlerts compact message="Want a message when a driver is assigned to this pickup and when your bins are collected?" />
             <InstallPrompt />
           </div>
         )}

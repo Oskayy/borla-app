@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { DOC_TYPES } from '@/lib/driver-docs'
+import { driverPhotoUrls } from '@/lib/driver-photos'
 import DriverDocumentsForm from '@/components/DriverDocumentsForm'
 import { AlertTriangle, Clock } from 'lucide-react'
 import { PageHeader } from '@/components/ui'
@@ -23,6 +24,9 @@ export default async function DriverVerificationPage() {
   const docs = await prisma.driverDocument.findMany({ where: { driverId: user.id }, select: { type: true, createdAt: true } })
   const uploaded = Object.fromEntries(docs.map((d: { type: string; createdAt: Date }) => [d.type, d.createdAt.toISOString()]))
   const waiting = profile.approvalStatus === 'PENDING' && !!profile.submittedAt
+  const types = DOC_TYPES.filter((t) => !t.setup)
+  // The driver sees each photo they sent (30-minute private links).
+  const previews = await driverPhotoUrls(user.id, types.map((t) => t.code))
 
   return (
     <div className="max-w-4xl">
@@ -50,11 +54,11 @@ export default async function DriverVerificationPage() {
       )}
       {!waiting && profile.approvalStatus !== 'REJECTED' && (
         <p className="mb-6 max-w-[60ch] text-[15px] text-ink-2">
-          To keep customers safe, every Trashit driver is checked before their first pickup. Add a clear photo of yourself, then send
-          your details for review. Your Ghana Card number, plate number and vehicle photo are on the setup page.
+          To keep customers safe, every Trashit driver is checked before their first pickup. Add a clear photo of yourself
+          and of your driver&apos;s licence, then send them for review. Your Ghana Card number, plate number and vehicle photo are on the setup page.
         </p>
       )}
-      <DriverDocumentsForm types={DOC_TYPES.filter((t) => !t.setup)} uploaded={uploaded} submitted={waiting} />
+      <DriverDocumentsForm types={types} uploaded={uploaded} previews={previews} submitted={waiting} />
     </div>
   )
 }

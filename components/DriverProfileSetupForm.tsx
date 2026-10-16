@@ -7,7 +7,7 @@ import ZoneMap from './ZoneMap'
 import { AlertCircle, Check, Search, Truck } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 import PhotoUpload from '@/components/driver/PhotoUpload'
-import { maskGhanaCard, parseGhanaCard, parsePlate } from '@/lib/ghana-card'
+import { maskGhanaCard, formatGhanaCardTyping, parseGhanaCard, parsePlate } from '@/lib/ghana-card'
 
 interface Zone {
   id: string
@@ -271,9 +271,10 @@ export default function DriverProfileSetupForm({
           <input
             id="ghana-card"
             value={ghanaCard}
-            onChange={(e) => setGhanaCard(e.target.value.toUpperCase())}
+            onChange={(e) => setGhanaCard(formatGhanaCardTyping(e.target.value))}
             className={`${FIELD} mt-1.5 tabular-nums`}
             placeholder="GHA-123456789-0"
+            maxLength={15}
             autoCapitalize="characters"
             autoComplete="off"
             inputMode="text"

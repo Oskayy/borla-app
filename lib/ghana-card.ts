@@ -11,6 +11,16 @@ export function parseGhanaCard(input: unknown): string | null {
   return m ? `GHA-${m[1]}-${m[2]}` : null
 }
 
+// Shapes the number while it is typed, like the example: "gha6788" becomes "GHA-6788", ten digits become
+// "GHA-123456789-0". Typing only digits adds the GHA. Part of "GHA" is left alone so backspace still works.
+export function formatGhanaCardTyping(input: string): string {
+  const s = input.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (s === '' || 'GHA'.startsWith(s)) return s
+  const digits = s.replace(/^[A-Z]*/, '').replace(/D/g, '').slice(0, 10)
+  if (!digits) return 'GHA'
+  return 'GHA-' + digits.slice(0, 9) + (digits.length > 9 ? '-' + digits.slice(9) : '')
+}
+
 // For screens that don't need the whole number: GHA-•••••6789-0.
 export function maskGhanaCard(n: string | null): string | null {
   const p = n ? parseGhanaCard(n) : null
