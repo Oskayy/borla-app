@@ -215,6 +215,30 @@
   .moon { display: none; }
 }
 
+/* Phones: the card sits top right, so the town moves left and down to keep the pin, its label and the route in the
+   open space beside it. The smallest phones also get a narrower card. */
+@media (max-width: 767px) {
+  .cam { translate: -22% 16%; }
+  .tagc { font-size: 18px; left: auto; right: 30px; } /* label on the side away from the card */
+}
+@media (max-width: 379px) {
+  .cam { scale: .46; translate: -26% 18%; }
+  .card { width: 172px; min-height: 196px; padding: 11px; right: 8px; top: 70px; border-radius: 18px; }
+  .panel { inset: 11px; gap: 4px; }
+  .panel h4 { font-size: 14px; }
+  .k { font-size: 10px; }
+  .prow { padding: 4px 7px; font-size: 11px; border-radius: 10px; }
+  .prow small { display: none; }
+  .ct { min-width: 22px; height: 22px; }
+  .paybtn { height: 32px; font-size: 12px; }
+  .photo { height: 58px; }
+  .steps4 { gap: 4px; }
+  .steps4 li { font-size: 11px; gap: 6px; }
+  .tick { width: 18px; height: 18px; }
+  .note { display: none; }
+  .alert { width: 280px; margin-left: -140px; }
+}
+
 /* Upright tablets: the same arrangement with a bigger scene and a full-size card, and the town shifted left and down so
    the route and the pickup stay clear of the card. */
 @media (min-width: 768px) and (max-width: 1100px) and (orientation: portrait) {
