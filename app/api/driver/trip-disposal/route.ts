@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { parseTakenAt } from '@/lib/taken-at'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest) {
 
   const onBoard = route.stops.map((s) => s.order).filter((o) => o.driverId === user.id && o.status === 'PICKED_UP')
   if (onBoard.length === 0) {
+    // The same unload sent again (the phone kept it while there was no signal, lib/outbox.ts) counts as done.
+    if (typeof photoPath === 'string' && photoPath.length < 300) {
+      const done = await prisma.orderEvidence.findFirst({
+        where: { type: 'driver_disposal', photoUrl: photoPath, orderId: { in: route.stops.map((s) => s.orderId) } },
+        select: { id: true },
+      })
+      if (done) return NextResponse.json({ success: true, already: true })
+    }
     return NextResponse.json({ error: 'Nothing on this trip has been collected yet' }, { status: 400 })
   }
 
@@ -67,6 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   const settings = await getShiftSettings()
+  const takenAt = parseTakenAt(body?.takenAt)
 
   try {
     const result = await prisma.$transaction(
@@ -79,7 +89,7 @@ export async function POST(req: NextRequest) {
             photoUrl: photoPath,
             gpsLat: gps.lat,
             gpsLng: gps.lng,
-            capturedAt: new Date(),
+            capturedAt: takenAt,
           })),
         })
 

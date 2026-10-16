@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, ImageOff, Phone } from 'lucide-react'
@@ -72,8 +73,7 @@ export default function DisposalReviewClient({ groups, canRefund = false }: { gr
           <li key={g.key} className="grid gap-5 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:grid-cols-[220px_1fr] sm:p-6">
             {g.photoUrl ? (
               <a href={g.photoUrl} target="_blank" rel="noopener noreferrer" className="block self-start overflow-hidden rounded-control ring-1 ring-line">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={g.photoUrl} alt={`Unload photo from ${g.driverName}`} className="aspect-[4/3] w-full object-cover" />
+                <Image src={g.photoUrl} alt={`Unload photo from ${g.driverName}`} width={440} height={330} unoptimized className="aspect-[4/3] w-full object-cover" />
                 <span className="block bg-canvas px-3 py-1.5 text-xs font-medium text-ink-3">Open full size</span>
               </a>
             ) : (

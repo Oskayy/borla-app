@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ZoneMap from './ZoneMap'
@@ -209,8 +210,7 @@ export default function DriverProfileSetupForm({
               >
                 <span className="flex h-16 items-center justify-center">
                   {v.imagePath ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={v.imagePath} alt="" className="max-h-14 max-w-full" />
+                    <Image src={v.imagePath} alt="" width={224} height={112} sizes="112px" className="max-h-14 w-auto max-w-full object-contain" />
                   ) : (
                     <Truck aria-hidden className="size-8 text-ink-3" />
                   )}

@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
 import { AlertCircle, Check, Flag } from 'lucide-react'
 import { flash } from '@/components/driver/Flash'
+import { sendOrQueue } from '@/lib/outbox'
 import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
 
 // One photo at the disposal site confirms the whole trip.
@@ -29,7 +29,6 @@ export default function ConfirmTripUnload({
   const [error, setError] = useState('')
   const [result, setResult] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   async function confirm() {
     if (!file) {
@@ -39,40 +38,37 @@ export default function ConfirmTripUnload({
     setError('')
     setLoading(true)
 
-    const filePath = `${photoOrderId}/disposal-trip-${Date.now()}.jpg`
-    const { error: uploadError } = await supabase.storage.from('pickup-evidence').upload(filePath, file)
-    if (uploadError) {
-      console.error('[unload] photo upload failed', uploadError)
-      setError("The photo didn't upload. Check your connection and try again.")
-      setLoading(false)
+    // Without signal the unload is kept on the phone and sent later (lib/outbox.ts).
+    const r = await sendOrQueue({
+      kind: 'trip-unload',
+      label: `Unload for trip ${tripNumber}`,
+      url: '/api/driver/trip-disposal',
+      body: { routeId, tripNumber, gpsLat, gpsLng },
+      photo: file,
+      photoPath: `${photoOrderId}/disposal-trip-${Date.now()}.jpg`,
+    })
+    setLoading(false)
+    if (r.status === 'failed') {
+      setError(r.error)
       return
     }
-
-    try {
-      const res = await fetch('/api/driver/trip-disposal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routeId, tripNumber, photoPath: filePath, gpsLat, gpsLng }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError(data.error || 'Could not confirm unloading')
-        return
-      }
+    let message: string
+    if (r.status === 'queued') {
+      message = 'No signal. The unload and its photo are saved on this phone and will send by themselves.'
+    } else {
+      const data = r.data
       const n = Number(data.orders ?? 0)
-      const message = data.verified
-        ? `Unload confirmed for ${n} ${n === 1 ? 'order' : 'orders'}. GHS ${Number(data.paid ?? 0).toFixed(2)} added to your earnings.`
-        : `Received. Ops will check your photo because ${data.why}. You'll be paid once it's approved.`
-      setResult(message)
-      // The trip card folds away on refresh, so keep the message on the page above it.
-      flash(message, data.verified ? 'ok' : 'warn')
-      setFile(null)
-      router.refresh()
-    } catch {
-      setError('Could not reach Trashit. Please check your connection and try again.')
-    } finally {
-      setLoading(false)
+      message = data.already
+        ? 'This unload was already confirmed.'
+        : data.verified
+          ? `Unload confirmed for ${n} ${n === 1 ? 'order' : 'orders'}. GHS ${Number(data.paid ?? 0).toFixed(2)} added to your earnings.`
+          : `Received. Ops will check your photo because ${data.why}. You'll be paid once it's approved.`
     }
+    setResult(message)
+    // The trip card folds away on refresh, so keep the message on the page above it.
+    flash(message, r.status === 'sent' && r.data.verified ? 'ok' : 'warn')
+    setFile(null)
+    if (r.status === 'sent') router.refresh()
   }
 
   return (

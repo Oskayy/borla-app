@@ -4,8 +4,9 @@ const isDev = process.env.NODE_ENV !== "production";
 
 // What the browser may load. Mapbox draws the maps (tiles, styles, a web worker); Supabase serves logins
 // and photos. Paystack checkout is a full-page redirect, so it needs no entry here.
-// Report-only for now: the browser logs anything that would be blocked but doesn't block it.
-// Once the console stays clean in normal use, rename the header to "Content-Security-Policy".
+// Enforced since 15 Oct 2026, after a crawl of the public, customer and driver pages (light and dark) showed no
+// violations. Inline scripts stay allowed ('unsafe-inline') because Next.js needs them unless every page is rendered
+// per request with a nonce. A new outside service the browser talks to must be added here, or it will be blocked.
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
@@ -22,6 +23,14 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Pictures Next.js may resize and send as WebP: vehicle pictures (public bucket) and the landing page's area map.
+  // Private photos (pickups, driver documents) are shown with `unoptimized` and never go through this service.
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/vehicle-images/**" },
+      { protocol: "https", hostname: "api.mapbox.com", pathname: "/styles/v1/**" },
+    ],
+  },
   async headers() {
     return [
       {
@@ -29,7 +38,7 @@ const nextConfig: NextConfig = {
         headers: [
           // Browsers only ever use HTTPS for this site after the first visit (ignored on http://localhost).
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
-          { key: "Content-Security-Policy-Report-Only", value: csp },
+          { key: "Content-Security-Policy", value: csp },
         ],
       },
     ];

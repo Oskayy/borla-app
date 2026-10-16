@@ -12,6 +12,7 @@ import { earnedLines } from '@/lib/accounts'
 import { distanceInMeters, GEOFENCE_THRESHOLD_METERS } from '@/lib/geo'
 import { notifyCustomerCollected } from '@/lib/customer-updates'
 import { caught } from '@/lib/errors'
+import { minutesLate, parseTakenAt } from '@/lib/taken-at'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
@@ -39,7 +40,10 @@ export async function POST(req: NextRequest) {
   if (!order || order.driverId !== user.id) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
+  // The same pickup sent again (the phone kept it while there was no signal, lib/outbox.ts) counts as done.
   if (order.status !== 'ASSIGNED') {
+    const done = await prisma.orderEvidence.findFirst({ where: { orderId, type: 'driver_pickup', photoUrl: photoPath }, select: { id: true } })
+    if (done) return NextResponse.json({ success: true, already: true })
     return NextResponse.json({ error: 'Order not eligible for pickup confirmation' }, { status: 400 })
   }
   if (!order.driverAcceptedAt) {
@@ -60,6 +64,9 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date()
+  // When the photo was taken: a pickup sent late keeps its own time, so the speed check between pickups stays right.
+  const takenAt = parseTakenAt(body?.takenAt, now)
+  const late = minutesLate(takenAt, now)
   const [photoHash, previous] = await Promise.all([
     evidenceFileHash(photoPath),
     prisma.orderEvidence.findFirst({
@@ -68,7 +75,7 @@ export async function POST(req: NextRequest) {
         order: { driverId: user.id },
         gpsLat: { not: null },
         gpsLng: { not: null },
-        capturedAt: { gte: new Date(now.getTime() - 6 * 3600_000) },
+        capturedAt: { gte: new Date(takenAt.getTime() - 6 * 3600_000), lte: takenAt },
       },
       orderBy: { capturedAt: 'desc' },
       select: { gpsLat: true, gpsLng: true, capturedAt: true },
@@ -82,15 +89,16 @@ export async function POST(req: NextRequest) {
     accuracyM: accuracy,
     pin: order.latitude != null && order.longitude != null ? { lat: order.latitude, lng: order.longitude } : null,
     previous: previous ? { lat: previous.gpsLat!, lng: previous.gpsLng!, at: previous.capturedAt } : null,
-    at: now,
+    at: takenAt,
     photoUsedElsewhere: !!reused,
   })
 
   let payoutPesewas = 0
   const idempotencyKey = `pickup-${orderId}`
+  const sentLate = late ? `, sent ${late} min after the photo (no signal)` : ''
   const auditReason = checks.length
-    ? `Driver confirmed pickup with photo evidence (${PICKUP_CHECK_MARKER}: ${checks.join('; ')})`
-    : 'Driver confirmed pickup with photo evidence'
+    ? `Driver confirmed pickup with photo evidence${sentLate} (${PICKUP_CHECK_MARKER}: ${checks.join('; ')})`
+    : `Driver confirmed pickup with photo evidence${sentLate}`
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -110,7 +118,7 @@ export async function POST(req: NextRequest) {
           gpsLng: gps.lng,
           gpsAccuracy: accuracy,
           photoHash,
-          capturedAt: now,
+          capturedAt: takenAt,
         },
       })
       // The pickup share, from the split frozen at payment. It can't be withdrawn until the load is unloaded

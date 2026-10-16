@@ -4,6 +4,7 @@ import "./globals.css";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import Footer from "@/components/Footer";
 import PointerFx from "@/components/kit/PointerFx";
+import WebVitals from "@/components/WebVitals";
 
 // One typeface across the customer, driver and ops apps and the public site.
 const geist = Geist({
@@ -46,6 +47,7 @@ export default function RootLayout({
         <Footer />
         <CookieConsentBanner />
         <PointerFx />
+        <WebVitals />
       </body>
     </html>
   );

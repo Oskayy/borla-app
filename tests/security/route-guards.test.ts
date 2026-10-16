@@ -30,6 +30,8 @@ const PUBLIC_ROUTES: Record<string, string[]> = {
   'payments/webhook': ['x-paystack-signature', 'timingSafeEqual'],
   // Price check before signing up: saves nothing, limited per IP.
   'pricing/quote-public': ['enforceRateLimit(', 'getClientIp('],
+  // Anonymous page-speed reports: stores nothing, checks every field, throttled per IP.
+  vitals: ['parseVital(', 'throttled(getClientIp('],
 }
 
 const routes = routeFiles(API).map((file) => ({

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import VehicleImageUpload from './VehicleImageUpload'
@@ -164,8 +165,7 @@ export default function VehicleTypesClient({
           <li key={v.id} className={`${PANEL} ${v.active ? '' : 'opacity-70'}`}>
             <div className="grid h-32 place-items-center rounded-control bg-canvas">
               {v.imagePath ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={v.imagePath} alt={v.name} className="max-h-28 max-w-full" />
+                <Image src={v.imagePath} alt={v.name} width={448} height={224} sizes="224px" className="max-h-28 w-auto max-w-full object-contain" />
               ) : (
                 <span className="flex flex-col items-center gap-1 text-sm text-ink-3">
                   <Truck aria-hidden className="size-6" /> No picture yet

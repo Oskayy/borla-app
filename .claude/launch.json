@@ -21,6 +21,15 @@
       "env": {
         "NEXT_PUBLIC_OAUTH_PROVIDERS": "google"
       }
+    },
+    {
+      "name": "trashit-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start"
+      ],
+      "port": 3000
     }
   ]
 }

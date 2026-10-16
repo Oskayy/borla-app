@@ -147,8 +147,9 @@ and a driver) and for an end-to-end stress test (real accounts, bookings, paymen
 dispatch stress test so far was a simulation of the planner only.
 
 **Security and privacy:**
-- Switch `Content-Security-Policy-Report-Only` (`next.config.ts`) to enforcing once the console shows no reports on the
-  map and booking pages; the inline theme script in `app/layout.tsx` will need a hash or nonce.
+- `Content-Security-Policy` (`next.config.ts`) is **enforced** since 15 Oct 2026 (a crawl of public, customer and driver
+  pages showed no violations). It keeps 'unsafe-inline' for scripts (Next.js needs it without per-request nonces). Any
+  new outside service the browser talks to must be added there or it is blocked.
 - Ghana Data Protection Act 2012: register with the Data Protection Commission. Fill the remaining privacy policy
   gaps (`lib/legal-content.ts`: registered company details, privacy contact email). Minimum age is 16 for customers
   (16-17 with a parent's permission) and 18 for drivers, confirmed by a sign-up checkbox (checked on the server too; the tick is not stored). Terms are filled (drivers are
@@ -176,8 +177,11 @@ page fits 320 px in Chromium and WebKit/iPhone Safari with no errors; Tailwind v
 run here; real phones still worth a test)). Done earlier: dark/light theme, loading and error screens,
 animated launch screen, ops console redesign, driver Tonight with trips and time estimates, price-a-pickup without an
 account, alerts asked for at the right moment, settings that explain themselves. Still to check against the plan:
-the remaining accessibility items (contrast, tap targets, labels), shadcn/ui, and speed (`next/image`, lazy maps,
-offline-tolerant driver actions, web-vitals). Tested at 320, 375, 390 and 1280 px wide.
+the remaining accessibility items (contrast, tap targets, labels) and shadcn/ui. Speed (15 Oct): photos use `next/image`
+(public pictures resized to WebP; private ones lazy and `unoptimized`, never cached by the image service); anonymous
+web-vitals go to `/api/vitals` and appear as `[vitals]` lines in the server log (nothing stored); driver pickups and
+unloads without signal are kept on the phone and sent later (`lib/outbox.ts`, `components/driver/OutboxBar.tsx`; the
+server keeps the photo time, `lib/taken-at.ts`, and treats a repeat as done). Tested at 320, 375, 390 and 1280 px wide.
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 
 ## Documents (on claude.ai)

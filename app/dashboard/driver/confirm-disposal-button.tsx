@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
 import PhotoCapture from '@/components/PhotoCapture'
 import { AlertCircle, Check } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
+import { flash } from '@/components/driver/Flash'
+import { sendOrQueue } from '@/lib/outbox'
 
 export default function ConfirmDisposalButton({ orderId }: { orderId: string }) {
   const [file, setFile] = useState<File | null>(null)
@@ -14,7 +15,6 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   async function confirmDisposal() {
     if (!file) {
@@ -25,31 +25,21 @@ export default function ConfirmDisposalButton({ orderId }: { orderId: string }) 
     setError('')
     setLoading(true)
 
-    const filePath = `${orderId}/disposal-${Date.now()}.jpg`
-    const { error: uploadError } = await supabase.storage
-      .from('pickup-evidence')
-      .upload(filePath, file)
-
-    if (uploadError) {
-      console.error('[unload] photo upload failed', uploadError)
-      setError("Your photo didn't upload. Please check your signal and try again.")
-      setLoading(false)
-      return
-    }
-
-    const res = await fetch('/api/orders/confirm-disposal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId, photoPath: filePath, gpsLat, gpsLng }),
+    // Without signal the unload is kept on the phone and sent later (lib/outbox.ts).
+    const r = await sendOrQueue({
+      kind: 'unload',
+      label: 'An unload',
+      url: '/api/orders/confirm-disposal',
+      body: { orderId, gpsLat, gpsLng },
+      photo: file,
+      photoPath: `${orderId}/disposal-${Date.now()}.jpg`,
     })
-
     setLoading(false)
-    if (res.ok) {
-      router.refresh()
-    } else {
-      const data = await res.json()
-      setError(data.error || 'Failed to confirm disposal')
-    }
+    if (r.status === 'sent') router.refresh()
+    else if (r.status === 'queued') {
+      flash('No signal. The unload and its photo are saved on this phone and will send by themselves.', 'warn')
+      setFile(null)
+    } else setError(r.error)
   }
 
   return (

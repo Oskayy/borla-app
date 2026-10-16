@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight, BadgeCheck, Building2, Camera, Check, ChevronDown, Clock, Home as HomeIcon, MapPin, Phone } from 'lucide-react'
 import DeletedNotice from '@/components/landing/DeletedNotice'
 import NightStory, { storyAfter } from '@/components/landing/NightStory'
@@ -148,14 +149,13 @@ export default async function Home() {
             <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
               <figure data-tilt className="tour-moment overflow-hidden rounded-card bg-surface shadow-lift ring-1 ring-line/70">
                 {mapUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={mapUrl}
                     alt={`Map of the areas Trashit collects in: ${zones.map((z) => z.name).join(', ')}`}
                     width={640}
                     height={440}
+                    sizes="(min-width: 1024px) 600px, 100vw"
                     className="block h-auto w-full"
-                    loading="lazy"
                   />
                 ) : (
                   <div className="grid aspect-[16/11] place-items-center bg-rail text-ink-3">

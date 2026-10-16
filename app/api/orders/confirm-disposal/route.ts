@@ -8,6 +8,7 @@ import { evidenceFileExists, isValidEvidencePath } from '@/lib/storage'
 import { releaseDisposal } from '@/lib/disposal-release'
 import { getShiftSettings } from '@/lib/settings'
 import { caught } from '@/lib/errors'
+import { parseTakenAt } from '@/lib/taken-at'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
@@ -34,7 +35,10 @@ export async function POST(req: NextRequest) {
   if (!order || order.driverId !== user.id) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   }
+  // The same unload sent again (the phone kept it while there was no signal, lib/outbox.ts) counts as done.
   if (order.status !== 'PICKED_UP') {
+    const done = await prisma.orderEvidence.findFirst({ where: { orderId, photoUrl: photoPath }, select: { id: true } })
+    if (done) return NextResponse.json({ success: true, already: true })
     return NextResponse.json({ error: 'Order not eligible for disposal confirmation' }, { status: 400 })
   }
 
@@ -62,7 +66,7 @@ export async function POST(req: NextRequest) {
           photoUrl: photoPath,
           gpsLat: gps.lat,
           gpsLng: gps.lng,
-          capturedAt: new Date(),
+          capturedAt: parseTakenAt(body?.takenAt),
         },
       })
       payoutAmount = await releaseDisposal(tx, {

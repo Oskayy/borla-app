@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ImageOff, Phone } from 'lucide-react'
@@ -29,8 +30,7 @@ export function DocPhoto({ url, label }: { url: string | null; label: string }) 
       <figcaption className="mb-1 text-xs font-medium text-ink-3">{label}</figcaption>
       {url ? (
         <a href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-control ring-1 ring-line hover:ring-action-deep">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt={label} className="aspect-[4/3] w-full object-cover" />
+          <Image src={url} alt={label} width={320} height={240} unoptimized className="aspect-[4/3] w-full object-cover" />
         </a>
       ) : (
         <div className="grid aspect-[4/3] place-items-center rounded-control bg-canvas text-xs text-ink-3 ring-1 ring-line">

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ChevronRight, ShieldAlert } from 'lucide-react'
 import DriverFrame from '@/components/driver/DriverFrame'
+import OutboxBar from '@/components/driver/OutboxBar'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
@@ -38,6 +39,8 @@ export default async function DriverLayout({ children }: { children: React.React
       shift={windowLabel(settings)}
       notice={
         <>
+          {/* Pickups and unloads kept on the phone while there was no signal. */}
+          <OutboxBar />
           {/* Until a driver is approved, every page says where the application stands. */}
           {profile && profile.approvalStatus !== 'APPROVED' && (
             <Link

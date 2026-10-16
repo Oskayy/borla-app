@@ -8,6 +8,7 @@ import PhotoPreview from '@/components/kit/PhotoPreview'
 import { errorMessage } from '@/lib/errors'
 import { AlertCircle, Camera, Check } from 'lucide-react'
 import { flash } from '@/components/driver/Flash'
+import { sendOrQueue } from '@/lib/outbox'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
@@ -45,30 +46,32 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
     setError('')
     setWarning('')
     setLoading(true)
-    try {
-      const photoPath = await uploadPhoto('pickup')
-      const res = await fetch('/api/orders/confirm-pickup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, photoPath, gpsLat, gpsLng, gpsAccuracy }),
-      })
-      const data = await res.json()
-      setLoading(false)
-      if (res.ok) {
-        if (data.flagged) {
-          const text = `Pickup confirmed, but the photo was taken about ${Math.round(data.distanceMeters)} m from the pin, so ops will check it.`
-          setWarning(text)
-          flash(text, 'warn') // this card goes away on refresh; keep the warning on the page
-        } else {
-          flash('Pickup confirmed.')
-        }
-        router.refresh()
+    // Without signal the pickup is kept on the phone and sent later (lib/outbox.ts).
+    const r = await sendOrQueue({
+      kind: 'pickup',
+      label: 'A pickup',
+      url: '/api/orders/confirm-pickup',
+      body: { orderId, gpsLat, gpsLng, gpsAccuracy },
+      photo: file,
+      photoPath: `${orderId}/pickup-${Date.now()}.jpg`,
+    })
+    setLoading(false)
+    if (r.status === 'queued') {
+      const text = 'No signal. The pickup and its photo are saved on this phone and will send by themselves. Carry on to your next stop.'
+      setWarning(text)
+      flash(text, 'warn')
+      setFile(null)
+    } else if (r.status === 'sent') {
+      if (r.data.flagged) {
+        const text = `Pickup confirmed, but the photo was taken about ${Math.round(Number(r.data.distanceMeters))} m from the pin, so ops will check it.`
+        setWarning(text)
+        flash(text, 'warn') // this card goes away on refresh; keep the warning on the page
       } else {
-        setError(data.error || 'Failed to confirm pickup')
+        flash('Pickup confirmed.')
       }
-    } catch (e) {
-      setLoading(false)
-      setError(errorMessage(e))
+      router.refresh()
+    } else {
+      setError(r.error)
     }
   }
 
