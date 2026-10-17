@@ -64,8 +64,11 @@ export default async function Home() {
         {/* Hero: a Trashit tricycle collecting at a gate on a Tema street before dawn, the promise and the one main
             button. On computers and tablets on their side the words sit over the photo (darker on the left, where they are); on phones and upright tablets the photo
             comes first and the words sit below it. It runs under the see-through top bar (components/landing/SiteHeader). */}
-        <section aria-labelledby="hero-title" className="relative isolate -mt-16 overflow-hidden bg-[#0b1424] text-white sm:-mt-[72px]">
-          <div className="relative h-[56svh] min-h-[340px] lg:absolute lg:inset-0 lg:h-auto">
+        <section
+          aria-labelledby="hero-title"
+          className="relative isolate -mt-16 flex h-[100svh] min-h-[480px] flex-col overflow-hidden bg-[#0b1424] text-white sm:-mt-[72px] lg:block lg:min-h-0"
+        >
+          <div className="relative min-h-[140px] flex-1 lg:absolute lg:inset-0">
             <Image
               src="/landing/tema-street-dawn.jpg"
               alt="A Trashit aboboyaa tricycle tipping a customer's bin at a gate on a quiet Tema street before dawn, its driver beside it"
@@ -77,9 +80,9 @@ export default async function Home() {
             <span aria-hidden className="hero-shade-phone absolute inset-0 lg:hidden" />
             <span aria-hidden className="hero-shade-wide absolute inset-0 hidden lg:block" />
           </div>
-          <div className="relative mx-auto flex max-w-6xl px-4 sm:px-6 lg:min-h-[100svh] lg:items-center">
-            <div className="-mt-20 pb-14 lg:mt-0 lg:max-w-[36rem] lg:py-28">
-              <h1 id="hero-title" className="text-[clamp(2.75rem,7vw,5rem)] font-bold leading-[0.95] tracking-[-0.045em] [text-shadow:0_2px_24px_rgb(0_0_0/0.35)]">
+          <div className="relative mx-auto flex w-full max-w-6xl px-4 sm:px-6 lg:h-full lg:items-center lg:pb-20 lg:pt-[72px]">
+            <div className="-mt-10 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:mt-0 lg:max-w-[42rem] lg:pb-0">
+              <h1 id="hero-title" className="text-[clamp(2.5rem,min(7vw,9svh),5rem)] font-bold leading-[0.95] tracking-[-0.045em] [text-shadow:0_2px_24px_rgb(0_0_0/0.35)]">
                 <span className="word">
                   <span style={{ animationDelay: '80ms' }}>Your</span>
                 </span>{' '}
@@ -96,10 +99,10 @@ export default async function Home() {
                   </span>
                 </span>
               </h1>
-              <p className="anim-rise mt-5 max-w-[32rem] text-[clamp(1.05rem,1.6vw,1.2rem)] leading-relaxed text-[#e9eef4] [animation-delay:500ms]">
+              <p className="anim-rise mt-4 max-w-[32rem] lg:mt-[2.4svh] text-[clamp(1.05rem,1.6vw,1.2rem)] leading-relaxed text-[#e9eef4] [animation-delay:500ms]">
                 Book by {snapshot} and a Trashit driver collects your refuse from your gate before daybreak.
               </p>
-              <div className="anim-rise mt-8 flex w-full flex-col items-stretch gap-3 [animation-delay:620ms] sm:w-auto sm:flex-row sm:items-center">
+              <div className="anim-rise mt-6 flex w-full flex-col lg:mt-[3.4svh] items-stretch gap-3 [animation-delay:620ms] sm:w-auto sm:flex-row sm:items-center">
                 <Link href="/book" data-magnet className={MAIN_BUTTON}>
                   Book tonight&apos;s pickup <ArrowRight aria-hidden className="size-5 transition-transform group-hover:translate-x-1" />
                 </Link>
@@ -110,7 +113,7 @@ export default async function Home() {
                   How it works
                 </Link>
               </div>
-              <ul className="anim-rise mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-[#dfe6ee] [animation-delay:740ms]">
+              <ul className="anim-rise mt-5 flex flex-wrap lg:mt-[3svh] gap-x-6 gap-y-2 text-sm font-medium text-[#dfe6ee] [animation-delay:740ms]">
                 {[`Late bookings until ${cutoff}`, 'Pay with MoMo', 'Photo proof of pickup'].map((t) => (
                   <li key={t} className="inline-flex items-center gap-2">
                     <Check aria-hidden className="size-4 text-[#9be07a]" strokeWidth={2.6} /> {t}
