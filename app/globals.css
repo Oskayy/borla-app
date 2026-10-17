@@ -644,3 +644,13 @@ dialog.sheet::backdrop { background: rgb(8 14 10 / 0.5); animation: fade 240ms e
   details.faq::details-content { height: 0; overflow: clip; transition: height 320ms var(--ease-out), content-visibility 320ms allow-discrete; }
   details.faq[open]::details-content { height: auto; }
 }
+
+/* Landing hero photo (app/page.tsx): phones fade the photo into the dark panel below it; wider screens darken the
+   left side, where the words sit, and fade out before the tricycle. */
+.hero-shade-phone { background: linear-gradient(0deg, #0b1424 0%, rgb(11 20 36 / 0.35) 35%, rgb(11 20 36 / 0.25) 80%, rgb(11 20 36 / 0.55) 100%); }
+.hero-shade-wide {
+  background:
+    linear-gradient(90deg, rgb(6 12 24 / 0.82) 0%, rgb(6 12 24 / 0.62) 34%, rgb(6 12 24 / 0.18) 60%, rgb(6 12 24 / 0) 74%),
+    linear-gradient(0deg, rgb(6 12 24 / 0.45) 0%, rgb(6 12 24 / 0) 30%),
+    linear-gradient(180deg, rgb(6 12 24 / 0.5) 0%, rgb(6 12 24 / 0) 18%);
+}

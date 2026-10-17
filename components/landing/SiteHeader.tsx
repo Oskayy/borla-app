@@ -13,8 +13,19 @@ const LINKS = [
 ]
 
 // The website's top bar: logo, sections, Sign in and the one main button. On phones the sections fold into a menu.
-export default function SiteHeader() {
+// `overHero` (the landing page): see-through with white text while it sits over the hero photo, the normal bar once
+// the page is scrolled past it or the menu is open.
+export default function SiteHeader({ overHero = false }: { overHero?: boolean }) {
   const [open, setOpen] = useState(false)
+  const [overPhoto, setOverPhoto] = useState(overHero)
+  useEffect(() => {
+    if (!overHero) return
+    const check = () => setOverPhoto(window.scrollY < window.innerHeight * 0.5)
+    check()
+    window.addEventListener('scroll', check, { passive: true })
+    return () => window.removeEventListener('scroll', check)
+  }, [overHero])
+  const clear = overHero && overPhoto && !open
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
@@ -23,27 +34,37 @@ export default function SiteHeader() {
   }, [open])
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line/60 bg-canvas/80 backdrop-blur-xl">
+    <header
+      className={`sticky top-0 z-40 border-b transition-colors duration-300 ${
+        clear ? 'border-transparent bg-transparent text-white' : 'border-line/60 bg-canvas/80 backdrop-blur-xl'
+      }`}
+    >
       <nav aria-label="Main" className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:h-[72px] sm:px-6">
         <Link href="/" aria-label="Trashit home" className="shrink-0">
-          <span className="only-light">
-            <Logo height={30} />
-          </span>
-          <span className="only-dark">
+          {clear ? (
             <Logo height={30} onDark />
-          </span>
+          ) : (
+            <>
+              <span className="only-light">
+                <Logo height={30} />
+              </span>
+              <span className="only-dark">
+                <Logo height={30} onDark />
+              </span>
+            </>
+          )}
         </Link>
         <ul className="hidden items-center gap-1 lg:flex">
           {LINKS.map((l) => (
             <li key={l.href}>
-              <a href={l.href} className="rounded-full px-3 py-2 text-[15px] font-medium text-ink-2 transition hover:bg-surface hover:text-ink">
+              <a href={l.href} className={`rounded-full px-3 py-2 text-[15px] font-medium transition ${clear ? 'text-white/85 hover:bg-white/10 hover:text-white' : 'text-ink-2 hover:bg-surface hover:text-ink'}`}>
                 {l.label}
               </a>
             </li>
           ))}
         </ul>
         <div className="ml-auto flex items-center gap-1.5">
-          <Link href="/login" className="hidden rounded-full px-3 py-2 text-[15px] font-semibold text-ink-2 hover:text-ink sm:inline-flex">
+          <Link href="/login" className={`hidden rounded-full px-3 py-2 text-[15px] font-semibold sm:inline-flex ${clear ? 'text-white hover:text-white/80' : 'text-ink-2 hover:text-ink'}`}>
             Sign in
           </Link>
           <Link
@@ -59,7 +80,7 @@ export default function SiteHeader() {
             aria-expanded={open}
             aria-controls="site-menu"
             aria-label={open ? 'Close menu' : 'Open menu'}
-            className="press grid size-11 place-items-center rounded-full bg-surface ring-1 ring-line lg:hidden"
+            className={`press grid size-11 place-items-center rounded-full ring-1 lg:hidden ${clear ? 'bg-white/10 text-white ring-white/35 backdrop-blur-sm' : 'bg-surface ring-line'}`}
           >
             {open ? <X aria-hidden className="size-5" /> : <Menu aria-hidden className="size-5" />}
           </button>

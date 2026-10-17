@@ -56,61 +56,74 @@ export default async function Home() {
 
   return (
     <div data-surface="new" className="bg-canvas text-ink">
-      <SiteHeader />
+      <SiteHeader overHero />
 
       <main>
         <DeletedNotice />
 
-        {/* Hero: the promise, the one main button, and a nudge to scroll into the tour. */}
-        <section data-spot className="spotlight relative isolate overflow-hidden">
-          <div aria-hidden className="aurora pointer-events-none absolute inset-[-20%] -z-10">
-            <b className="left-[8%] top-[18%] size-[520px] bg-[#cfeabb]" />
-            <b className="right-[6%] top-[4%] size-[460px] bg-[#f1ddb8]" />
-            <b className="bottom-[4%] left-[40%] size-[380px] bg-[#d7e7cf]" />
+        {/* Hero: a Trashit tricycle collecting at a gate on a Tema street before dawn, the promise and the one main
+            button. On computers and tablets on their side the words sit over the photo (darker on the left, where they are); on phones and upright tablets the photo
+            comes first and the words sit below it. It runs under the see-through top bar (components/landing/SiteHeader). */}
+        <section aria-labelledby="hero-title" className="relative isolate -mt-16 overflow-hidden bg-[#0b1424] text-white sm:-mt-[72px]">
+          <div className="relative h-[56svh] min-h-[340px] lg:absolute lg:inset-0 lg:h-auto">
+            <Image
+              src="/landing/tema-street-dawn.jpg"
+              alt="A Trashit aboboyaa tricycle tipping a customer's bin at a gate on a quiet Tema street before dawn, its driver beside it"
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-[78%_50%] brightness-[.78] contrast-[1.04] lg:object-[62%_50%]"
+            />
+            <span aria-hidden className="hero-shade-phone absolute inset-0 lg:hidden" />
+            <span aria-hidden className="hero-shade-wide absolute inset-0 hidden lg:block" />
           </div>
-          <div className="mx-auto flex min-h-[calc(100svh-72px)] max-w-5xl flex-col items-center justify-center px-4 pb-28 pt-12 text-center sm:px-6">
-            <h1 className="text-[clamp(3rem,8.5vw,6rem)] font-bold leading-[0.95] tracking-[-0.045em]">
-              <span className="word">
-                <span style={{ animationDelay: '80ms' }}>Your</span>
-              </span>{' '}
-              <span className="word">
-                <span style={{ animationDelay: '150ms' }}>bin,</span>
-              </span>{' '}
-              <span className="word">
-                <span style={{ animationDelay: '220ms' }}>cleared</span>
-              </span>
-              <br />
-              <span className="word">
-                <span style={{ animationDelay: '320ms' }} className="text-action-deep">
-                  overnight.
+          <div className="relative mx-auto flex max-w-6xl px-4 sm:px-6 lg:min-h-[100svh] lg:items-center">
+            <div className="-mt-20 pb-14 lg:mt-0 lg:max-w-[36rem] lg:py-28">
+              <h1 id="hero-title" className="text-[clamp(2.75rem,7vw,5rem)] font-bold leading-[0.95] tracking-[-0.045em] [text-shadow:0_2px_24px_rgb(0_0_0/0.35)]">
+                <span className="word">
+                  <span style={{ animationDelay: '80ms' }}>Your</span>
+                </span>{' '}
+                <span className="word">
+                  <span style={{ animationDelay: '150ms' }}>bin,</span>
+                </span>{' '}
+                <span className="word">
+                  <span style={{ animationDelay: '220ms' }}>cleared</span>
                 </span>
-              </span>
-            </h1>
-            <p className="anim-rise mt-6 max-w-[36rem] text-[clamp(1.05rem,1.6vw,1.25rem)] leading-relaxed text-ink-2 [animation-delay:500ms]">
-              Book by {snapshot} and a Trashit driver collects from your gate during the night, takes it to a licensed disposal site,
-              and shows you proof at every step.
-            </p>
-            <div className="anim-rise mt-9 flex w-full flex-col items-stretch justify-center gap-3 [animation-delay:620ms] sm:w-auto sm:flex-row sm:items-center">
-              <Link href="/book" data-magnet className={MAIN_BUTTON}>
-                Book tonight&apos;s pickup <ArrowRight aria-hidden className="size-5 transition-transform group-hover:translate-x-1" />
-              </Link>
-              <Link
-                href="#how"
-                className="press inline-flex min-h-14 items-center justify-center rounded-full px-7 text-base font-semibold text-ink ring-1 ring-line-strong transition hover:bg-surface"
-              >
-                How it works
-              </Link>
+                <br />
+                <span className="word">
+                  <span style={{ animationDelay: '320ms' }} className="text-[#9be07a]">
+                    overnight.
+                  </span>
+                </span>
+              </h1>
+              <p className="anim-rise mt-5 max-w-[32rem] text-[clamp(1.05rem,1.6vw,1.2rem)] leading-relaxed text-[#e9eef4] [animation-delay:500ms]">
+                Book by {snapshot} and a Trashit driver collects your refuse from your gate before daybreak.
+              </p>
+              <div className="anim-rise mt-8 flex w-full flex-col items-stretch gap-3 [animation-delay:620ms] sm:w-auto sm:flex-row sm:items-center">
+                <Link href="/book" data-magnet className={MAIN_BUTTON}>
+                  Book tonight&apos;s pickup <ArrowRight aria-hidden className="size-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+                <Link
+                  href="#how"
+                  className="press inline-flex min-h-14 items-center justify-center rounded-full bg-white/5 px-7 text-base font-semibold text-white ring-1 ring-white/55 backdrop-blur-sm transition hover:bg-white/15"
+                >
+                  How it works
+                </Link>
+              </div>
+              <ul className="anim-rise mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-[#dfe6ee] [animation-delay:740ms]">
+                {[`Late bookings until ${cutoff}`, 'Pay with MoMo', 'Photo proof of pickup'].map((t) => (
+                  <li key={t} className="inline-flex items-center gap-2">
+                    <Check aria-hidden className="size-4 text-[#9be07a]" strokeWidth={2.6} /> {t}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="anim-rise mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-medium text-ink-2 [animation-delay:740ms]">
-              {[`Late bookings until ${cutoff}`, 'Pay with MoMo', 'Photo proof of pickup'].map((t) => (
-                <li key={t} className="inline-flex items-center gap-2">
-                  <Check aria-hidden className="size-4 text-action-deep" strokeWidth={2.6} /> {t}
-                </li>
-              ))}
-            </ul>
           </div>
-          <a href="#how" className="tour-cue anim-fade absolute bottom-7 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2.5 text-sm font-semibold text-ink-3 [animation-delay:1100ms]">
-            <span aria-hidden className="scroll-cue relative h-[38px] w-6 rounded-full ring-2 ring-line-strong" />
+          <a
+            href="#how"
+            className="tour-cue anim-fade absolute bottom-7 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2.5 text-sm font-semibold text-[#dfe6ee] [animation-delay:1100ms] lg:flex"
+          >
+            <span aria-hidden className="scroll-cue relative h-[38px] w-6 rounded-full ring-2 ring-white/50" />
             Scroll to follow one pickup
           </a>
         </section>
