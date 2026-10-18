@@ -134,16 +134,26 @@ model Zone {
   // The zone's outline, drawn on the map: GeoJSON { type: "Polygon", coordinates: [[[lng, lat], ...]] } (lib/zone-shape.ts).
   // When set it decides which zone an address is in; the centre stays for maps and tips, the radius is legacy.
   boundary        Json?
-  tier            ZoneTier          @default(STANDARD) // premium, standard or basic area (pricing per tier comes later)
+  tier            ZoneTier          @default(STANDARD) // premium, standard or basic area; sets the price when followsTier
   coveredAreas    String[]          @default([])
   active          Boolean           @default(true)
   // Price multiplier for pickups in this zone. Only Super Admin / Finance may change it.
   priceMultiplier Float             @default(1.0)
+  // true: priceMultiplier is kept equal to this tier's TierPrice (lib/tier-price-server.ts); false: the zone's own number.
+  followsTier     Boolean           @default(false)
   createdAt       DateTime          @default(now())
   customers       CustomerProfile[]
   orders          Order[]
   facilities      Facility[]
   drivers         DriverProfile[]
+}
+
+// Default price multiplier for each zone tier (Pricing page; Super Admin and Finance). Zones that follow their tier
+// take it; one row per tier, 0.5 to 5 (checked in the database too).
+model TierPrice {
+  tier       ZoneTier @id
+  multiplier Float    @default(1.0)
+  updatedAt  DateTime @default(now()) @updatedAt
 }
 
 // A disposal site (landfill or transfer station) where drivers unload.

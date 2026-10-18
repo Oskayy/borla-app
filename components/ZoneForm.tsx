@@ -28,6 +28,7 @@ interface Check {
   text?: string
   overlaps?: { id: string; name: string; km2: number }[]
   moves?: { toThis: number; awayFromThis: number }
+  price?: { before: number | null; after: number; followsTier: boolean }
 }
 
 // A suggested zone to review ("Suggest zones"): opens the form prefilled, saved like any drawn zone.
@@ -109,8 +110,8 @@ export default function ZoneForm({
         const res = await fetch(`${url}?dryRun=1`, { method, headers: { 'Content-Type': 'application/json' }, body: body() })
         const data = await res.json().catch(() => ({}))
         if (stale) return
-        if (res.ok) setCheck({ state: 'ok', moves: data.moves })
-        else if (res.status === 409) setCheck({ state: 'blocked', text: data.error, overlaps: data.overlaps, moves: data.moves })
+        if (res.ok) setCheck({ state: 'ok', moves: data.moves, price: data.price })
+        else if (res.status === 409) setCheck({ state: 'blocked', text: data.error, overlaps: data.overlaps, moves: data.moves, price: data.price })
         else setCheck({ state: 'error', text: data.error || 'Could not check the outline' })
       } catch {
         if (!stale) setCheck({ state: 'error', text: 'Could not reach Trashit to check the outline' })
@@ -122,7 +123,7 @@ export default function ZoneForm({
     }
     // body() reads the same values listed here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boundary, active, localError])
+  }, [boundary, active, localError, tier])
 
   function trim() {
     if (!boundary) return
@@ -259,7 +260,11 @@ export default function ZoneForm({
               Active (customers can book here)
             </label>
           )}
-          <p className="text-xs text-ink-3">The tier groups zones for reports; prices per tier come later. Each zone&apos;s price multiplier is set by Finance in the list below.</p>
+          <p className="text-xs text-ink-3">
+            {isEditing
+              ? 'If this zone follows its tier’s price, changing the tier changes its price (only a Super Admin can do that here). Finance sets prices on the Pricing page and in the list below.'
+              : 'A new zone uses its tier’s price, set by Finance on the Pricing page; Finance can give it its own price later in the list below.'}
+          </p>
 
           {/* What saving would do */}
           <div aria-live="polite" className="grid gap-2">
@@ -289,6 +294,13 @@ export default function ZoneForm({
                 <Users aria-hidden className="mt-0.5 size-4 shrink-0" />
                 Saving moves {check.moves.toThis} {check.moves.toThis === 1 ? 'customer' : 'customers'} into this zone
                 {check.moves.awayFromThis > 0 && ` and ${check.moves.awayFromThis} out of it`}. Orders already paid keep their price.
+              </p>
+            )}
+            {!localError && check.price && check.state !== 'error' && (check.price.before === null || check.price.before !== check.price.after) && (
+              <p className="rounded-[14px] bg-canvas p-3 text-sm text-ink-2">
+                {check.price.before === null
+                  ? `New bookings here will be priced at ×${check.price.after} (the ${tier.charAt(0) + tier.slice(1).toLowerCase()} tier price).`
+                  : `Saving changes this zone’s price from ×${check.price.before} to ×${check.price.after} for new bookings.`}
               </p>
             )}
             {check.state === 'error' && <p className="text-sm text-danger">{check.text}</p>}

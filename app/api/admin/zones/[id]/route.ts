@@ -28,11 +28,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const active = typeof body?.active === 'boolean' ? body.active : current.active
   const dryRun = req.nextUrl.searchParams.get('dryRun') === '1'
 
-  const result = await saveZone({ id, input, active, actorId: auth.user.id, dryRun })
+  const result = await saveZone({ id, input, active, actorId: auth.user.id, actorRole: auth.dbUser.role, dryRun })
   if (!result.ok) {
-    return NextResponse.json({ error: result.error, overlaps: result.overlaps, moves: result.moves }, { status: result.error === 'Zone not found' ? 404 : 409 })
+    return NextResponse.json({ error: result.error, overlaps: result.overlaps, moves: result.moves, price: result.price }, { status: result.status ?? (result.error === 'Zone not found' ? 404 : 409) })
   }
-  return NextResponse.json({ success: true, dryRun, zoneId: id, moves: result.moves })
+  return NextResponse.json({ success: true, dryRun, zoneId: id, moves: result.moves, price: result.price })
 }
 
 // Deletes a zone nothing uses. Anything linked (customers, drivers, sites, orders) keeps it: switch it off instead.

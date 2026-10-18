@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   if ('error' in input) return NextResponse.json({ error: input.error }, { status: 400 })
   const dryRun = req.nextUrl.searchParams.get('dryRun') === '1'
 
-  const result = await saveZone({ id: null, input, active: body?.active !== false, actorId: auth.user.id, dryRun })
-  if (!result.ok) return NextResponse.json({ error: result.error, overlaps: result.overlaps, moves: result.moves }, { status: 409 })
-  return NextResponse.json({ success: true, dryRun, zoneId: result.zoneId ?? null, moves: result.moves })
+  const result = await saveZone({ id: null, input, active: body?.active !== false, actorId: auth.user.id, actorRole: auth.dbUser.role, dryRun })
+  if (!result.ok) return NextResponse.json({ error: result.error, overlaps: result.overlaps, moves: result.moves, price: result.price }, { status: result.status ?? 409 })
+  return NextResponse.json({ success: true, dryRun, zoneId: result.zoneId ?? null, moves: result.moves, price: result.price })
 }

@@ -7,6 +7,8 @@ import { SectionTitle } from '@/components/ops/kit'
 import RuleActions from '@/components/ops/RuleActions'
 import { dateLabel } from '@/lib/format'
 import TaxForm from '@/components/ops/TaxForm'
+import TierPriceForm from '@/components/ops/TierPriceForm'
+import { getTierPrices } from '@/lib/tier-price-server'
 
 export default async function PricingRulesPage() {
   const supabase = await createClient()
@@ -18,7 +20,7 @@ export default async function PricingRulesPage() {
     redirect('/ops')
   }
 
-  const [rules, sizes, tax] = await Promise.all([
+  const [rules, sizes, tax, tierPrices, following] = await Promise.all([
     prisma.pricingRule.findMany({
       orderBy: { createdAt: 'desc' },
       include: { binPrices: { include: { binSize: true } } },
@@ -32,16 +34,20 @@ export default async function PricingRulesPage() {
       where: { id: 1 },
       select: { vatPercent: true, nhilPercent: true, getfundPercent: true, withholdingPercent: true },
     }),
+    getTierPrices(),
+    prisma.zone.groupBy({ by: ['tier'], where: { followsTier: true }, _count: { _all: true } }),
   ])
 
   return (
     <div className="grid max-w-3xl gap-8">
       <PageHeader
         title="Pricing"
-        lead="Price = (base fee + each bin's fee and per-bin charge) × the zone multiplier, minus the recyclable discount, plus hazard and late surcharges. Worked out on the server; the browser never sets a price. The platform fee is fixed on each order when it is priced, so a change here only affects new bookings."
+        lead="Price = (base fee + each bin's fee and per-bin charge) × the zone multiplier (its tier's, or its own), minus the recyclable discount, plus hazard and late surcharges. Worked out on the server; the browser never sets a price. The platform fee is fixed on each order when it is priced, so a change here only affects new bookings."
       />
 
       <PricingRuleForm sizes={sizes} />
+
+      <TierPriceForm current={tierPrices} following={Object.fromEntries(following.map((f) => [f.tier, f._count._all]))} />
 
       <TaxForm current={tax ?? { vatPercent: 0, nhilPercent: 0, getfundPercent: 0, withholdingPercent: 0 }} />
 

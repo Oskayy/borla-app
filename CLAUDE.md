@@ -32,13 +32,17 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   converted to 32-sided outlines just outside them). An address belongs to the zone whose outline contains it
   (`lib/zone-match.ts`); zones can't overlap (checked on save, in a Serializable transaction, `lib/zone-save-server.ts`), saving
   moves affected customers and is logged (`ZONE_CREATED/CHANGED/DELETED`). Only Super Admin and Ops Manager change zones
-  (`ZONE_EDIT_ROLES`); `Zone.tier` (premium/standard/basic) is stored but doesn't change prices yet. Zones are drawn on a
+  (`ZONE_EDIT_ROLES`); `Zone.tier` (premium/standard/basic) sets the price of zones that follow it (see Price below). Zones are drawn on a
   satellite map on the Zones page (Mapbox GL Draw, `components/ops/ZoneDrawMap.tsx`): overlaps show red with "Trim to fit"
   (`trimToFit`), and a dry run (`?dryRun=1`) shows how many customers a save moves. "Suggest zones" (`lib/zone-suggest*.ts`, `/api/admin/zones/suggest`, max
   150 km², 10 scans an hour) proposes one zone per OpenStreetMap neighbourhood (or a grid) away from existing zones, with a
   tier from the share of buildings with a pool, building density and our order values; one Overpass request per scan
-  (often 30-90 s, cached a day). Nothing is saved until a person reviews it in the zone form. Tier prices: phase D (Collins).
-- Price = base by bin size (30/60/120 L, placeholders) x **per-zone multiplier**. Customers must drop an exact
+  (often 30-90 s, cached a day). Nothing is saved until a person reviews it in the zone form.
+- Price = base by bin size (30/60/120 L, placeholders) x **per-zone multiplier**. Since 19 Oct 2026 the multiplier is either
+  the zone's **tier price** (`TierPrice` table, Pricing page, all 1.0 for now; `Zone.followsTier`, new zones follow) or its
+  **own price** (all zones from before 19 Oct). Only Super Admin and Finance change either (`lib/tier-price*.ts`); saving a
+  tier price updates every zone following it in one transaction, logged `TIER_PRICES_CHANGED`. A tier change that would
+  change a zone's price needs a Super Admin (Ops Managers are refused). Customers must drop an exact
   pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
 - Platform fee is taken off the top; the **driver pool** is paid **40% at pickup, 60% at disposal**
   (disposal released by the site geofence, or by ops review on "Unloads to Check"). `PayoutRule` table.
@@ -113,7 +117,7 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 ## Open work (as of 13 Oct 2026)
 
-**State (checked 13 Oct 2026):** all migrations applied (latest `20261018120000_zone_outlines`, applied 18 Oct); build, lint and tests
+**State (checked 13 Oct 2026):** all migrations applied (latest `20261019120000_tier_prices`, applied 19 Oct); build, lint and tests
 pass; work committed and pushed. The payment flow rewrite (steps 2–7) is live. Paystack is still in **test mode**.
 The local `.env` and Vercel both use the new `sb_secret_` Supabase key. The database pooler sometimes drops a connection
 for a few seconds: if a migration or script says "Can't reach database server", wait and run it again.

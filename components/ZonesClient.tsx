@@ -19,6 +19,7 @@ interface ZoneWithCount {
   active: boolean
   priceMultiplier: number
   tier: string
+  followsTier: boolean
   boundary: unknown
   areaKm2: number | null // size of the drawn outline
   corners: number
@@ -29,10 +30,12 @@ export default function ZonesClient({
   zones,
   canEditZones,
   canEditPrice,
+  tierPrices,
 }: {
   zones: ZoneWithCount[]
   canEditZones: boolean
   canEditPrice: boolean
+  tierPrices: Record<string, number>
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<ZoneDraft | null>(null)
@@ -104,7 +107,7 @@ export default function ZonesClient({
                     </button>
                   )}
                 </div>
-                <ZoneMultiplierEditor zoneId={zone.id} value={zone.priceMultiplier} canEdit={canEditPrice} />
+                <ZoneMultiplierEditor zoneId={zone.id} value={zone.priceMultiplier} followsTier={zone.followsTier} tier={zone.tier} tierPrice={tierPrices[zone.tier] ?? 1} canEdit={canEditPrice} />
               </li>
             ))}
           </ul>
