@@ -32,8 +32,9 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   converted to 32-sided outlines just outside them). An address belongs to the zone whose outline contains it
   (`lib/zone-match.ts`); zones can't overlap (checked on save, in a Serializable transaction, `lib/zone-save-server.ts`), saving
   moves affected customers and is logged (`ZONE_CREATED/CHANGED/DELETED`). Only Super Admin and Ops Manager change zones
-  (`ZONE_EDIT_ROLES`); `Zone.tier` (premium/standard/basic) is stored but doesn't change prices yet. Drawing tool and
-  automatic suggestions: phases B and C.
+  (`ZONE_EDIT_ROLES`); `Zone.tier` (premium/standard/basic) is stored but doesn't change prices yet. Zones are drawn on a
+  satellite map on the Zones page (Mapbox GL Draw, `components/ops/ZoneDrawMap.tsx`): overlaps show red with "Trim to fit"
+  (`trimToFit`), and a dry run (`?dryRun=1`) shows how many customers a save moves. Automatic suggestions: phase C.
 - Price = base by bin size (30/60/120 L, placeholders) x **per-zone multiplier**. Customers must drop an exact
   pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
 - Platform fee is taken off the top; the **driver pool** is paid **40% at pickup, 60% at disposal**

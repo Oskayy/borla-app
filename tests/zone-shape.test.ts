@@ -146,3 +146,18 @@ describe('parseZoneBody', async () => {
     expect(ZONE_EDIT_ROLES).toEqual(['SUPER_ADMIN', 'OPS_MANAGER'])
   })
 })
+
+describe('trimToFit', async () => {
+  const { trimToFit } = await import('@/lib/zone-shape')
+  it('cuts the overlap away so the result only touches the neighbour', () => {
+    const neighbour = shape(sq(-0.02, 5.66))
+    const drawn = shape(sq(-0.01, 5.66)) // half on top of the neighbour
+    const t = trimToFit(drawn, [neighbour])
+    expect(t).not.toBeNull()
+    expect(overlapKm2(t!, neighbour)).toBeLessThan(0.001)
+    expect(areaKm2(t!)).toBeGreaterThan(areaKm2(drawn) * 0.4)
+  })
+  it('gives nothing back when the outline is wholly inside another zone', () => {
+    expect(trimToFit(shape(sq(-0.015, 5.665, 0.005)), [shape(sq(-0.02, 5.66))])).toBeNull()
+  })
+})

@@ -4,6 +4,7 @@
 
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
 import intersect from '@turf/intersect'
+import difference from '@turf/difference'
 import area from '@turf/area'
 import kinks from '@turf/kinks'
 import { featureCollection, polygon as turfPolygon } from '@turf/helpers'
@@ -111,4 +112,27 @@ export function circleToBoundary(lat: number, lng: number, radiusKm: number, sid
   }
   ring[sides] = [ring[0][0], ring[0][1]]
   return { type: 'Polygon', coordinates: [ring] }
+}
+
+// "Trim to fit": cuts the parts of an outline that overlap other zones. If the cut leaves several pieces, the largest
+// is kept. Returns null when nothing sensible is left. The server checks the result again before saving.
+export function trimToFit(shape: ZoneBoundary, others: ZoneBoundary[]): ZoneBoundary | null {
+  let current: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> | null = turfPolygon(shape.coordinates)
+  for (const o of others) {
+    if (!current) return null
+    if (overlapKm2(shape, o) <= OVERLAP_TOLERANCE_KM2) continue
+    current = difference(featureCollection([current, turfPolygon(o.coordinates)]))
+  }
+  if (!current) return null
+  const g = current.geometry
+  const rings: Position[][] = g.type === 'Polygon' ? [g.coordinates[0] as Position[]] : g.coordinates.map((p) => p[0] as Position[])
+  let best: Position[] | null = null
+  let bestArea = 0
+  for (const r of rings) {
+    const a = area(turfPolygon([r])) / 1e6
+    if (a > bestArea) [best, bestArea] = [r, a]
+  }
+  if (!best) return null
+  const out = parseBoundary({ type: 'Polygon', coordinates: [best] })
+  return isShapeError(out) ? null : out
 }

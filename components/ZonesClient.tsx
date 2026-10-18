@@ -18,6 +18,7 @@ interface ZoneWithCount {
   active: boolean
   priceMultiplier: number
   tier: string
+  boundary: unknown
   areaKm2: number | null // size of the drawn outline
   corners: number
   _count: { drivers: number; customers: number }
@@ -38,7 +39,9 @@ export default function ZonesClient({
 
   return (
     <div className="grid gap-8">
-      {canEditZones && <ZoneForm editingZone={editingZone} onDoneEditing={() => setEditingId(null)} otherZones={zones} />}
+      {canEditZones && (
+        <ZoneForm key={editingZone?.id ?? 'new'} editingZone={editingZone} onDoneEditing={() => setEditingId(null)} otherZones={zones} />
+      )}
 
       <section aria-labelledby="h-zones">
         <SectionTitle id="h-zones" count={zones.length}>
@@ -66,7 +69,10 @@ export default function ZonesClient({
                     {zone.coveredAreas.length > 0 && <p className="mt-0.5 text-sm text-ink-2">Covers {zone.coveredAreas.join(', ')}</p>}
                   </div>
                   {canEditZones && (
-                    <button type="button" onClick={() => setEditingId(zone.id)} className={BUTTON_QUIET}>
+                    <button type="button" onClick={() => {
+                        setEditingId(zone.id)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }} className={BUTTON_QUIET}>
                       <Pencil aria-hidden className="size-4" /> Edit
                     </button>
                   )}

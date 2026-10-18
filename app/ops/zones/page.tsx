@@ -28,7 +28,7 @@ export default async function ZonesPage() {
   })
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-[1400px]">
       <PageHeader
         title="Zones"
         lead="Where customers can book. Each zone is an outline on the map; a booking's pin must fall inside an active zone, and that zone's multiplier scales its price. Zones can't overlap, so every address has one price."
@@ -42,7 +42,7 @@ export default async function ZonesPage() {
       <ZonesClient
         zones={zones.map((z) => {
           const b = storedBoundary(z.boundary)
-          return { ...z, boundary: undefined, areaKm2: b ? Math.round(areaKm2(b) * 10) / 10 : null, corners: b ? b.coordinates[0].length - 1 : 0 }
+          return { ...z, boundary: b, areaKm2: b ? Math.round(areaKm2(b) * 10) / 10 : null, corners: b ? b.coordinates[0].length - 1 : 0 }
         })}
        canEditZones={ZONE_EDIT_ROLES.includes(dbUser.role)} canEditPrice={PRICE_EDIT_ROLES.includes(dbUser.role)} />
     </div>

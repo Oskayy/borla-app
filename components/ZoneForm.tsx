@@ -1,183 +1,294 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import ZoneMap from './ZoneMap'
+import { AlertTriangle, CheckCircle2, RotateCcw, Scissors, Users } from 'lucide-react'
 import { BUTTON_DANGER, BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
-import { CHECK, PANEL, Result } from '@/components/ops/kit'
+import { CHECK, PANEL, Result, SELECT } from '@/components/ops/kit'
+import Skeleton from '@/components/kit/Skeleton'
+import { areaKm2, isShapeError, OVERLAP_TOLERANCE_KM2, overlapKm2, parseBoundary, storedBoundary, trimToFit, type ZoneBoundary } from '@/lib/zone-shape'
+import type { OtherZone } from '@/components/ops/ZoneDrawMap'
 
-interface ExistingZone {
+// The map and its drawing tools load only on this page, and only in the browser.
+const ZoneDrawMap = dynamic(() => import('@/components/ops/ZoneDrawMap'), { ssr: false, loading: () => <Skeleton className="h-[520px] rounded-none" /> })
+
+export interface ExistingZone {
   id: string
   name: string
   city: string
-  centerLat: number | null
-  centerLng: number | null
-  radiusKm: number
   coveredAreas: string[]
   active: boolean
+  tier: string
+  boundary: unknown
 }
 
-export default function ZoneForm({
-  editingZone,
-  onDoneEditing,
-  otherZones,
-}: {
-  editingZone?: ExistingZone | null
-  onDoneEditing?: () => void
-  otherZones: ExistingZone[]
-}) {
+interface Check {
+  state: 'idle' | 'checking' | 'ok' | 'blocked' | 'error'
+  text?: string
+  overlaps?: { id: string; name: string; km2: number }[]
+  moves?: { toThis: number; awayFromThis: number }
+}
+
+const TIERS = [
+  { value: 'PREMIUM', label: 'Premium' },
+  { value: 'STANDARD', label: 'Standard' },
+  { value: 'BASIC', label: 'Basic' },
+]
+
+// Create or change a zone by drawing its outline. Before saving, the server checks the outline (dry run) and says
+// whether it overlaps another zone and how many customers would move; saving is blocked while it overlaps.
+export default function ZoneForm({ editingZone, onDoneEditing, otherZones }: { editingZone?: ExistingZone | null; onDoneEditing?: () => void; otherZones: ExistingZone[] }) {
+  const isEditing = !!editingZone
   const [name, setName] = useState(editingZone?.name ?? '')
   const [city, setCity] = useState(editingZone?.city ?? '')
-  const [centerLat, setCenterLat] = useState(editingZone?.centerLat?.toString() ?? '')
-  const [centerLng, setCenterLng] = useState(editingZone?.centerLng?.toString() ?? '')
-  const [radiusKm, setRadiusKm] = useState(editingZone?.radiusKm?.toString() ?? '3')
   const [coveredAreas, setCoveredAreas] = useState(editingZone?.coveredAreas?.join(', ') ?? '')
+  const [tier, setTier] = useState(editingZone?.tier ?? 'STANDARD')
   const [active, setActive] = useState(editingZone?.active ?? true)
+  const [boundary, setBoundary] = useState<ZoneBoundary | null>(storedBoundary(editingZone?.boundary))
+  const [check, setCheck] = useState<Check>({ state: 'idle' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const isEditing = !!editingZone
+  const others: OtherZone[] = useMemo(
+    () => otherZones.filter((z) => z.id !== editingZone?.id).map((z) => ({ id: z.id, name: z.name, active: z.active, boundary: z.boundary })),
+    [otherZones, editingZone?.id]
+  )
+  const shapeProblem = boundary ? parseBoundary(boundary) : null
+  const localError = shapeProblem && isShapeError(shapeProblem) ? shapeProblem.error : null
+  const km2 = boundary && !localError ? areaKm2(boundary) : null
+  // Overlaps worked out in the browser, so the warning shows at once; the server checks again on save.
+  const localOverlaps = useMemo(() => {
+    if (!boundary || localError || !active) return []
+    return others
+      .filter((o) => o.active)
+      .map((o) => {
+        const b = storedBoundary(o.boundary)
+        return { name: o.name, km2: b ? overlapKm2(boundary, b) : 0 }
+      })
+      .filter((o) => o.km2 > OVERLAP_TOLERANCE_KM2)
+  }, [boundary, localError, active, others])
 
-  const previewValid = centerLat !== '' && centerLng !== '' && !isNaN(Number(centerLat)) && !isNaN(Number(centerLng))
-  const preview = previewValid
-    ? { centerLat: Number(centerLat), centerLng: Number(centerLng), radiusKm: Number(radiusKm) || 3, name: name || 'New Zone' }
-    : null
+  const body = (extra: Record<string, unknown> = {}) =>
+    JSON.stringify({ name: name.trim() || 'New zone', city: city.trim() || '-', coveredAreas, tier, active, boundary, ...extra })
+  const url = isEditing ? `/api/admin/zones/${editingZone!.id}` : '/api/admin/zones'
+  const method = isEditing ? 'PATCH' : 'POST'
 
-  function resetForm() {
-    setName('')
-    setCity('')
-    setCenterLat('')
-    setCenterLng('')
-    setRadiusKm('3')
-    setCoveredAreas('')
-    setActive(true)
+  // Ask the server what saving would do, a moment after the outline stops changing.
+  useEffect(() => {
+    if (!boundary || localError) return
+    let stale = false
+    const t = window.setTimeout(async () => {
+      setCheck({ state: 'checking' })
+      try {
+        const res = await fetch(`${url}?dryRun=1`, { method, headers: { 'Content-Type': 'application/json' }, body: body() })
+        const data = await res.json().catch(() => ({}))
+        if (stale) return
+        if (res.ok) setCheck({ state: 'ok', moves: data.moves })
+        else if (res.status === 409) setCheck({ state: 'blocked', text: data.error, overlaps: data.overlaps, moves: data.moves })
+        else setCheck({ state: 'error', text: data.error || 'Could not check the outline' })
+      } catch {
+        if (!stale) setCheck({ state: 'error', text: 'Could not reach Trashit to check the outline' })
+      }
+    }, 600)
+    return () => {
+      stale = true
+      window.clearTimeout(t)
+    }
+    // body() reads the same values listed here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boundary, active, localError])
+
+  function trim() {
+    if (!boundary) return
+    const shapes = others.filter((o) => o.active).map((o) => storedBoundary(o.boundary)).filter((b): b is ZoneBoundary => !!b)
+    const t = trimToFit(boundary, shapes)
+    if (!t) {
+      setError('Nothing is left once the overlap is cut away. Draw the outline again.')
+      return
+    }
+    setError('')
+    setBoundary(t)
   }
 
   async function submit() {
     setError('')
+    if (!name.trim() || !city.trim()) return setError('Give the zone a name and a city')
+    if (!boundary) return setError('Draw the zone on the map')
+    if (localError) return setError(localError)
     setLoading(true)
-
-    const url = isEditing ? `/api/admin/zones/${editingZone!.id}` : '/api/admin/zones'
-    const method = isEditing ? 'PATCH' : 'POST'
-
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, city, centerLat, centerLng, radiusKm, coveredAreas, active }),
-    })
-    const data = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(data.error || 'Failed to save zone')
-      return
+    try {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body({ name: name.trim(), city: city.trim() }) })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Could not save the zone')
+        if (res.status === 409) setCheck({ state: 'blocked', text: data.error, overlaps: data.overlaps, moves: data.moves })
+        return
+      }
+      if (isEditing) onDoneEditing?.()
+      else {
+        setName('')
+        setCity('')
+        setCoveredAreas('')
+        setTier('STANDARD')
+        setBoundary(null)
+        setCheck({ state: 'idle' })
+      }
+      router.refresh()
+    } catch {
+      setError('Could not reach Trashit. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    if (isEditing) {
-      onDoneEditing?.()
-    } else {
-      resetForm()
-    }
-    router.refresh()
   }
 
+  const [confirmDelete, setConfirmDelete] = useState(false)
   async function handleDelete() {
     if (!editingZone) return
-    if (!confirm(`Delete "${editingZone.name}"? This cannot be undone.`)) return
-
     setError('')
     setLoading(true)
-    const res = await fetch(`/api/admin/zones/${editingZone.id}`, { method: 'DELETE' })
-    const data = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(data.error || 'Failed to delete zone')
-      return
+    try {
+      const res = await fetch(`/api/admin/zones/${editingZone.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) return setError(data.error || 'Could not delete the zone')
+      onDoneEditing?.()
+      router.refresh()
+    } finally {
+      setLoading(false)
+      setConfirmDelete(false)
     }
-
-    onDoneEditing?.()
-    router.refresh()
   }
 
+  const blocked = check.state === 'blocked' || localOverlaps.length > 0
+  const overlapText =
+    check.state === 'blocked' && check.text
+      ? check.text
+      : `This zone overlaps ${localOverlaps.map((o) => `${o.name} (${o.km2.toFixed(2)} km²)`).join(', ')}. Every address must be in one zone only: move its edge, or use Trim to fit.`
   const label = 'text-sm font-medium text-ink-2'
   return (
-    <div className="grid gap-4">
-      <section aria-labelledby="h-zone-form" className={PANEL}>
-        <h2 id="h-zone-form" className="text-base font-semibold tracking-tight">
-          {isEditing ? `Edit ${editingZone!.name}` : 'New zone'}
+    <section aria-labelledby="h-zone-form" className={`${PANEL} grid gap-5`}>
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 id="h-zone-form" className="text-lg font-semibold tracking-tight">
+          {isEditing ? `Edit ${editingZone!.name}` : 'Draw a new zone'}
         </h2>
+        {km2 != null && <span className="rounded-full bg-canvas px-3 py-1 text-sm tabular-nums text-ink-2">{km2.toFixed(1)} km² · {boundary!.coordinates[0].length - 1} corners</span>}
+      </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="grid gap-2">
+          <div className="overflow-hidden rounded-[16px] ring-1 ring-line">
+            <ZoneDrawMap value={boundary} others={others} onChange={setBoundary} startKey={editingZone?.id ?? 'new'} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="min-w-0 flex-1 text-sm text-ink-3">
+              {boundary ? 'Drag a white corner to move it; click a small dot between corners to add one.' : 'Click on the map to place each corner. Double-click, or click the first corner, to finish.'}
+            </p>
+            {boundary && (
+              <button type="button" onClick={() => setBoundary(null)} className={`${BUTTON_QUIET} min-h-10`}>
+                <RotateCcw aria-hidden className="size-4" /> Start again
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid content-start gap-4">
           <label className="block">
             <span className={label}>Zone name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Tema Community Belt" />
+            <input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. East Legon" />
           </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className={label}>City</span>
+              <input value={city} maxLength={60} onChange={(e) => setCity(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Accra" />
+            </label>
+            <label className="block">
+              <span className={label}>Tier</span>
+              <select value={tier} onChange={(e) => setTier(e.target.value)} className={`${SELECT} mt-1.5 w-full`}>
+                {TIERS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <label className="block">
-            <span className={label}>City</span>
-            <input value={city} onChange={(e) => setCity(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Tema" />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className={label}>Towns and communities covered (comma-separated)</span>
-            <input
-              value={coveredAreas}
-              onChange={(e) => setCoveredAreas(e.target.value)}
-              className={`${FIELD} mt-1.5`}
-              placeholder="e.g. Tema Community 1, Tema Community 4"
-            />
-          </label>
-          <label className="block">
-            <span className={label}>Centre latitude</span>
-            <input type="number" step="any" value={centerLat} onChange={(e) => setCenterLat(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} placeholder="e.g. 5.6698" />
-          </label>
-          <label className="block">
-            <span className={label}>Centre longitude</span>
-            <input type="number" step="any" value={centerLng} onChange={(e) => setCenterLng(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} placeholder="e.g. -0.0166" />
-          </label>
-          <label className="block">
-            <span className={label}>Radius (km)</span>
-            <input type="number" step="0.1" value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} placeholder="e.g. 3" />
+            <span className={label}>Neighbourhoods covered (comma-separated)</span>
+            <input value={coveredAreas} onChange={(e) => setCoveredAreas(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. East Legon, Adjiringanor" />
           </label>
           {isEditing && (
-            <label className="flex min-h-11 items-center gap-2 self-end text-[15px] font-medium">
+            <label className="flex min-h-11 items-center gap-2 text-[15px] font-medium">
               <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className={CHECK} />
               Active (customers can book here)
             </label>
           )}
-        </div>
-        {!isEditing && (
-          <p className="mt-3 text-sm text-ink-3">
-            To find the centre: in Google Maps, right-click the middle of the area and click the coordinates to copy them.
-          </p>
-        )}
+          <p className="text-xs text-ink-3">The tier groups zones for reports; prices per tier come later. Each zone&apos;s price multiplier is set by Finance in the list below.</p>
 
-        <Result msg={error ? { ok: false, text: error } : null} />
-        <div className="mt-4 flex flex-wrap gap-2.5">
-          <button type="button" onClick={submit} disabled={loading} className={BUTTON_PRIMARY}>
-            {loading ? 'Saving…' : isEditing ? 'Save changes' : 'Create zone'}
-          </button>
-          {isEditing && (
-            <>
+          {/* What saving would do */}
+          <div aria-live="polite" className="grid gap-2">
+            {localError && boundary && (
+              <p className="flex items-start gap-2 rounded-[14px] bg-danger-wash p-3 text-sm text-danger">
+                <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" /> {localError}
+              </p>
+            )}
+            {!localError && !blocked && check.state === 'checking' && <p className="text-sm text-ink-3">Checking the outline…</p>}
+            {!localError && blocked && (
+              <div className="grid gap-2 rounded-[14px] bg-danger-wash p-3 text-sm text-danger">
+                <p className="flex items-start gap-2">
+                  <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" /> {overlapText}
+                </p>
+                <button type="button" onClick={trim} className={`${BUTTON_QUIET} min-h-10 justify-self-start bg-surface`}>
+                  <Scissors aria-hidden className="size-4" /> Trim to fit
+                </button>
+              </div>
+            )}
+            {!localError && !blocked && check.state === 'ok' && (
+              <p className="flex items-start gap-2 rounded-[14px] bg-ok-wash p-3 text-sm text-ok-deep">
+                <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0" /> No overlaps. Ready to save.
+              </p>
+            )}
+            {!localError && check.moves && (check.moves.toThis > 0 || check.moves.awayFromThis > 0) && (
+              <p className="flex items-start gap-2 rounded-[14px] bg-canvas p-3 text-sm text-ink-2">
+                <Users aria-hidden className="mt-0.5 size-4 shrink-0" />
+                Saving moves {check.moves.toThis} {check.moves.toThis === 1 ? 'customer' : 'customers'} into this zone
+                {check.moves.awayFromThis > 0 && ` and ${check.moves.awayFromThis} out of it`}. Orders already paid keep their price.
+              </p>
+            )}
+            {check.state === 'error' && <p className="text-sm text-danger">{check.text}</p>}
+          </div>
+
+          <Result msg={error ? { ok: false, text: error } : null} />
+          <div className="flex flex-wrap gap-2.5">
+            <button type="button" onClick={submit} disabled={loading || blocked || !!localError || !boundary} className={BUTTON_PRIMARY}>
+              {loading ? 'Saving…' : isEditing ? 'Save changes' : 'Create zone'}
+            </button>
+            {isEditing && (
               <button type="button" onClick={onDoneEditing} disabled={loading} className={BUTTON_QUIET}>
                 Cancel
               </button>
-              <button type="button" onClick={handleDelete} disabled={loading} className={`${BUTTON_DANGER} sm:ml-auto`}>
-                Delete zone
+            )}
+          </div>
+          {isEditing &&
+            (confirmDelete ? (
+              <div className="grid gap-2 rounded-[14px] bg-danger-wash p-3 text-sm">
+                <p>Delete &ldquo;{editingZone!.name}&rdquo;? This can&apos;t be undone. Zones with customers, drivers, sites or orders can only be switched off.</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={handleDelete} disabled={loading} className={BUTTON_DANGER}>
+                    Delete zone
+                  </button>
+                  <button type="button" onClick={() => setConfirmDelete(false)} className={BUTTON_QUIET}>
+                    Keep it
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setConfirmDelete(true)} disabled={loading} className="justify-self-start text-sm font-semibold text-danger hover:underline">
+                Delete this zone
               </button>
-            </>
-          )}
-        </div>
-      </section>
-
-      <div>
-        <p className="mb-2 text-sm text-ink-3">
-          {preview ? 'Live preview: the circle follows the fields above.' : 'Enter a centre above to preview the zone on the map.'}
-        </p>
-        <div className="overflow-hidden rounded-card ring-1 ring-line">
-          <ZoneMap zones={isEditing ? otherZones.filter((z) => z.id !== editingZone!.id) : otherZones} preview={preview} />
+            ))}
         </div>
       </div>
-    </div>
+    </section>
   )
 }
