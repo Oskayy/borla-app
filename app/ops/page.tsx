@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import { AlertTriangle, BadgeCheck, Flag, Landmark, Route, Star, Undo2, Wallet, type LucideIcon } from 'lucide-react'
+import type { OrderStatus } from '@prisma/client'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
-import { isDriverAvailable, isWithinShift, localParts, windowLabel } from '@/lib/shift'
+import { addDays, isDriverAvailable, isWithinShift, localParts, windowLabel } from '@/lib/shift'
 import { dbDate, planningShiftDate } from '@/lib/schedule'
 import { worksNight } from '@/lib/availability'
 import { REFUND_ROLES } from '@/lib/refunds'
@@ -59,6 +60,12 @@ function onlineNow<T extends { isOnline: boolean; onlineOverrideUntil: Date | nu
   const now = new Date()
   return drivers.filter((d) => isDriverAvailable(d, now, settings))
 }
+
+// Roles that see what tonight is worth.
+const MONEY_VIEW = ['SUPER_ADMIN', 'OPS_MANAGER', 'FINANCE', 'ANALYST']
+
+// Collected at least as far as the driver's vehicle.
+const COLLECTED = ['PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED'] as OrderStatus[]
 
 // Stages of tonight's orders.
 const STAGES = [
@@ -161,6 +168,37 @@ export default async function OpsOverview() {
 
   const count = (key: string) => stageCounts.find((s) => s.key === key)?.count ?? 0
 
+  // Pickups collected on each of the last seven nights (tonight so far last), and tonight's orders by zone.
+  const nights = Array.from({ length: 7 }, (_, i) => addDays(night, i - 6))
+  const perNight = await prisma.order.groupBy({
+    by: ['shiftDate'],
+    where: { shiftDate: { gte: dbDate(nights[0]), lte: dbDate(night) }, status: { in: COLLECTED } },
+    _count: { _all: true },
+  })
+  const week = nights.map((n) => ({
+    label: new Date(`${n}T12:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short' }),
+    value: perNight.find((p) => p.shiftDate && p.shiftDate.toISOString().slice(0, 10) === n)?._count._all ?? 0,
+  }))
+  const zoneCounts = await prisma.order.groupBy({
+    by: ['zoneId'],
+    where: { shiftDate: dbDate(night), status: { notIn: ['DRAFT', 'PENDING_PAYMENT', 'CANCELLED'] } },
+    _count: { _all: true },
+  })
+  const zoneNames = await prisma.zone.findMany({ where: { id: { in: zoneCounts.map((z) => z.zoneId).filter((x): x is string => !!x) } }, select: { id: true, name: true } })
+  const byZoneAll = zoneCounts
+    .map((z) => ({ label: zoneNames.find((n) => n.id === z.zoneId)?.name ?? 'No zone', value: z._count._all }))
+    .sort((a, b) => b.value - a.value)
+  const byZone = byZoneAll.length > 4 ? [...byZoneAll.slice(0, 3), { label: 'Other', value: byZoneAll.slice(3).reduce((n, z) => n + z.value, 0) }] : byZoneAll
+
+  // What tonight's orders are worth: shown only to roles that already see money.
+  const seesMoney = MONEY_VIEW.includes(me.role)
+  const booked = seesMoney
+    ? await prisma.order.aggregate({
+        where: { shiftDate: dbDate(night), status: { notIn: ['DRAFT', 'PENDING_PAYMENT', 'CANCELLED'] } },
+        _sum: { pricePesewas: true },
+      })
+    : null
+
   return (
     <OpsOverviewView
       dateLine={`${label} · shift ${windowLabel(settings)}`}
@@ -175,6 +213,10 @@ export default async function OpsOverview() {
       working={working}
       waiting={waiting.map(({ key, count, title, hint, href, icon }) => ({ key, count, text: title(count), hint, href, icon }))}
       drivers={driverRows}
+      week={week}
+      byZone={byZone}
+      bookedGhs={booked ? (booked._sum.pricePesewas ?? 0) / 100 : null}
+      firstName={me.name.split(/\s+/)[0]}
     />
   )
 }

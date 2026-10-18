@@ -19,6 +19,9 @@ export interface OpsLink {
   queue?: QueueKey
 }
 
+// Customers page (read-only; phone numbers masked).
+export const CUSTOMER_PAGE_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'FINANCE', 'SUPPORT']
+
 const SETUP_VIEW = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE']
 const MONEY_RULES = ['SUPER_ADMIN', 'FINANCE']
 
@@ -33,10 +36,11 @@ export const OPS_SECTIONS: { title: string; links: OpsLink[] }[] = [
     ],
   },
   {
-    title: 'Drivers',
+    title: 'People',
     links: [
       { href: '/ops/drivers', label: 'Drivers', icon: 'Truck', roles: OPS_ROLES },
       { href: '/ops/driver-approvals', label: 'Approvals', icon: 'BadgeCheck', roles: APPROVAL_ROLES, queue: 'approvals' },
+      { href: '/ops/customers', label: 'Customers', icon: 'UserRound', roles: CUSTOMER_PAGE_ROLES },
       { href: '/ops/ratings', label: 'Ratings', icon: 'Star', roles: EXCEPTION_ROLES, queue: 'lowRatings' },
     ],
   },

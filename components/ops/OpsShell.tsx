@@ -25,6 +25,7 @@ import {
   Star,
   Tags,
   Truck,
+  UserRound,
   Users,
   Wallet,
   X,
@@ -53,6 +54,7 @@ const ICONS: Record<string, LucideIcon> = {
   Star,
   Tags,
   Truck,
+  UserRound,
   Users,
   Wallet,
 }
@@ -96,7 +98,7 @@ function Nav({ sections, onNavigate }: { sections: ShellSection[]; onNavigate?: 
     <nav aria-label="Ops" className="grid gap-5">
       {sections.map((s) => (
         <div key={s.title}>
-          <p className="px-3 text-xs font-semibold text-ink-3">{s.title}</p>
+          <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">{s.title}</p>
           <ul className="mt-1.5 grid gap-0.5">
             {s.links.map((l) => {
               const on = isActive(pathname, l.href)
@@ -107,7 +109,7 @@ function Nav({ sections, onNavigate }: { sections: ShellSection[]; onNavigate?: 
                     href={l.href}
                     onClick={onNavigate}
                     aria-current={on ? 'page' : undefined}
-                    className={`press flex min-h-11 items-center gap-3 rounded-control px-3 text-[14px] font-medium transition lg:min-h-10 ${
+                    className={`press flex min-h-11 items-center gap-3 rounded-[12px] px-3 text-[14px] font-medium transition lg:min-h-10 ${
                       on ? 'bg-selected text-on-selected shadow-card' : 'text-ink-2 hover:bg-surface hover:text-ink'
                     }`}
                   >
@@ -116,7 +118,7 @@ function Nav({ sections, onNavigate }: { sections: ShellSection[]; onNavigate?: 
                     {l.count > 0 && (
                       <span
                         className={`min-w-6 rounded-full px-1.5 py-0.5 text-center text-xs font-bold tabular-nums ${
-                          on ? 'bg-white text-ink' : URGENT.has(l.href) ? 'bg-danger text-white' : 'bg-surface text-ink-2 ring-1 ring-line'
+                          on ? 'bg-highlight text-on-highlight' : URGENT.has(l.href) ? 'bg-danger-wash text-danger' : 'bg-canvas text-ink-2'
                         }`}
                       >
                         {l.count > 99 ? '99+' : l.count}
@@ -311,7 +313,8 @@ function HealthMenu({ health, bad }: { health: ShellHealth[]; bad: number }) {
   )
 }
 
-// The ops console frame: an icon rail (moss and sky), a top bar with system health, the night shift, alerts,
+// The ops console frame: a labelled sidebar on computers, a folding icon rail on tablets, a drawer on phones (moss
+// and sky); a top bar with system health, the night shift, alerts,
 // 2FA status and the user. Phones get a drawer with the names.
 export default function OpsShell({
   sections,
@@ -371,7 +374,7 @@ export default function OpsShell({
       <aside
         ref={railRef}
         {...railProps}
-        className={`group/rail fixed inset-y-0 left-0 z-40 hidden w-[84px] flex-col items-stretch gap-3 overflow-hidden border-r border-line bg-rail pt-5 transition-[width,box-shadow] duration-300 ease-[var(--ease-out)] hover:w-[260px] hover:shadow-lift has-[:focus-visible]:w-[260px] has-[:focus-visible]:shadow-lift data-[open]:w-[260px] lg:flex ${RAIL_OPEN}`}
+        className={`group/rail fixed inset-y-0 left-0 z-40 hidden w-[84px] flex-col items-stretch gap-3 overflow-hidden border-r border-line bg-rail pt-5 transition-[width,box-shadow] duration-300 ease-[var(--ease-out)] hover:w-[260px] hover:shadow-lift has-[:focus-visible]:w-[260px] has-[:focus-visible]:shadow-lift data-[open]:w-[260px] lg:flex xl:hidden ${RAIL_OPEN}`}
       >
         <Link href="/ops" aria-label="Trashit operations home" className="mb-2 flex h-12 items-center gap-3 px-[22px]">
           <span className="grid size-10 shrink-0 place-items-center">
@@ -386,6 +389,9 @@ export default function OpsShell({
         </div>
         <Rail sections={sections} />
       </aside>
+
+      {/* Computers: the labelled sidebar, always open. */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] border-r border-line bg-surface xl:block">{sidebar()}</aside>
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
@@ -404,7 +410,7 @@ export default function OpsShell({
         </div>
       )}
 
-      <div className="lg:pl-[84px]">
+      <div className="lg:pl-[84px] xl:pl-[248px]">
         <header className="sticky top-0 z-20 border-b border-line bg-canvas/90 backdrop-blur-md">
           <div className="flex h-16 min-w-0 items-center gap-3 px-4 sm:px-6 lg:px-8">
             <button type="button" onClick={() => setOpen(true)} aria-label="Open menu" aria-expanded={open} className="-ml-2 grid size-11 place-items-center rounded-control hover:bg-canvas lg:hidden">

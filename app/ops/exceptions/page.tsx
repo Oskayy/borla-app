@@ -6,6 +6,7 @@ import { REFUND_ROLES, LIVE_REFUND_STATUSES, refundable } from '@/lib/refunds'
 import { PICKUP_CHECK_MARKER } from '@/lib/plausibility'
 import ExceptionsClient, { type ExceptionItem, type RefundRow } from '@/components/ExceptionsClient'
 import { PageHeader } from '@/components/ui'
+import { Kpi } from '@/components/ops/kit'
 
 export const dynamic = 'force-dynamic'
 
@@ -130,14 +131,30 @@ export default async function ExceptionsPage() {
     requestedByMe: r.requestedBy === dbUser.id,
   }))
 
+  const n = (k: ExceptionItem['kind']) => items.filter((i) => i.kind === k).length
+  const waitingRefunds = refundRows.filter((r) => ['AWAITING_APPROVAL', 'PENDING', 'NEEDS_ATTENTION'].includes(r.status))
+  const needsSecond = refundRows.filter((r) => r.status === 'AWAITING_APPROVAL').length
+  const refundTotal = waitingRefunds.reduce((t, r) => t + r.amount, 0)
+
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-[1400px]">
       <PageHeader
         title="Exceptions"
         lead={`Failed pickups, disputes, payment problems and pickup checks. Every decision needs a short note, which is kept on the order's history.${
           canRefund ? '' : ' Refunds need a Finance, Ops Manager or Super Admin account.'
         }`}
       />
+      <div className="anim-stagger mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <Kpi hero label="Open now" value={items.length} note={n('flagged') ? `${n('flagged')} failed or disputed` : 'None failed or disputed'} tone={n('flagged') ? 'bad' : 'good'} />
+        <Kpi label="Failed pickups and disputes" value={n('flagged')} note="Call the customer first" tone={n('flagged') ? 'bad' : 'good'} />
+        <Kpi label="Payment problems" value={n('payment')} note="Paid twice or the wrong amount" />
+        <Kpi
+          label="Refunds waiting"
+          value={`GHS ${refundTotal.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          note={needsSecond ? `${needsSecond} ${needsSecond === 1 ? 'needs' : 'need'} a second approver` : `${waitingRefunds.length} waiting`}
+          tone={needsSecond ? 'bad' : 'plain'}
+        />
+      </div>
       <ExceptionsClient items={items} refunds={refundRows} canRefund={canRefund} attemptFeePercent={pricing?.attemptFeePercent ?? 0} />
     </div>
   )

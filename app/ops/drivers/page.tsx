@@ -9,6 +9,9 @@ import { PageHeader } from '@/components/ui'
 import { APPROVAL_ROLES, DRIVER_DOCS_BUCKET } from '@/lib/driver-docs'
 import { maskGhanaCard } from '@/lib/ghana-card'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { dbDate, planningShiftDate } from '@/lib/schedule'
+import { weeklyAverages } from '@/lib/ops-stats'
+import { Kpi } from '@/components/ops/kit'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,6 +66,21 @@ export default async function DriversPage() {
   }
 
   const now = new Date()
+  const night = planningShiftDate(now, settings)
+  const since = new Date(now.getTime() - 35 * 86_400_000)
+  const since30 = new Date(now.getTime() - 30 * 86_400_000)
+  const ids = drivers.map((d) => d.id)
+  // Tonight's stops, ratings over five weeks and missed stops over 30 days, for every driver at once.
+  const tonight = await prisma.order.groupBy({
+    by: ['driverId', 'status'],
+    where: { shiftDate: dbDate(night), driverId: { in: ids } },
+    _count: { _all: true },
+  })
+  const ratings = await prisma.orderRating.findMany({ where: { driverId: { in: ids }, createdAt: { gte: since } }, select: { driverId: true, stars: true, createdAt: true } })
+  const misses = await prisma.driverMiss.groupBy({ by: ['driverId'], where: { driverId: { in: ids }, createdAt: { gte: since30 } }, _count: { _all: true } })
+  const trend = weeklyAverages(ratings, now)
+  const DONE = ['PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED']
+
   const rows = drivers
     .filter((d) => d.driverProfile)
     .map((d) => {
@@ -84,21 +102,42 @@ export default async function DriversPage() {
         lastLocationAt: available && p.lastLocationAt ? p.lastLocationAt.toISOString() : null,
         ghanaCard: canEditId ? maskGhanaCard(p.ghanaCardNumber) : null,
         cardPhotoUrl: cardPhotos.get(d.id) ?? null,
+        missingCard: canEditId && !p.ghanaCardNumber,
+        stopsTonight: tonight.filter((t) => t.driverId === d.id && t.status !== 'CANCELLED').reduce((n, t) => n + t._count._all, 0),
+        doneTonight: tonight.filter((t) => t.driverId === d.id && DONE.includes(t.status)).reduce((n, t) => n + t._count._all, 0),
+        rating: (() => {
+          const mine = ratings.filter((r) => r.driverId === d.id && r.createdAt >= since30)
+          return mine.length ? Math.round((mine.reduce((n, r) => n + r.stars, 0) / mine.length) * 10) / 10 : null
+        })(),
+        trend: trend.get(d.id) ?? [],
+        missed: misses.find((m) => m.driverId === d.id)?._count._all ?? 0,
       }
     })
     .sort((a, b) => Number(b.online) - Number(a.online))
 
   const shiftRunning = isWithinShift(now, settings)
   const onlineCount = rows.filter((r) => r.online).length
+  const recent = ratings.filter((r) => r.createdAt >= since30)
+  const avg = recent.length ? (recent.reduce((n, r) => n + r.stars, 0) / recent.length).toFixed(1) : null
+  const stops = rows.reduce((n, r) => n + r.stopsTonight, 0)
+  const done = rows.reduce((n, r) => n + r.doneTonight, 0)
+  const missed = rows.reduce((n, r) => n + r.missed, 0)
+  const worst = [...rows].sort((a, b) => b.missed - a.missed)[0]
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-[1400px]">
       <PageHeader
         title="Drivers"
         lead={`Shift hours ${windowLabel(settings)}; the shift is ${shiftRunning ? 'running now' : 'not running'}. ${onlineCount} of ${rows.length} ${
           rows.length === 1 ? 'driver' : 'drivers'
         } online. Drivers can only go online during shift hours; "Allow extra hours" lets one driver work outside them, for example to clear a backlog.`}
       />
+      <div className="anim-stagger mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <Kpi hero label="Online now" value={onlineCount} unit={`of ${rows.filter((r) => r.active).length}`} note={shiftRunning ? 'Shift running' : 'Shift not running'} />
+        <Kpi label="Stops tonight" value={stops} note={`${done} collected`} />
+        <Kpi label="Average rating, 30 days" value={avg ?? '—'} unit={avg ? '★' : undefined} note={`${recent.length} ${recent.length === 1 ? 'rating' : 'ratings'}`} />
+        <Kpi label="Missed stops, 30 days" value={missed} note={missed && worst ? `Most: ${worst.name} (${worst.missed})` : 'None'} tone={missed ? 'bad' : 'good'} />
+      </div>
       <DriversClient drivers={rows} canEditId={canEditId} />
     </div>
   )

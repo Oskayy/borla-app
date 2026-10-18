@@ -7,8 +7,14 @@ import WithdrawalsClient, { type WithdrawalRow } from '@/components/WithdrawalsC
 import { PageHeader } from '@/components/ui'
 import { getPaystackTransfers } from '@/lib/settings'
 import Link from 'next/link'
+import { Kpi } from '@/components/ops/kit'
 
 export const dynamic = 'force-dynamic'
+
+// Reads the clock: outside the component.
+function daysAgo(days: number): Date {
+  return new Date(Date.now() - days * 86_400_000)
+}
 
 export default async function WithdrawalsPage() {
   const supabase = await createClient()
@@ -31,6 +37,14 @@ export default async function WithdrawalsPage() {
       include: { driver: { select: { name: true, phone: true } } },
     }),
   ])
+
+  // Headline numbers: what waits, what waits for a second finance user, and what was paid in the last 7 days.
+  const weekAgo = daysAgo(7)
+  const paidWeek = await prisma.withdrawal.aggregate({ where: { status: 'PAID', paidAt: { gte: weekAgo } }, _sum: { amount: true, feePesewas: true }, _count: { _all: true } })
+  const sum = (rows: typeof open) => rows.reduce((n, w) => n + w.amount, 0)
+  const confirming = open.filter((w) => w.status === 'CONFIRMING')
+  const waitingRows = open.filter((w) => w.status !== 'CONFIRMING')
+  const money = (n: number) => `GHS ${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Each waiting driver's balance, as a sense check before paying.
   const balances = new Map<string, number>()
@@ -56,7 +70,7 @@ export default async function WithdrawalsPage() {
   })
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-[1400px]">
       <PageHeader
         title="Withdrawals"
         lead="Drivers are paid automatically every morning; large payouts, wallets changed in the last 24 hours, and cash-outs Paystack couldn't cover wait here. Send pays through Paystack from your Paystack balance. If Paystack transfers aren't on for your account yet, pay from your MoMo business wallet and use Mark paid with the transaction ID; a different finance user then confirms it."
@@ -71,6 +85,12 @@ export default async function WithdrawalsPage() {
           once Paystack allows them.
         </p>
       )}
+      <div className="anim-stagger mb-5 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <Kpi hero label="Waiting" value={money(sum(waitingRows))} note={`${waitingRows.length} ${waitingRows.length === 1 ? 'payout' : 'payouts'}`} />
+        <Kpi label="Waiting for a second finance user" value={money(sum(confirming))} note={`${confirming.length} to confirm`} tone={confirming.length ? 'bad' : 'plain'} />
+        <Kpi label="Paid in the last 7 days" value={money(paidWeek._sum.amount ?? 0)} note={`${paidWeek._count._all} payouts`} />
+        <Kpi label="Cash-out fees, 7 days" value={money((paidWeek._sum.feePesewas ?? 0) / 100)} note="Paid by drivers" />
+      </div>
       <WithdrawalsClient open={open.map(toRow)} recent={recent.map(toRow)} transfersOn={transfersOn} />
     </div>
   )

@@ -16,6 +16,8 @@ import { PageHeader } from '@/components/ui'
 import { AllClear, PANEL, SectionTitle } from '@/components/ops/kit'
 import { ConfirmSettlement, OpeningBalanceForm, ReviewCheck, TopUpForm, TransfersSwitch } from '@/components/ops/FinanceActions'
 import { getPaystackTransfers } from '@/lib/settings'
+import { Card, Kpi } from '@/components/ops/kit'
+import { AreaChart, DaySquares, DivergingBars } from '@/components/ops/charts'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,11 +39,21 @@ function Row({ label, value, hint, strong, minus }: { label: string; value: numb
   )
 }
 
-// Start of the month and of today, Accra time (reads the clock: outside the component).
+// Start of the month and of today, Accra time, and the starts of the last six months (reads the clock: outside the
+// component).
 function periods(timezone: string) {
   const { date } = localParts(new Date(), timezone)
-  return { today: date, monthStart: zonedInstant(`${date.slice(0, 8)}01`, 0, timezone) }
+  const y = Number(date.slice(0, 4))
+  const m = Number(date.slice(5, 7))
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(Date.UTC(y, m - 1 - (5 - i), 1))
+    const ymd = d.toISOString().slice(0, 10)
+    return { ymd, start: zonedInstant(ymd, 0, timezone), label: d.toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' }) }
+  })
+  return { today: date, monthStart: zonedInstant(`${date.slice(0, 8)}01`, 0, timezone), months }
 }
+
+const MARGIN_ACCOUNTS = [ACCOUNTS.platformFeeIncome, ACCOUNTS.paymentFees, ACCOUNTS.transferFees, ACCOUNTS.refundLosses, ACCOUNTS.reconciliationDifferences]
 
 export default async function FinancePage() {
   const supabase = await createClient()
@@ -51,7 +63,7 @@ export default async function FinancePage() {
   if (!dbUser || !PAYOUT_ROLES.includes(dbUser.role)) redirect('/ops')
 
   const [settings, transfersOn] = await Promise.all([getShiftSettings(), getPaystackTransfers()])
-  const { today, monthStart } = periods(settings.timezone)
+  const { today, monthStart, months } = periods(settings.timezone)
   const [byAccount, month, refunds, liveBalance, check, sweep, settlements, runs] = await Promise.all([
     prisma.posting.groupBy({ by: ['account'], _sum: { amount: true } }),
     prisma.posting.groupBy({ by: ['account'], where: { createdAt: { gte: monthStart } }, _sum: { amount: true } }),
@@ -83,15 +95,74 @@ export default async function FinancePage() {
   const losses = total(month, ACCOUNTS.refundLosses)
   const differences = total(month, ACCOUNTS.reconciliationDifferences)
 
+  // Margin for each of the last six months: income less costs, from the ledger.
+  const sixMonths = await prisma.posting.findMany({
+    where: { account: { in: MARGIN_ACCOUNTS }, createdAt: { gte: months[0].start } },
+    select: { account: true, amount: true, createdAt: true },
+  })
+  const marginByMonth = months.map((mo, i) => {
+    const end = months[i + 1]?.start ?? new Date(8.64e15)
+    // Income is a credit (negative) and costs are debits (positive): margin is minus their sum.
+    const sum = sixMonths.filter((p) => p.createdAt >= mo.start && p.createdAt < end).reduce((n, p) => n + p.amount, 0)
+    return { label: mo.label, value: Math.round(-sum) / 100 }
+  })
+  const margin = income - payFees - transferFees - losses - differences
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(`${today}T12:00:00Z`)
+    d.setUTCDate(d.getUTCDate() - (14 - i))
+    const ymd = d.toISOString().slice(0, 10)
+    const r = runs.find((x) => x.day === ymd)
+    return { label: dateLabel(`${ymd}T12:00:00Z`), state: !r ? ('none' as const) : r.ok ? ('ok' as const) : r.reviewedAt ? ('explained' as const) : ('check' as const) }
+  })
+
   const toConfirm = settlements.filter((s) => !s.confirmedAt)
   const confirmed = settlements.filter((s) => s.confirmedAt).slice(0, 8)
 
   return (
-    <div className="grid max-w-4xl gap-8">
+    <div className="grid max-w-[1400px] gap-8">
       <PageHeader
         title="Finance"
         lead="Whose money is whose, what Trashit earned this month, the morning payout check, and the daily match against Paystack. Figures come from the ledger; bank figures come from the settlements and top-ups recorded here."
       />
+
+      <div className="-mt-3 grid gap-4">
+        <div className="anim-stagger grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <Kpi hero label="Trashit’s own money" value={ghs(own)} note="After customers, drivers and refunds" />
+          <Kpi label="Margin this month" value={ghs(margin)} note={`Fees earned ${ghs(income)}`} tone={margin < 0 ? 'bad' : 'good'} />
+          <Kpi label="Owed to drivers" value={ghs(owed)} note="Clearing and available" />
+          <Kpi
+            label="Paystack balance"
+            value={ghs(liveBalance ?? paystack)}
+            note={check ? (check.topUpPesewas > 0 ? `Top up ${ghs(check.topUpPesewas)}` : 'Covers today’s payouts') : liveBalance == null ? 'From the ledger' : 'Live from Paystack'}
+            tone={check && check.topUpPesewas > 0 ? 'bad' : 'plain'}
+          />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <Card id="whose-chart" title="Whose money is it?" sub="GHS, from the ledger right now; details below">
+            <DivergingBars
+              label="Whose money is it, GHS"
+              rows={[
+                { label: 'In the bank', value: bank / 100 },
+                { label: 'Paystack balance', value: paystack / 100 },
+                { label: 'Not yet settled', value: clearing / 100 },
+                { label: 'Held for customers', value: -held / 100 },
+                { label: 'Owed to drivers', value: -owed / 100 },
+                { label: 'Refunds on the way', value: -refunding / 100 },
+                { label: 'Trashit’s own', value: own / 100, total: true },
+              ]}
+            />
+          </Card>
+          <Card id="margin-chart" title="Margin, last 6 months" sub="GHS · platform fees less Paystack fees, transfer fees and refunds Trashit paid">
+            <AreaChart data={marginByMonth} label="Margin per month, GHS" />
+          </Card>
+        </div>
+        <Card id="checks-chart" title="Daily money checks, last 14 days" sub="Green matched · amber explained · red to check · grey not run">
+          <DaySquares days={days} />
+        </Card>
+      </div>
+
+      <div className="grid items-start gap-8 xl:grid-cols-2">
+      <div className="grid gap-8">
 
       <section aria-labelledby="h-whose" className={PANEL}>
         <SectionTitle id="h-whose">Whose money is it?</SectionTitle>
@@ -118,7 +189,7 @@ export default async function FinancePage() {
           <Row label="Payout transfer fees" value={transferFees} minus />
           <Row label="Refunds Trashit paid itself" value={losses} minus />
           {differences !== 0 && <Row label="Differences to explain" value={differences} minus />}
-          <Row label="Margin" value={income - payFees - transferFees - losses - differences} strong />
+          <Row label="Margin" value={margin} strong />
         </div>
       </section>
 
@@ -131,6 +202,8 @@ export default async function FinancePage() {
         </p>
         <TransfersSwitch on={transfersOn} />
       </section>
+      </div>
+      <div className="grid gap-8">
 
       <section aria-labelledby="h-payouts" className={PANEL}>
         <SectionTitle id="h-payouts">Today’s driver payouts</SectionTitle>
@@ -169,6 +242,8 @@ export default async function FinancePage() {
         </p>
         <OpeningBalanceForm suggestedPaystack={gap != null && gap !== 0 ? gap / 100 : null} />
       </section>
+      </div>
+      </div>
 
       <section aria-labelledby="h-settle">
         <SectionTitle id="h-settle" count={toConfirm.length} hint="Paystack sends customer payments to the bank in settlements. Confirm each one when it arrives.">

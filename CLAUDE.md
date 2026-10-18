@@ -189,6 +189,11 @@ on the account (`User.themePrefs`, `lib/theme.ts`, `/api/account/theme`). Signin
 customer sign-out is on "Your account" and at the foot of the rail. Rails have a "Show names" button on touch screens.
 A **driver's licence photo is required** to send an application (drivers approved earlier keep their approval). Public
 pages draw their own footer (the global `Footer` is no longer used).
+Ops console redesign (18 Oct): labelled sidebar on computers (icon rail on tablets, drawer on phones), headline tiles
+(`Kpi`, `Card` in `components/ops/kit.tsx`) and server-drawn SVG charts (`components/ops/charts.tsx`, no chart library) on
+Overview, Drivers, Ratings, Finance, Withdrawals and Exceptions; new read-only **Customers** page (`/ops/customers`,
+`CUSTOMER_PAGE_ROLES` = Super Admin, Ops Manager, Finance, Support; phones masked by `maskPhone` in `lib/ops-stats.ts`). The
+Overview's "Booked for tonight" value shows only to Super Admin, Ops Manager, Finance and Analyst.
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 
 ## Documents (on claude.ai)

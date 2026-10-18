@@ -52,7 +52,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
     <>
     <AccountTheme app="ops" saved={parseThemePrefs(me.themePrefs).ops ?? null} />
     <OpsShell sections={sections} name={me.name} role={ROLE_NAMES[me.role] ?? me.role} health={health} has2fa={has2fa} shift={shift}>
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1400px]">
         <EnableAlerts compact message="Turn on alerts on this device so you hear when tonight's plan is ready or an order needs a driver." />
         {children}
       </div>

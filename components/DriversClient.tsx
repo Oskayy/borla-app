@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Clock, IdCard, MapPin, Phone } from 'lucide-react'
 import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 import { AllClear, Chip, Result, SELECT } from '@/components/ops/kit'
 import { TZ } from '@/lib/format'
 import { useNow } from '@/lib/use-now'
+import { Sparkline } from '@/components/ops/charts'
 
 interface DriverRow {
   id: string
@@ -24,7 +25,15 @@ interface DriverRow {
   lastLocationAt: string | null
   ghanaCard: string | null // partly hidden; only for staff who approve drivers
   cardPhotoUrl: string | null // an old Ghana Card photo, to copy the number from (30-minute link)
+  missingCard: boolean // only true for staff who see Ghana Card details
+  stopsTonight: number
+  doneTonight: number
+  rating: number | null // average over 30 days
+  trend: number[] // weekly averages, oldest first
+  missed: number // missed stops over 30 days
 }
+
+type Filter = 'all' | 'online' | 'paused' | 'card'
 
 // Enter (or, with a reason, correct) a driver's Ghana Card number.
 function GhanaCard({ d }: { d: DriverRow }) {
@@ -127,6 +136,17 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
   const [message, setMessage] = useState('')
   const router = useRouter()
   const now = useNow(60_000) // null until the browser has its clock
+  const [filter, setFilter] = useState<Filter>('all')
+  const shown = useMemo(
+    () => drivers.filter((d) => (filter === 'online' ? d.online : filter === 'paused' ? !d.active : filter === 'card' ? d.missingCard : true)),
+    [drivers, filter]
+  )
+  const tabs: [Filter, string, number][] = [
+    ['all', 'All', drivers.length],
+    ['online', 'Online', drivers.filter((d) => d.online).length],
+    ['paused', 'Paused', drivers.filter((d) => !d.active).length],
+    ...(canEditId ? ([['card', 'No Ghana Card', drivers.filter((d) => d.missingCard).length]] as [Filter, string, number][]) : []),
+  ]
 
   async function setOverride(driverId: string, h: number) {
     setBusy(driverId)
@@ -154,9 +174,23 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
 
   return (
     <div>
+      <div role="group" aria-label="Show drivers" className="mb-3 inline-flex flex-wrap gap-1 rounded-full bg-surface p-1 shadow-card ring-1 ring-line/70">
+        {tabs.map(([key, label, n]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={filter === key}
+            onClick={() => setFilter(key)}
+            className={`min-h-9 rounded-full px-3.5 text-sm font-medium transition ${filter === key ? 'bg-selected text-on-selected' : 'text-ink-2 hover:text-ink'}`}
+          >
+            {label} <span className="tabular-nums opacity-70">{n}</span>
+          </button>
+        ))}
+      </div>
       <Result msg={message ? { ok: false, text: message } : null} />
-      <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70">
-        {drivers.map((d) => (
+      {shown.length === 0 && <AllClear>No drivers here.</AllClear>}
+      <ul className="divide-y divide-line rounded-card bg-surface shadow-card ring-1 ring-line/70 empty:hidden">
+        {shown.map((d) => (
           <li key={d.id} className={`flex flex-wrap items-start justify-between gap-4 p-4 sm:px-5 ${d.active ? '' : 'bg-canvas/60'}`}>
             <div className="min-w-0 flex-1 basis-72">
               <p className="flex flex-wrap items-center gap-2">
@@ -193,6 +227,24 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
                 </p>
               )}
             </div>
+
+            <dl className="grid grid-cols-3 gap-x-6 gap-y-1 text-sm sm:w-auto">
+              <div>
+                <dt className="text-xs text-ink-3">Tonight</dt>
+                <dd className="font-semibold tabular-nums">{d.stopsTonight ? `${d.doneTonight} of ${d.stopsTonight}` : '—'}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-ink-3">Rating, 30 days</dt>
+                <dd className="flex items-center gap-2 font-semibold tabular-nums">
+                  {d.rating != null ? `${d.rating.toFixed(1)} ★` : '—'}
+                  <Sparkline values={d.trend} label={`${d.name}, weekly rating`} bad={d.rating != null && d.rating < 4} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-ink-3">Missed</dt>
+                <dd className={`font-semibold tabular-nums ${d.missed ? 'text-danger' : ''}`}>{d.missed}</dd>
+              </div>
+            </dl>
 
             <div className="flex flex-wrap items-center gap-2">
               {d.overrideUntil ? (
