@@ -67,3 +67,16 @@ describe('API route guards', () => {
     for (const name of Object.keys(PUBLIC_ROUTES)) expect(names.has(name), name).toBe(true)
   })
 })
+
+describe('zone changes', () => {
+  it('create, change and delete need the zone-edit roles, not every ops role', () => {
+    const files = ['app/api/admin/zones/route.ts', 'app/api/admin/zones/[id]/route.ts'].map((f) => readFileSync(path.resolve(__dirname, '../..', f), 'utf8'))
+    for (const src of files) {
+      for (const verb of ['POST', 'PATCH', 'DELETE']) {
+        const at = src.indexOf(`export async function ${verb}`)
+        if (at < 0) continue
+        expect(src.slice(at, at + 200), verb).toContain('requireAuth(ZONE_EDIT_ROLES)')
+      }
+    }
+  })
+})

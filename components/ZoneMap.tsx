@@ -3,6 +3,10 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { areaKm2, storedBoundary } from '@/lib/zone-shape'
+
+// Zone names and areas are typed by staff: escape them before they go into a map popup.
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 
 interface ZoneData {
   id: string
@@ -13,6 +17,7 @@ interface ZoneData {
   radiusKm: number
   coveredAreas: string[]
   active: boolean
+  boundary?: unknown // the drawn outline; when set it is drawn instead of the circle
 }
 
 interface PreviewZone {
@@ -84,7 +89,8 @@ export default function ZoneMap({
       loaded.current = true
 
       zonesWithCoords.forEach((zone) => {
-        const circleCoords = makeCircle(zone.centerLat!, zone.centerLng!, zone.radiusKm)
+        const outline = storedBoundary(zone.boundary)
+        const circleCoords = outline ? outline.coordinates[0] : makeCircle(zone.centerLat!, zone.centerLng!, zone.radiusKm)
 
         map.current!.addSource(`zone-${zone.id}`, {
           type: 'geojson',
@@ -103,7 +109,8 @@ export default function ZoneMap({
           paint: { 'line-color': zone.active ? '#3e6630' : '#8a94a3', 'line-width': 2 },
         })
 
-        const popupHtml = `<strong>${zone.name}</strong><br/>${zone.city} · ${zone.radiusKm}km radius<br/>${zone.coveredAreas.length > 0 ? zone.coveredAreas.join(', ') : 'No towns listed'}`
+        const size = outline ? `${areaKm2(outline).toFixed(1)} km²` : `${zone.radiusKm} km radius`
+        const popupHtml = `<strong>${esc(zone.name)}</strong><br/>${esc(zone.city)} · ${size}<br/>${zone.coveredAreas.length > 0 ? esc(zone.coveredAreas.join(', ')) : 'No towns listed'}`
 
         new mapboxgl.Marker({ color: '#3e6630' })
           .setLngLat([zone.centerLng!, zone.centerLat!])

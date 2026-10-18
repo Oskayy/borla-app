@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { storedBoundary } from '@/lib/zone-shape'
 
 // Content for the public landing page. Only true facts go here.
 
@@ -13,6 +14,7 @@ export interface CoverageZone {
   lat: number
   lng: number
   radiusKm: number
+  outline: [number, number][] | null // the drawn outline, [lng, lat] points
 }
 
 // Zones Trashit collects in today, straight from the ops Zones screen.
@@ -20,10 +22,10 @@ export async function activeZones(): Promise<CoverageZone[]> {
   try {
     const zones = await prisma.zone.findMany({
       where: { active: true, centerLat: { not: null }, centerLng: { not: null } },
-      select: { name: true, city: true, centerLat: true, centerLng: true, radiusKm: true },
+      select: { name: true, city: true, centerLat: true, centerLng: true, radiusKm: true, boundary: true },
       orderBy: { name: 'asc' },
     })
-    return zones.map((z) => ({ name: z.name, city: z.city, lat: z.centerLat!, lng: z.centerLng!, radiusKm: z.radiusKm }))
+    return zones.map((z) => ({ name: z.name, city: z.city, lat: z.centerLat!, lng: z.centerLng!, radiusKm: z.radiusKm, outline: storedBoundary(z.boundary)?.coordinates[0] ?? null }))
   } catch (e) {
     console.error('[marketing] could not load zones', e)
     return []
@@ -42,6 +44,15 @@ function circleRing(lat: number, lng: number, km: number, points = 40): [number,
   return ring
 }
 
+// Keeps every n-th corner so a long outline fits in a map address; the ring stays closed.
+function thin(ring: [number, number][], max: number): [number, number][] {
+  if (ring.length <= max) return ring
+  const step = Math.ceil((ring.length - 1) / (max - 1))
+  const out = ring.filter((_, i) => i % step === 0).map(([a, b]) => [+a.toFixed(5), +b.toFixed(5)] as [number, number])
+  out.push(out[0])
+  return out
+}
+
 // A Mapbox static map of the live zones (night style), or null without a token or zones.
 export function coverageMapUrl(zones: CoverageZone[], width = 640, height = 440): string | null {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -52,7 +63,8 @@ export function coverageMapUrl(zones: CoverageZone[], width = 640, height = 440)
     features: shown.map((z) => ({
       type: 'Feature',
       properties: { fill: '#12825a', 'fill-opacity': 0.28, stroke: '#3fd99a', 'stroke-width': 2, 'stroke-opacity': 0.9 },
-      geometry: { type: 'Polygon', coordinates: [circleRing(z.lat, z.lng, z.radiusKm)] },
+      // The drawn outline, simplified to at most 40 points so the map address stays short.
+      geometry: { type: 'Polygon', coordinates: [z.outline ? thin(z.outline, 40) : circleRing(z.lat, z.lng, z.radiusKm)] },
     })),
   }
   const pins = shown.map((z) => `pin-s+3fd99a(${z.lng.toFixed(5)},${z.lat.toFixed(5)})`).join(',')

@@ -17,6 +17,9 @@ interface ZoneWithCount {
   coveredAreas: string[]
   active: boolean
   priceMultiplier: number
+  tier: string
+  areaKm2: number | null // size of the drawn outline
+  corners: number
   _count: { drivers: number; customers: number }
 }
 
@@ -53,11 +56,12 @@ export default function ZonesClient({
                       <span className="font-semibold">{zone.name}</span>
                       <span className="text-ink-3">{zone.city}</span>
                       {!zone.active && <Chip tone="danger">Inactive</Chip>}
+                      <Chip tone={zone.tier === 'PREMIUM' ? 'ops' : zone.tier === 'BASIC' ? 'driver' : 'neutral'}>{zone.tier.charAt(0) + zone.tier.slice(1).toLowerCase()}</Chip>
                     </p>
                     <p className="mt-0.5 text-sm text-ink-3">
                       {zone._count.drivers} {zone._count.drivers === 1 ? 'driver' : 'drivers'} · {zone._count.customers}{' '}
-                      {zone._count.customers === 1 ? 'customer' : 'customers'} · {zone.radiusKm} km radius
-                      {zone.centerLat != null && ` · centre ${zone.centerLat.toFixed(4)}, ${zone.centerLng?.toFixed(4)}`}
+                      {zone._count.customers === 1 ? 'customer' : 'customers'}
+                      {zone.areaKm2 != null ? ` · ${zone.areaKm2} km² outline, ${zone.corners} corners` : ` · ${zone.radiusKm} km circle (no outline yet)`}
                     </p>
                     {zone.coveredAreas.length > 0 && <p className="mt-0.5 text-sm text-ink-2">Covers {zone.coveredAreas.join(', ')}</p>}
                   </div>

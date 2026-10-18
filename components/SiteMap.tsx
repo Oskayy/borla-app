@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
+import { storedBoundary } from '@/lib/zone-shape'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 export interface MapZone {
@@ -10,6 +11,7 @@ export interface MapZone {
   centerLat: number | null
   centerLng: number | null
   radiusKm: number
+  boundary?: unknown
   active: boolean
 }
 
@@ -114,7 +116,7 @@ export default function SiteMap({
             .map((z) => ({
               type: 'Feature' as const,
               properties: {},
-              geometry: { type: 'Polygon' as const, coordinates: [circle(z.centerLat!, z.centerLng!, z.radiusKm)] },
+              geometry: { type: 'Polygon' as const, coordinates: [storedBoundary(z.boundary)?.coordinates[0] ?? circle(z.centerLat!, z.centerLng!, z.radiusKm)] },
             })),
         },
       })

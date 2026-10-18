@@ -24,7 +24,7 @@ export default async function DisposalSitesPage() {
     prisma.zone.findMany({
       where: { active: true },
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, centerLat: true, centerLng: true, radiusKm: true, active: true },
+      select: { id: true, name: true, centerLat: true, centerLng: true, radiusKm: true, active: true, boundary: true },
     }),
     getShiftSettings(),
   ])

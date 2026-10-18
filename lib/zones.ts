@@ -1,4 +1,10 @@
+import type { ZoneTier } from '@prisma/client'
 import { cleanText, isValidLat, isValidLng, type JsonBody } from '@/lib/validate'
+import { areaKm2, centreOf, circleToBoundary, isShapeError, parseBoundary, type ZoneBoundary } from '@/lib/zone-shape'
+
+// Who may draw, change or delete zones (a zone decides an address's price). Others with the Zones page can look.
+export const ZONE_EDIT_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER']
+export const ZONE_TIERS: ZoneTier[] = ['PREMIUM', 'STANDARD', 'BASIC']
 
 // Returns the number, null when not provided, or NaN when it is not a number.
 function optionalNumber(value: unknown): number | null {
@@ -16,23 +22,52 @@ function parseAreas(value: unknown): string[] | null {
   return areas
 }
 
-// Returns clean zone data, or null if anything is invalid.
-export function parseZoneBody(body: JsonBody) {
+export interface ZoneInput {
+  name: string
+  city: string
+  coveredAreas: string[]
+  boundary: ZoneBoundary
+  centerLat: number
+  centerLng: number
+  radiusKm: number
+  tier?: ZoneTier
+}
+
+// Clean zone data from the browser, or the reason it can't be saved. The outline is either drawn (`boundary`) or,
+// from the older form, a centre and radius that become an outline here. The centre is always worked out from the
+// outline, so it can't point somewhere else.
+export function parseZoneBody(body: JsonBody): ZoneInput | { error: string } {
   const name = cleanText(body?.name, 80)
   const city = cleanText(body?.city, 60)
   const coveredAreas = parseAreas(body?.coveredAreas)
-  const centerLat = optionalNumber(body?.centerLat)
-  const centerLng = optionalNumber(body?.centerLng)
-  const radiusRaw = optionalNumber(body?.radiusKm)
+  if (!name || !city) return { error: 'Give the zone a name and a city' }
+  if (!coveredAreas) return { error: 'Up to 50 covered areas, each under 60 letters' }
 
-  if (!name || !city || !coveredAreas) return null
-  if (Number.isNaN(centerLat) || Number.isNaN(centerLng) || Number.isNaN(radiusRaw)) return null
-  if (centerLat !== null && !isValidLat(centerLat)) return null
-  if (centerLng !== null && !isValidLng(centerLng)) return null
-  if ((centerLat === null) !== (centerLng === null)) return null // both or neither
+  const tierRaw = body?.tier
+  if (tierRaw !== undefined && !ZONE_TIERS.includes(tierRaw as ZoneTier)) return { error: 'Choose premium, standard or basic' }
+  const tier = tierRaw as ZoneTier | undefined
 
-  const radiusKm = radiusRaw === null ? 3 : radiusRaw
-  if (radiusKm < 0.1 || radiusKm > 50) return null
-
-  return { name, city, coveredAreas, centerLat, centerLng, radiusKm }
+  let boundary: ZoneBoundary
+  let radiusKm = 3
+  if (body?.boundary != null) {
+    const shape = parseBoundary(body.boundary)
+    if (isShapeError(shape)) return shape
+    boundary = shape
+    radiusKm = Math.round(Math.sqrt(areaKm2(shape) / Math.PI) * 10) / 10 // a rough size, for older screens only
+  } else {
+    const lat = optionalNumber(body?.centerLat)
+    const lng = optionalNumber(body?.centerLng)
+    const r = optionalNumber(body?.radiusKm)
+    if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng) || !isValidLat(lat) || !isValidLng(lng)) {
+      return { error: 'Draw the zone on the map, or give its centre' }
+    }
+    radiusKm = r == null || Number.isNaN(r) ? 3 : r
+    if (radiusKm < 0.1 || radiusKm > 25) return { error: 'The radius must be between 0.1 and 25 km' }
+    const shape = parseBoundary(circleToBoundary(lat, lng, radiusKm))
+    if (isShapeError(shape)) return shape
+    boundary = shape
+  }
+  const centre = centreOf(boundary)
+  return { name, city, coveredAreas, boundary, centerLat: centre.lat, centerLng: centre.lng, radiusKm, ...(tier ? { tier } : {}) }
 }
+

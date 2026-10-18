@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { cleanText, readJson } from '@/lib/validate'
 import { distanceInMeters } from '@/lib/geo'
+import { pickZone } from '@/lib/zone-match'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
@@ -43,25 +44,18 @@ export async function POST(req: NextRequest) {
   }
 
   const zones = await prisma.zone.findMany({
-    where: { active: true, centerLat: { not: null }, centerLng: { not: null } },
-    select: { id: true, name: true, city: true, centerLat: true, centerLng: true, radiusKm: true },
+    where: { active: true },
+    select: { id: true, name: true, city: true, centerLat: true, centerLng: true, radiusKm: true, priceMultiplier: true, boundary: true },
   })
 
-  let matchedZone: { id: string; name: string } | null = null
-  let matchedDistance = Infinity
+  // The zone the address is in (its outline), and otherwise the nearest zone centre as a suggestion.
+  const hit = pickZone(zones, lat, lng)
+  const matchedZone = hit ? { id: hit.id, name: `${hit.name} — ${hit.city}` } : null
   let nearestZone: { id: string; name: string; distanceKm: number } | null = null
-
   for (const zone of zones) {
-    const distanceKm = distanceInMeters(lat, lng, zone.centerLat!, zone.centerLng!) / 1000
-    const label = `${zone.name} — ${zone.city}`
-
-    if (!nearestZone || distanceKm < nearestZone.distanceKm) {
-      nearestZone = { id: zone.id, name: label, distanceKm }
-    }
-    if (distanceKm <= zone.radiusKm && distanceKm < matchedDistance) {
-      matchedZone = { id: zone.id, name: label }
-      matchedDistance = distanceKm
-    }
+    if (zone.centerLat == null || zone.centerLng == null) continue
+    const distanceKm = distanceInMeters(lat, lng, zone.centerLat, zone.centerLng) / 1000
+    if (!nearestZone || distanceKm < nearestZone.distanceKm) nearestZone = { id: zone.id, name: `${zone.name} — ${zone.city}`, distanceKm }
   }
 
   return NextResponse.json({

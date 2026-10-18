@@ -27,7 +27,7 @@ export default async function ZoneMapPage() {
     <div className="max-w-5xl">
       <PageHeader
         title="Zone map"
-        lead="Shaded circles show each zone's approximate coverage. Click a marker for details."
+        lead="Each zone's outline, shaded. Click a marker for details."
         action={
           <Link href="/ops/zones" className={BUTTON_QUIET}>
             <ArrowLeft aria-hidden className="size-4" /> Zones

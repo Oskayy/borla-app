@@ -118,6 +118,12 @@ model DriverProfile {
   vehicleChangeNote     String? // why ops sent the change back, shown to the driver
 }
 
+enum ZoneTier {
+  PREMIUM
+  STANDARD
+  BASIC
+}
+
 model Zone {
   id              String            @id @default(uuid())
   name            String
@@ -125,6 +131,10 @@ model Zone {
   centerLat       Float?
   centerLng       Float?
   radiusKm        Float             @default(3)
+  // The zone's outline, drawn on the map: GeoJSON { type: "Polygon", coordinates: [[[lng, lat], ...]] } (lib/zone-shape.ts).
+  // When set it decides which zone an address is in; the centre stays for maps and tips, the radius is legacy.
+  boundary        Json?
+  tier            ZoneTier          @default(STANDARD) // premium, standard or basic area (pricing per tier comes later)
   coveredAreas    String[]          @default([])
   active          Boolean           @default(true)
   // Price multiplier for pickups in this zone. Only Super Admin / Finance may change it.

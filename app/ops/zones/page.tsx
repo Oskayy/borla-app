@@ -5,10 +5,12 @@ import Link from 'next/link'
 import ZonesClient from '@/components/ZonesClient'
 import { Map as MapIcon } from 'lucide-react'
 import { BUTTON_QUIET, PageHeader } from '@/components/ui'
+import { ZONE_EDIT_ROLES } from '@/lib/zones'
+import { areaKm2, storedBoundary } from '@/lib/zone-shape'
 
-const ZONE_EDIT_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
+// Dispatchers and Finance can look; only Ops Managers and Super Admins change outlines (lib/zones.ts).
 const PRICE_EDIT_ROLES = ['SUPER_ADMIN', 'FINANCE']
-const ALLOWED_ROLES = [...ZONE_EDIT_ROLES, 'FINANCE']
+const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER', 'FINANCE']
 
 export default async function ZonesPage() {
   const supabase = await createClient()
@@ -29,7 +31,7 @@ export default async function ZonesPage() {
     <div className="max-w-4xl">
       <PageHeader
         title="Zones"
-        lead="Where customers can book. A booking's pin must fall inside an active zone, and each zone's multiplier scales its prices."
+        lead="Where customers can book. Each zone is an outline on the map; a booking's pin must fall inside an active zone, and that zone's multiplier scales its price. Zones can't overlap, so every address has one price."
         action={
           <Link href="/ops/zones/map" className={BUTTON_QUIET}>
             <MapIcon aria-hidden className="size-4" /> See all on a map
@@ -37,7 +39,12 @@ export default async function ZonesPage() {
         }
       />
 
-      <ZonesClient zones={zones} canEditZones={ZONE_EDIT_ROLES.includes(dbUser.role)} canEditPrice={PRICE_EDIT_ROLES.includes(dbUser.role)} />
+      <ZonesClient
+        zones={zones.map((z) => {
+          const b = storedBoundary(z.boundary)
+          return { ...z, boundary: undefined, areaKm2: b ? Math.round(areaKm2(b) * 10) / 10 : null, corners: b ? b.coordinates[0].length - 1 : 0 }
+        })}
+       canEditZones={ZONE_EDIT_ROLES.includes(dbUser.role)} canEditPrice={PRICE_EDIT_ROLES.includes(dbUser.role)} />
     </div>
   )
 }

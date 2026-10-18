@@ -28,6 +28,12 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 - Timezone **Africa/Accra**, same for all zones. Shift **8pm–6am**; planning snapshot **7pm** (live setting since 28 Sep; code default 6pm);
   late orders accepted until the **midnight** hard cutoff. Settings: `OperatingSettings` table, ops page Shift Hours.
+- Zones are **outlines** drawn on the map (`Zone.boundary`, GeoJSON; `lib/zone-shape.ts`), since 18 Oct 2026 (the old circles were
+  converted to 32-sided outlines just outside them). An address belongs to the zone whose outline contains it
+  (`lib/zone-match.ts`); zones can't overlap (checked on save, in a Serializable transaction, `lib/zone-save-server.ts`), saving
+  moves affected customers and is logged (`ZONE_CREATED/CHANGED/DELETED`). Only Super Admin and Ops Manager change zones
+  (`ZONE_EDIT_ROLES`); `Zone.tier` (premium/standard/basic) is stored but doesn't change prices yet. Drawing tool and
+  automatic suggestions: phases B and C.
 - Price = base by bin size (30/60/120 L, placeholders) x **per-zone multiplier**. Customers must drop an exact
   pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
 - Platform fee is taken off the top; the **driver pool** is paid **40% at pickup, 60% at disposal**
@@ -103,7 +109,7 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 
 ## Open work (as of 13 Oct 2026)
 
-**State (checked 13 Oct 2026):** all migrations applied (latest `20261016120000_landmark_and_theme`, applied 16 Oct); build, lint and tests
+**State (checked 13 Oct 2026):** all migrations applied (latest `20261018120000_zone_outlines`, applied 18 Oct); build, lint and tests
 pass; work committed and pushed. The payment flow rewrite (steps 2–7) is live. Paystack is still in **test mode**.
 The local `.env` and Vercel both use the new `sb_secret_` Supabase key. The database pooler sometimes drops a connection
 for a few seconds: if a migration or script says "Can't reach database server", wait and run it again.

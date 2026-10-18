@@ -78,8 +78,8 @@ export async function getActiveRule(): Promise<RuleForQuote | null> {
 
 export async function findZoneForPoint(lat: number, lng: number) {
   const zones = await prisma.zone.findMany({
-    where: { active: true, centerLat: { not: null }, centerLng: { not: null } },
-    select: { id: true, name: true, city: true, centerLat: true, centerLng: true, radiusKm: true, priceMultiplier: true },
+    where: { active: true },
+    select: { id: true, name: true, city: true, centerLat: true, centerLng: true, radiusKm: true, priceMultiplier: true, boundary: true },
   })
   return pickZone(zones, lat, lng)
 }
