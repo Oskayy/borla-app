@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import ZoneForm from './ZoneForm'
+import ZoneForm, { type ZoneDraft } from './ZoneForm'
+import ZoneSuggester from './ops/ZoneSuggester'
 import ZoneMultiplierEditor from './ZoneMultiplierEditor'
 import { Pencil } from 'lucide-react'
 import { BUTTON_QUIET } from '@/components/ui'
@@ -34,13 +35,38 @@ export default function ZonesClient({
   canEditPrice: boolean
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<ZoneDraft | null>(null)
+  const [saved, setSaved] = useState<Set<string>>(() => new Set())
 
   const editingZone = zones.find((z) => z.id === editingId) ?? null
 
   return (
     <div className="grid gap-8">
       {canEditZones && (
-        <ZoneForm key={editingZone?.id ?? 'new'} editingZone={editingZone} onDoneEditing={() => setEditingId(null)} otherZones={zones} />
+        <ZoneForm
+          key={editingZone?.id ?? (draft ? `draft-${draft.key}` : 'new')}
+          editingZone={editingZone}
+          draft={editingZone ? null : draft}
+          onDoneEditing={() => {
+            setEditingId(null)
+            setDraft(null)
+          }}
+          onSaved={() => {
+            if (draft && !editingZone) setSaved((prev) => new Set(prev).add(draft.key))
+          }}
+          otherZones={zones}
+        />
+      )}
+      {canEditZones && (
+        <ZoneSuggester
+          others={zones.map((z) => ({ id: z.id, name: z.name, active: z.active, boundary: z.boundary }))}
+          saved={saved}
+          onReview={(d) => {
+            setEditingId(null)
+            setDraft(d)
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
       )}
 
       <section aria-labelledby="h-zones">
@@ -71,6 +97,7 @@ export default function ZonesClient({
                   {canEditZones && (
                     <button type="button" onClick={() => {
                         setEditingId(zone.id)
+                        setDraft(null)
                         window.scrollTo({ top: 0, behavior: 'smooth' })
                       }} className={BUTTON_QUIET}>
                       <Pencil aria-hidden className="size-4" /> Edit

@@ -16,7 +16,25 @@ export interface OtherZone {
   boundary: unknown
 }
 
+// Suggested zones drawn over the map ("Suggest zones"), coloured by tier.
+export interface PreviewZone {
+  name: string
+  tier: string
+  boundary: unknown
+}
+
 const RED = '#c4443a'
+const TIER_COLOUR = ['match', ['get', 'tier'], 'PREMIUM', '#e8b84a', 'BASIC', '#b9a3e3', '#9be07a'] as mapboxgl.ExpressionSpecification
+
+function previewData(preview: PreviewZone[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: preview.flatMap((z) => {
+      const b = storedBoundary(z.boundary)
+      return b ? [{ type: 'Feature' as const, properties: { name: z.name, tier: z.tier }, geometry: b }] : []
+    }),
+  }
+}
 
 function overlapFeatures(shape: ZoneBoundary | null, others: OtherZone[]) {
   const out: GeoJSON.Feature[] = []
@@ -33,7 +51,21 @@ function overlapFeatures(shape: ZoneBoundary | null, others: OtherZone[]) {
 // A satellite map to draw a zone's outline: click to add corners, double-click (or click the first corner) to
 // finish, drag a corner to move it, click a small dot between corners to add one. Other zones show for reference;
 // where the outline overlaps one, it is painted red. `value` is the outline; `onChange` gets every edit.
-export default function ZoneDrawMap({ value, others, onChange, startKey }: { value: ZoneBoundary | null; others: OtherZone[]; onChange: (b: ZoneBoundary | null) => void; startKey: string }) {
+export default function ZoneDrawMap({
+  value,
+  others,
+  onChange,
+  startKey,
+  preview = [],
+  label = "Map for drawing the zone's outline",
+}: {
+  value: ZoneBoundary | null
+  others: OtherZone[]
+  onChange: (b: ZoneBoundary | null) => void
+  startKey: string
+  preview?: PreviewZone[]
+  label?: string
+}) {
   const box = useRef<HTMLDivElement | null>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const draw = useRef<MapboxDraw | null>(null)
@@ -86,6 +118,10 @@ export default function ZoneDrawMap({ value, others, onChange, startKey }: { val
       m.addLayer({ id: 'others-name', type: 'symbol', source: 'others', layout: { 'text-field': ['get', 'name'], 'text-size': 13 }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#10202b', 'text-halo-width': 1.5 } })
       m.addSource('overlap', { type: 'geojson', data: { type: 'FeatureCollection', features: overlapFeatures(value, others) } })
       m.addLayer({ id: 'overlap-fill', type: 'fill', source: 'overlap', paint: { 'fill-color': RED, 'fill-opacity': 0.5 } })
+      m.addSource('preview', { type: 'geojson', data: previewData(preview) })
+      m.addLayer({ id: 'preview-fill', type: 'fill', source: 'preview', paint: { 'fill-color': TIER_COLOUR, 'fill-opacity': 0.35 } })
+      m.addLayer({ id: 'preview-line', type: 'line', source: 'preview', paint: { 'line-color': TIER_COLOUR, 'line-width': 2 } })
+      m.addLayer({ id: 'preview-name', type: 'symbol', source: 'preview', layout: { 'text-field': ['get', 'name'], 'text-size': 12 }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#10202b', 'text-halo-width': 1.5 } })
       if (value) d.add({ type: 'Feature', properties: {}, geometry: value })
       if (all.length) {
         const bounds = new mapboxgl.LngLatBounds()
@@ -109,6 +145,11 @@ export default function ZoneDrawMap({ value, others, onChange, startKey }: { val
     src?.setData({ type: 'FeatureCollection', features: overlapFeatures(value, others) })
   }, [value, others])
 
+  useEffect(() => {
+    const src = ready.current ? (map.current?.getSource('preview') as mapboxgl.GeoJSONSource | undefined) : undefined
+    src?.setData(previewData(preview))
+  }, [preview])
+
   // When the outline is replaced from outside (Trim to fit, Start again), redraw it.
   useEffect(() => {
     const d = draw.current
@@ -121,5 +162,5 @@ export default function ZoneDrawMap({ value, others, onChange, startKey }: { val
     else d.changeMode('draw_polygon')
   }, [value])
 
-  return <div ref={box} role="application" aria-label="Map for drawing the zone's outline" className="h-[520px] w-full" />
+  return <div ref={box} role="application" aria-label={label} className="h-[520px] w-full" />
 }

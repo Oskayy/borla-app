@@ -34,7 +34,10 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   moves affected customers and is logged (`ZONE_CREATED/CHANGED/DELETED`). Only Super Admin and Ops Manager change zones
   (`ZONE_EDIT_ROLES`); `Zone.tier` (premium/standard/basic) is stored but doesn't change prices yet. Zones are drawn on a
   satellite map on the Zones page (Mapbox GL Draw, `components/ops/ZoneDrawMap.tsx`): overlaps show red with "Trim to fit"
-  (`trimToFit`), and a dry run (`?dryRun=1`) shows how many customers a save moves. Automatic suggestions: phase C.
+  (`trimToFit`), and a dry run (`?dryRun=1`) shows how many customers a save moves. "Suggest zones" (`lib/zone-suggest*.ts`, `/api/admin/zones/suggest`, max
+  150 km², 10 scans an hour) proposes one zone per OpenStreetMap neighbourhood (or a grid) away from existing zones, with a
+  tier from the share of buildings with a pool, building density and our order values; one Overpass request per scan
+  (often 30-90 s, cached a day). Nothing is saved until a person reviews it in the zone form. Tier prices: phase D (Collins).
 - Price = base by bin size (30/60/120 L, placeholders) x **per-zone multiplier**. Customers must drop an exact
   pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
 - Platform fee is taken off the top; the **driver pool** is paid **40% at pickup, 60% at disposal**

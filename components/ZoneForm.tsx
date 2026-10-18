@@ -30,6 +30,17 @@ interface Check {
   moves?: { toThis: number; awayFromThis: number }
 }
 
+// A suggested zone to review ("Suggest zones"): opens the form prefilled, saved like any drawn zone.
+export interface ZoneDraft {
+  key: string
+  name: string
+  city: string
+  tier: string
+  coveredAreas: string[]
+  boundary: unknown
+  reasons: string[]
+}
+
 const TIERS = [
   { value: 'PREMIUM', label: 'Premium' },
   { value: 'STANDARD', label: 'Standard' },
@@ -38,14 +49,27 @@ const TIERS = [
 
 // Create or change a zone by drawing its outline. Before saving, the server checks the outline (dry run) and says
 // whether it overlaps another zone and how many customers would move; saving is blocked while it overlaps.
-export default function ZoneForm({ editingZone, onDoneEditing, otherZones }: { editingZone?: ExistingZone | null; onDoneEditing?: () => void; otherZones: ExistingZone[] }) {
+export default function ZoneForm({
+  editingZone,
+  draft,
+  onDoneEditing,
+  onSaved,
+  otherZones,
+}: {
+  editingZone?: ExistingZone | null
+  draft?: ZoneDraft | null
+  onDoneEditing?: () => void
+  onSaved?: () => void
+  otherZones: ExistingZone[]
+}) {
   const isEditing = !!editingZone
-  const [name, setName] = useState(editingZone?.name ?? '')
-  const [city, setCity] = useState(editingZone?.city ?? '')
-  const [coveredAreas, setCoveredAreas] = useState(editingZone?.coveredAreas?.join(', ') ?? '')
-  const [tier, setTier] = useState(editingZone?.tier ?? 'STANDARD')
+  const start = editingZone ?? draft
+  const [name, setName] = useState(start?.name ?? '')
+  const [city, setCity] = useState(start?.city ?? '')
+  const [coveredAreas, setCoveredAreas] = useState(start?.coveredAreas?.join(', ') ?? '')
+  const [tier, setTier] = useState(start?.tier ?? 'STANDARD')
   const [active, setActive] = useState(editingZone?.active ?? true)
-  const [boundary, setBoundary] = useState<ZoneBoundary | null>(storedBoundary(editingZone?.boundary))
+  const [boundary, setBoundary] = useState<ZoneBoundary | null>(storedBoundary(start?.boundary))
   const [check, setCheck] = useState<Check>({ state: 'idle' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -126,7 +150,8 @@ export default function ZoneForm({ editingZone, onDoneEditing, otherZones }: { e
         if (res.status === 409) setCheck({ state: 'blocked', text: data.error, overlaps: data.overlaps, moves: data.moves })
         return
       }
-      if (isEditing) onDoneEditing?.()
+      onSaved?.()
+      if (isEditing || draft) onDoneEditing?.()
       else {
         setName('')
         setCity('')
@@ -170,7 +195,7 @@ export default function ZoneForm({ editingZone, onDoneEditing, otherZones }: { e
     <section aria-labelledby="h-zone-form" className={`${PANEL} grid gap-5`}>
       <div className="flex flex-wrap items-center gap-3">
         <h2 id="h-zone-form" className="text-lg font-semibold tracking-tight">
-          {isEditing ? `Edit ${editingZone!.name}` : 'Draw a new zone'}
+          {isEditing ? `Edit ${editingZone!.name}` : draft ? `Review suggestion: ${draft.name}` : 'Draw a new zone'}
         </h2>
         {km2 != null && <span className="rounded-full bg-canvas px-3 py-1 text-sm tabular-nums text-ink-2">{km2.toFixed(1)} km² · {boundary!.coordinates[0].length - 1} corners</span>}
       </div>
@@ -178,7 +203,7 @@ export default function ZoneForm({ editingZone, onDoneEditing, otherZones }: { e
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="grid gap-2">
           <div className="overflow-hidden rounded-[16px] ring-1 ring-line">
-            <ZoneDrawMap value={boundary} others={others} onChange={setBoundary} startKey={editingZone?.id ?? 'new'} />
+            <ZoneDrawMap value={boundary} others={others} onChange={setBoundary} startKey={editingZone?.id ?? (draft ? `draft-${draft.key}` : 'new')} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="min-w-0 flex-1 text-sm text-ink-3">
@@ -193,6 +218,17 @@ export default function ZoneForm({ editingZone, onDoneEditing, otherZones }: { e
         </div>
 
         <div className="grid content-start gap-4">
+          {draft && draft.reasons.length > 0 && (
+            <div className="rounded-[14px] bg-canvas p-3 text-sm text-ink-2">
+              <p className="font-semibold text-ink">Why {draft.tier.charAt(0) + draft.tier.slice(1).toLowerCase()}</p>
+              <ul className="mt-1 list-disc pl-5">
+                {draft.reasons.map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+              <p className="mt-1.5 text-xs text-ink-3">A suggestion only: check the outline and the tier against what you know of the area before creating it.</p>
+            </div>
+          )}
           <label className="block">
             <span className={label}>Zone name</span>
             <input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. East Legon" />
@@ -263,9 +299,9 @@ export default function ZoneForm({ editingZone, onDoneEditing, otherZones }: { e
             <button type="button" onClick={submit} disabled={loading || blocked || !!localError || !boundary} className={BUTTON_PRIMARY}>
               {loading ? 'Saving…' : isEditing ? 'Save changes' : 'Create zone'}
             </button>
-            {isEditing && (
+            {(isEditing || draft) && (
               <button type="button" onClick={onDoneEditing} disabled={loading} className={BUTTON_QUIET}>
-                Cancel
+                {draft ? 'Back to suggestions' : 'Cancel'}
               </button>
             )}
           </div>
