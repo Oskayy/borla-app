@@ -14,12 +14,14 @@ export interface MapRoute {
   planned?: boolean // a suggestion not yet approved (dashed); otherwise already given to the driver (solid)
 }
 
-// Colours follow the shared status colours: driver amber, customer green, disposal site blue; other routes recede to slate.
+// Colours follow the shared status colours: driver amber, customer green, disposal site blue, an order nobody has yet
+// red (it needs a person); other routes recede to slate.
 const AMBER = '#e0a23c'
 const GREEN = '#2f7a3a'
 const INDIGO = '#2b57a3'
 const SLATE = '#94a3b8'
 const NIGHT = '#233a1e'
+const RED = '#c4443a'
 
 function esc(t: string) {
   return t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
@@ -49,7 +51,8 @@ function MapView({
     const dark = document.documentElement.dataset.theme === 'dark'
     const m = new mapboxgl.Map({
       container: box.current,
-      style: dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
+      // Full streets (the pale "light" style washed out roads and labels); the night style in dark mode.
+      style: dark ? 'mapbox://styles/mapbox/navigation-night-v1' : 'mapbox://styles/mapbox/streets-v12',
       center: [-0.02, 5.67],
       zoom: 11,
       attributionControl: false,
@@ -167,7 +170,8 @@ function MapView({
     }
     for (const u of unassigned) {
       const el = document.createElement('div')
-      el.style.cssText = 'width:14px;height:14px;border-radius:999px;background:#fff;border:3px solid #94a3b8;box-shadow:0 1px 2px rgba(0,0,0,.3)'
+      el.textContent = '!'
+      el.style.cssText = `width:24px;height:24px;border-radius:999px;background:${RED};color:#fff;font:800 13px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 0 0 4px rgba(196,68,58,.25),0 2px 6px rgba(0,0,0,.35)`
       add(el, u.lng, u.lat, `<strong>Not assigned</strong><br/>${esc(u.label)}`)
     }
 
@@ -179,10 +183,11 @@ function MapView({
       r.points.forEach((p) => pts.push([p.lng, p.lat]))
     }
     if (!selected) unassigned.forEach((u) => pts.push([u.lng, u.lat]))
-    if (pts.length === 1) m.easeTo({ center: pts[0], zoom: 14 })
+    // Never closer than neighbourhood level, so the area around a lone order is readable.
+    if (pts.length === 1) m.easeTo({ center: pts[0], zoom: 13 })
     else if (pts.length > 1) {
       const b = pts.reduce((bb, p) => bb.extend(p), new mapboxgl.LngLatBounds(pts[0], pts[0]))
-      m.fitBounds(b, { padding: 56, maxZoom: 15, duration: 600 })
+      m.fitBounds(b, { padding: 64, maxZoom: 13.5, duration: 600 })
     }
   }, [routes, unassigned, selected, ready, onSelect])
 
@@ -190,7 +195,7 @@ function MapView({
     <div className="relative h-full min-h-[420px] overflow-hidden rounded-card ring-1 ring-line">
       {/* Inline position: mapbox-gl.css (unlayered) would otherwise override the Tailwind classes. */}
       <div ref={box} style={{ position: 'absolute', inset: 0 }} />
-      <div className="absolute bottom-3 left-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/95 px-3 py-2 text-xs font-medium shadow-card ring-1 ring-line backdrop-blur">
+      <div className="absolute bottom-8 left-3 right-14 flex w-fit flex-wrap items-center gap-x-3 gap-y-1 rounded-control bg-surface/95 px-3 py-2 text-xs font-medium shadow-card ring-1 ring-line backdrop-blur">
         <span className="flex items-center gap-1.5">
           <span className="size-2.5 rounded-full bg-warn" aria-hidden /> Driver
         </span>
@@ -198,7 +203,7 @@ function MapView({
           <span className="size-2.5 rounded-full bg-ok-strong" aria-hidden /> Pickup
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-action-strong" aria-hidden /> Disposal site
+          <span className="size-2.5 rounded-sm bg-[#2b57a3]" aria-hidden /> Disposal site
         </span>
         {routes.some((r) => r.planned) && (
           <span className="flex items-center gap-1.5">
@@ -207,7 +212,7 @@ function MapView({
         )}
         {unassigned.length > 0 && (
           <span className="flex items-center gap-1.5">
-            <span className="size-2.5 rounded-full border-2 border-[#94a3b8] bg-white" aria-hidden /> Not assigned
+            <span className="size-2.5 rounded-full bg-danger" aria-hidden /> Not assigned
           </span>
         )}
       </div>

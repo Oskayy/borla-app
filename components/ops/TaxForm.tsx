@@ -51,7 +51,7 @@ export default function TaxForm({ current }: { current: Rates }) {
         confirmed rates. VAT and levies are added on top of the price and shown on the booking and receipt; withholding is taken from each driver
         payout. Orders already paid keep the tax they were charged.
       </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-4">
+      <div className="fields mt-4 grid gap-4 sm:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4">
         {FIELDS.map((f) => (
           <label key={f.key}>
             <span className="text-sm font-medium text-ink-2">{f.label}</span>

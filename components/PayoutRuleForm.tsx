@@ -76,7 +76,7 @@ export default function PayoutRuleForm({ current }: { current: PayoutRuleValues 
 
       <h3 className="mt-5 text-sm font-semibold">When drivers are paid</h3>
       <p className="text-sm text-ink-3">How the driver pool (the order price after the platform fee) is split between the two moments of a stop.</p>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+      <div className="fields mt-3 grid gap-4 sm:grid-cols-2">
         <Field label="At pickup (%)" value={v.pickupPercent} onChange={set('pickupPercent')} />
         <Field label="At unload (%)" value={v.disposalPercent} onChange={set('disposalPercent')} />
       </div>
@@ -86,7 +86,7 @@ export default function PayoutRuleForm({ current }: { current: PayoutRuleValues 
 
       <h3 className="mt-6 text-sm font-semibold">Surcharges and the recyclable discount</h3>
       <p className="text-sm text-ink-3">The rest of each surcharge goes to Trashit; the rest of the discount comes out of the drivers&apos; share.</p>
-      <div className="mt-3 grid gap-4 sm:grid-cols-3">
+      <div className="fields mt-3 grid gap-4 sm:grid-cols-3">
         <Field label="Late surcharge to drivers (%)" value={v.lateSurchargeDriverPercent} onChange={set('lateSurchargeDriverPercent')} />
         <Field label="Hazardous surcharge to drivers (%)" value={v.hazardSurchargeDriverPercent} onChange={set('hazardSurchargeDriverPercent')} />
         <Field label="Recyclable discount Trashit absorbs (%)" value={v.recyclableDiscountPlatformPercent} onChange={set('recyclableDiscountPlatformPercent')} />
@@ -94,7 +94,7 @@ export default function PayoutRuleForm({ current }: { current: PayoutRuleValues 
 
       <h3 className="mt-6 text-sm font-semibold">Distance bonus</h3>
       <p className="text-sm text-ink-3">For stops far from the driver&apos;s home base, paid from Trashit&apos;s fee and fixed when the stop is assigned. Set GHS per km to 0 to turn it off.</p>
-      <div className="mt-3 grid gap-4 sm:grid-cols-3">
+      <div className="fields mt-3 grid gap-4 sm:grid-cols-3">
         <Field label="Free distance (km)" value={v.distanceFreeKm} onChange={set('distanceFreeKm')} step={0.5} />
         <Field label="GHS per km beyond it" value={v.distanceBonusPerKm} onChange={set('distanceBonusPerKm')} step={0.1} />
         <Field label="Most per stop (GHS)" value={v.distanceBonusCap} onChange={set('distanceBonusCap')} step={0.5} />

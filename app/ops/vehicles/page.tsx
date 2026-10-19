@@ -24,7 +24,7 @@ export default async function VehiclesPage() {
   ])
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <PageHeader
         title="Vehicles"
         lead="Capacity decides how much fits on one trip before the driver unloads. The radius decides how far from a driver orders are offered; drivers choose their own, up to the maximum. Values are placeholders until real vehicles are measured."

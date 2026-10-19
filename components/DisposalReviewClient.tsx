@@ -65,7 +65,7 @@ export default function DisposalReviewClient({ groups, canRefund = false }: { gr
   }
 
   return (
-    <ul className="grid gap-4">
+    <ul className="grid items-start gap-4 2xl:grid-cols-2">
       {groups.map((g) => {
         const litres = g.orders.reduce((n, o) => n + (o.litres ?? 0), 0)
         const msg = messages[g.key]

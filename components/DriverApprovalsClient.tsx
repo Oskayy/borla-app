@@ -133,7 +133,7 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
           New drivers waiting for review
         </SectionTitle>
         {waiting.length === 0 && <AllClear>No drivers waiting.</AllClear>}
-        <ul className="grid gap-3 empty:hidden">{waiting.map((r) => card(r, true))}</ul>
+        <ul className="grid gap-3 empty:hidden xl:grid-cols-2">{waiting.map((r) => card(r, true))}</ul>
       </section>
 
       <section aria-labelledby="h-back">
@@ -141,7 +141,7 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
           Sent back, waiting for the driver
         </SectionTitle>
         {rejected.length === 0 && <AllClear>None.</AllClear>}
-        <ul className="grid gap-3 empty:hidden">{rejected.map((r) => card(r, true))}</ul>
+        <ul className="grid gap-3 empty:hidden xl:grid-cols-2">{rejected.map((r) => card(r, true))}</ul>
       </section>
 
       <section aria-labelledby="h-notsent">
@@ -149,7 +149,7 @@ export default function DriverApprovalsClient({ waiting, notSent, rejected }: { 
           Not sent yet
         </SectionTitle>
         {notSent.length === 0 && <AllClear>None.</AllClear>}
-        <ul className="grid gap-3 empty:hidden">{notSent.map((r) => card(r, false))}</ul>
+        <ul className="grid gap-3 empty:hidden xl:grid-cols-2">{notSent.map((r) => card(r, false))}</ul>
       </section>
     </div>
   )

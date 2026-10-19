@@ -118,7 +118,7 @@ function Nav({ sections, onNavigate }: { sections: ShellSection[]; onNavigate?: 
                     {l.count > 0 && (
                       <span
                         className={`min-w-6 rounded-full px-1.5 py-0.5 text-center text-xs font-bold tabular-nums ${
-                          on ? 'bg-highlight text-on-highlight' : URGENT.has(l.href) ? 'bg-danger-wash text-danger' : 'bg-canvas text-ink-2'
+                          on ? (URGENT.has(l.href) ? 'bg-danger text-white' : 'bg-white/20 text-on-selected') : URGENT.has(l.href) ? 'bg-danger-wash text-danger' : 'bg-canvas text-ink-2'
                         }`}
                       >
                         {l.count > 99 ? '99+' : l.count}
@@ -170,7 +170,7 @@ function Rail({ sections }: { sections: ShellSection[] }) {
                       <span
                         aria-hidden
                         className={`absolute left-[30px] top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold tabular-nums ring-2 ring-rail group-hover/rail:left-auto group-hover/rail:right-3 group-hover/rail:top-3.5 group-data-[open]/rail:left-auto group-data-[open]/rail:right-3 group-data-[open]/rail:top-3.5 ${
-                          URGENT.has(l.href) ? 'bg-danger text-white' : 'bg-highlight text-on-highlight'
+                          URGENT.has(l.href) ? 'bg-danger text-white' : 'bg-ink text-surface'
                         }`}
                       >
                         {l.count > 99 ? '99+' : l.count}

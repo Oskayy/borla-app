@@ -68,8 +68,8 @@ export function Kpi({
 }) {
   const noteCls = hero
     ? tone === 'bad'
-      ? 'bg-white/15 text-[#ffc2b8]'
-      : 'bg-white/15 text-highlight'
+      ? 'bg-[#ff8f7d]/20 text-[#ffd0c7]'
+      : 'bg-white/15 text-on-hero'
     : tone === 'good'
       ? 'bg-ok-wash text-ok-deep'
       : tone === 'bad'

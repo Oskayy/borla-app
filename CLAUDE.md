@@ -208,6 +208,13 @@ Ops console redesign (18 Oct): labelled sidebar on computers (icon rail on table
 Overview, Drivers, Ratings, Finance, Withdrawals and Exceptions; new read-only **Customers** page (`/ops/customers`,
 `CUSTOMER_PAGE_ROLES` = Super Admin, Ops Manager, Finance, Support; phones masked by `maskPhone` in `lib/ops-stats.ts`). The
 Overview's "Booked for tonight" value shows only to Super Admin, Ops Manager, Finance and Analyst.
+Layout fixes (19 Oct): ops pages use the layout's full 1400 px; form pages (Pricing, Payout rules, Staff, 2FA recovery) are
+two columns on wide screens (form left, settings and history right), list pages widen. Rows of labelled boxes carry the
+`fields` class (`app/globals.css`, subgrid) so boxes line up when a label wraps. Exceptions: filters in one row, an "All
+clear" card when empty, list beside detail only when there is something. Maps use Mapbox `streets-v12` (light) and
+`navigation-night-v1` (dark), not the pale `light-v11`; unassigned orders on the plan map are red. The driver stop page
+uses a real map (`components/driver/StopMap.tsx`); the 3D look-only map stays on Home. Greetings use `greetingFor(name)`
+(`lib/format.ts`), which skips titles and placeholder words ("Customer", "Driver", "Test").
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 
 ## Documents (on claude.ai)

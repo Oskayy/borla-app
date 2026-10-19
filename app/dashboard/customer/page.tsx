@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
 import { bookingHint, classifyBooking, describeCollection, type ShiftSettings } from '@/lib/shift'
 import { binsText, CUSTOMER_STAGES, customerStatus, ghs, type OrderSnapshot } from '@/lib/order-status'
-import { dateLabel, greeting } from '@/lib/format'
+import { dateLabel, greetingFor } from '@/lib/format'
 import Chip from '@/components/kit/Chip'
 import HeroCard from '@/components/kit/HeroCard'
 import StepTrack from '@/components/kit/StepTrack'
@@ -62,7 +62,6 @@ export default async function CustomerHome() {
     getShiftSettings(),
   ])
 
-  const firstName = me?.name.split(/\s+/)[0] ?? ''
   const hasHome = profile?.homeLat != null && profile.homeLng != null && !!profile.homePinConfirmedAt
   const binsCollected = completed.reduce(
     (n, o) => n + ((o.quoteSnapshot as OrderSnapshot | null)?.lines ?? []).reduce((s, l) => s + l.count, 0),
@@ -80,7 +79,7 @@ export default async function CustomerHome() {
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-8">
       <div className="anim-stagger grid gap-6">
         <h1 className="text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-[-0.03em]">
-          {greeting()}, {firstName}
+          {greetingFor(me?.name)}
         </h1>
 
         <div className="grid gap-2.5">

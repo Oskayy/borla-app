@@ -234,7 +234,7 @@ export default function ZoneForm({
             <span className={label}>Zone name</span>
             <input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. East Legon" />
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="fields grid grid-cols-2 gap-3">
             <label className="block">
               <span className={label}>City</span>
               <input value={city} maxLength={60} onChange={(e) => setCity(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Accra" />

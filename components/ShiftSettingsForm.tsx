@@ -53,7 +53,7 @@ export default function ShiftSettingsForm({ initial, hazardSites }: { initial: S
     <section aria-label="Shift settings" className={PANEL}>
       <fieldset>
         <legend className="text-base font-semibold tracking-tight">Times (Ghana time)</legend>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <div className="fields mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {FIELDS.map((f) => (
             <label key={f.key} className="block">
               <span className="text-sm font-medium text-ink-2">{f.label}</span>
@@ -74,7 +74,7 @@ export default function ShiftSettingsForm({ initial, hazardSites }: { initial: S
         <p className="text-base font-semibold tracking-tight" aria-hidden>
           Dispatch
         </p>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <div className="fields mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <label className="block">
             <span className="text-sm font-medium text-ink-2">Trips per night</span>
             <input

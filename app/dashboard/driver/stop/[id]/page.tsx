@@ -8,12 +8,11 @@ import { storedSplit } from '@/lib/money-split'
 import { getAcceptMinutes, getShiftSettings } from '@/lib/settings'
 import { offerDeadline } from '@/lib/offers'
 import Chip from '@/components/kit/Chip'
-import ZoneMapCard from '@/components/driver/ZoneMapCard'
+import StopMapCard from '@/components/driver/StopMapCard'
 import NavigateButtons from '@/components/NavigateButtons'
 import StopResponse from '@/components/StopResponse'
 import StopPickupSheet from '@/components/driver/StopPickupSheet'
 import FlashHost from '@/components/driver/Flash'
-import type { MapMarker } from '@/components/kit/Map3D'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,7 +68,6 @@ export default async function StopPage({ params }: { params: Promise<{ id: strin
   const site = order.routeStop?.route.trips.find((t) => t.tripNumber === order.routeStop?.tripNumber)?.facility ?? null
   const phone = order.customer?.phone ?? null
   const hasSpot = order.latitude != null && order.longitude != null
-  const markers: MapMarker[] = hasSpot ? [{ lat: order.latitude!, lng: order.longitude!, kind: 'pin' }] : []
 
   return (
     <div className="grid max-w-4xl gap-5">
@@ -79,7 +77,7 @@ export default async function StopPage({ params }: { params: Promise<{ id: strin
       <FlashHost />
 
       {hasSpot ? (
-        <ZoneMapCard markers={markers} title="Pickup spot" radius={approximate ? 'Approximate' : 'Exact pin'} stops={1} legend={false} />
+        <StopMapCard lat={order.latitude!} lng={order.longitude!} approximate={approximate} live={order.status === 'ASSIGNED'} />
       ) : (
         <p className="rounded-card bg-danger-wash p-4 text-sm font-medium text-danger">No map position for this stop. Call the customer or ops.</p>
       )}

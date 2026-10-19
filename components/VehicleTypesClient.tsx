@@ -73,7 +73,7 @@ function VehicleForm({
         <span className={label}>Capacity (litres)</span>
         <input type="number" min="50" value={values.capacityLitres} onChange={(e) => set('capacityLitres', e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} />
       </label>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="fields grid grid-cols-2 gap-3">
         <label className="block">
           <span className={label}>Default radius (km)</span>
           <input

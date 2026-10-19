@@ -453,84 +453,91 @@ export default function ExceptionsClient({
 
   return (
     <div className="grid gap-10">
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,23rem)_minmax(0,1fr)]">
-        {/* The list: filter by kind, then pick one */}
-        <div className="grid gap-3">
-          <div role="tablist" aria-label="Kinds" className="flex flex-wrap gap-2">
-            {(['all', ...kinds] as const).map((k) => {
-              const n = k === 'all' ? items.length : items.filter((i) => i.kind === k).length
-              const on = filter === k
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setFilter(k)}
-                  className={`press inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition ${
-                    on ? 'bg-selected text-on-selected' : 'bg-surface text-ink-2 ring-1 ring-line hover:text-ink'
-                  }`}
-                >
-                  {k === 'all' ? 'All' : SECTIONS[k].title}
-                  <span className={`rounded-full px-1.5 text-xs font-semibold tabular-nums ${on ? 'bg-white/20' : n > 0 ? 'bg-danger-wash text-danger' : 'bg-canvas text-ink-3'}`}>{n}</span>
-                </button>
-              )
-            })}
-            <a href="#refunds" className="inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-medium text-ink-2 ring-1 ring-line hover:bg-surface">
-              Refunds
-              <span className={`rounded-full px-1.5 text-xs font-semibold tabular-nums ${openRefunds > 0 ? 'bg-action-wash text-action-deep' : 'bg-canvas text-ink-3'}`}>{openRefunds}</span>
-            </a>
+      <div className="grid gap-4">
+        {/* Filter by kind: one row across the page (scrolls sideways on a phone) */}
+      <div role="tablist" aria-label="Kinds" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible">
+        {(['all', ...kinds] as const).map((k) => {
+          const n = k === 'all' ? items.length : items.filter((i) => i.kind === k).length
+          const on = filter === k
+          return (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setFilter(k)}
+              className={`press inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium transition ${
+                on ? 'bg-selected text-on-selected' : 'bg-surface text-ink-2 ring-1 ring-line hover:text-ink'
+              }`}
+            >
+              {k === 'all' ? 'All' : SECTIONS[k].title}
+              <span className={`rounded-full px-1.5 text-xs font-semibold tabular-nums ${on ? 'bg-white/20' : n > 0 ? 'bg-danger-wash text-danger' : 'bg-canvas text-ink-3'}`}>{n}</span>
+            </button>
+          )
+        })}
+        <a href="#refunds" className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm font-medium text-ink-2 ring-1 ring-line hover:bg-surface sm:ml-auto">
+          Refunds
+          <span className={`rounded-full px-1.5 text-xs font-semibold tabular-nums ${openRefunds > 0 ? 'bg-action-wash text-action-deep' : 'bg-canvas text-ink-3'}`}>{openRefunds}</span>
+        </a>
+      </div>
+
+        {shown.length === 0 ? (
+          <div className="flex items-start gap-3 rounded-card bg-surface p-5 shadow-card ring-1 ring-line/70 sm:items-center sm:p-6">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-ok-wash text-ok-deep">
+              <CheckCircle2 aria-hidden className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold">{filter === 'all' ? 'All clear' : `No ${SECTIONS[filter].title.toLowerCase()} right now`}</p>
+              <p className="mt-0.5 text-sm text-ink-3">
+                {filter === 'all'
+                  ? 'No failed pickups, disputes, payment problems or pickup checks need you. New ones appear here as they happen.'
+                  : 'Pick another group above, or see the refunds below.'}
+              </p>
+            </div>
           </div>
+        ) : (
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
+            {/* The list: pick one */}
+        <ul className="anim-stagger grid gap-2">
+          {shown.map((item) => {
+            const key = `${item.kind}-${item.orderId}`
+            const on = current != null && key === `${current.kind}-${current.orderId}`
+            const Section = SECTIONS[item.kind]
+            return (
+              <li key={key}>
+                <button
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => {
+                    setSelected(key)
+                    setOpen(null)
+                    if (window.matchMedia('(max-width: 1023px)').matches) document.getElementById('exception-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  className={`lift flex w-full items-start gap-3 rounded-[18px] p-3.5 text-left ring-1 ${on ? 'bg-action-wash ring-2 ring-action-deep' : 'bg-surface ring-line'}`}
+                >
+                  <span className={`grid size-9 shrink-0 place-items-center rounded-full ${item.kind === 'flagged' ? 'bg-danger-wash text-danger' : 'bg-warn-wash text-warn-deep'}`}>
+                    <Section.icon aria-hidden className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{item.address}</span>
+                    <span className="block truncate text-sm text-ink-3">{item.reason}</span>
+                    <span className="mt-1 block text-xs text-ink-3">
+                      {ORDER_STATUS[item.status] ?? item.status} · {dateTimeLabel(item.updatedAt)}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
 
-          {shown.length === 0 ? (
-            <p className="flex items-center gap-2.5 rounded-card bg-surface p-4 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">
-              <CheckCircle2 aria-hidden className="size-5 text-ok-deep" /> Nothing here right now.
-            </p>
-          ) : (
-            <ul className="anim-stagger grid gap-2">
-              {shown.map((item) => {
-                const key = `${item.kind}-${item.orderId}`
-                const on = current != null && key === `${current.kind}-${current.orderId}`
-                const Section = SECTIONS[item.kind]
-                return (
-                  <li key={key}>
-                    <button
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => {
-                        setSelected(key)
-                        setOpen(null)
-                        if (window.matchMedia('(max-width: 1023px)').matches) document.getElementById('exception-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }}
-                      className={`lift flex w-full items-start gap-3 rounded-[18px] p-3.5 text-left ring-1 ${on ? 'bg-action-wash ring-2 ring-action-deep' : 'bg-surface ring-line'}`}
-                    >
-                      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${item.kind === 'flagged' ? 'bg-danger-wash text-danger' : 'bg-warn-wash text-warn-deep'}`}>
-                        <Section.icon aria-hidden className="size-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{item.address}</span>
-                        <span className="block truncate text-sm text-ink-3">{item.reason}</span>
-                        <span className="mt-1 block text-xs text-ink-3">
-                          {ORDER_STATUS[item.status] ?? item.status} · {dateTimeLabel(item.updatedAt)}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-
-        {/* The detail panel */}
-        <div id="exception-detail" className="scroll-mt-20 lg:sticky lg:top-24">
-          {current ? (
-            detail(current)
-          ) : (
-            <p className="rounded-card bg-surface p-6 text-[15px] text-ink-2 shadow-card ring-1 ring-line/70">Pick an exception to see it here.</p>
-          )}
-          {current && <p className="mt-2 text-sm text-ink-3">{SECTIONS[current.kind].hint}</p>}
-        </div>
+            {/* The detail panel */}
+            <div id="exception-detail" className="scroll-mt-20 lg:sticky lg:top-24">
+              {current && detail(current)}
+              {current && <p className="mt-2 text-sm text-ink-3">{SECTIONS[current.kind].hint}</p>}
+            </div>
+          </div>
+        )}
       </div>
 
       <section id="refunds" aria-labelledby="h-refunds" className="scroll-mt-20">

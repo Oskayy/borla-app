@@ -107,7 +107,7 @@ export default function ZoneSuggester({ others, onReview, saved }: { others: Oth
         </div>
 
         <div className="grid content-start gap-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="fields grid grid-cols-2 gap-3">
             <label className="block">
               <span className="text-sm font-medium text-ink-2">City</span>
               <input value={city} maxLength={60} onChange={(e) => setCity(e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Accra" />

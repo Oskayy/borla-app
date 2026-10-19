@@ -102,7 +102,7 @@ export default async function DriverApprovalsPage() {
   const rejected = rows.filter((r) => r.status === 'REJECTED')
 
   return (
-    <div className="grid max-w-4xl gap-10">
+    <div className="grid gap-10">
       <PageHeader title="Approvals" lead="New drivers can't go online or receive pickups until they're approved here. Approved drivers who switch vehicle wait here too." />
       <VehicleChangeReviews rows={changes} />
       <DriverApprovalsClient waiting={waiting} notSent={notSent} rejected={rejected} />

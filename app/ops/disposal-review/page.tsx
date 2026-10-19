@@ -105,7 +105,7 @@ export default async function DisposalReviewPage() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <PageHeader
         title="Unloads to check"
         lead="Most unloads are confirmed automatically when the driver's photo is taken inside the site's geofence. These couldn't be, or were never confirmed at all. Approving releases the driver's unload share for every order in the load; sending back asks the driver to confirm again."

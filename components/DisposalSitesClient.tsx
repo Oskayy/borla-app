@@ -206,7 +206,7 @@ export default function DisposalSitesClient({
             {pin ? `Position ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)} (click the map to move it)` : 'Click the map to place the site.'}
           </p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="fields mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className={label}>Site name</span>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={`${FIELD} mt-1.5`} placeholder="e.g. Kpone Engineered Landfill" />
@@ -257,7 +257,7 @@ export default function DisposalSitesClient({
             Open 24 hours
           </label>
           {!form.open24Hours && (
-            <div className="mt-2 grid gap-4 sm:grid-cols-2">
+            <div className="fields mt-2 grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className={label}>Opens</span>
                 <input type="time" value={form.opensAt} onChange={(e) => set('opensAt', e.target.value)} className={`${FIELD} mt-1.5 tabular-nums`} />
@@ -281,7 +281,7 @@ export default function DisposalSitesClient({
             </div>
           </fieldset>
 
-          <div className="mt-2 grid gap-4 sm:grid-cols-2">
+          <div className="fields mt-2 grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className={label}>Main zone served (optional)</span>
               <select value={form.zoneId} onChange={(e) => set('zoneId', e.target.value)} className={`${FIELD} mt-1.5`}>

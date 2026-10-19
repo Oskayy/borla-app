@@ -83,7 +83,7 @@ export default function PricingRuleForm({ sizes }: { sizes: BinSizeOption[] }) {
 
         <fieldset>
           <legend className="text-sm font-semibold text-ink">Fee per bin (GHS)</legend>
-          <div className="mt-2 grid gap-4 sm:grid-cols-3">
+          <div className="fields mt-2 grid gap-4 sm:grid-cols-3">
             {sizes.map((size) => (
               <Field key={size.code} label={`${size.label} (${size.litres} L)`}>
                 <input
@@ -100,7 +100,7 @@ export default function PricingRuleForm({ sizes }: { sizes: BinSizeOption[] }) {
           </div>
         </fieldset>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="fields grid gap-4 sm:grid-cols-2">
           <Field label="Per-bin charge (GHS)" hint="Added to every bin.">
             <input type="number" min="0" value={volumeRate} onChange={(e) => setVolumeRate(e.target.value)} className={INPUT} />
           </Field>

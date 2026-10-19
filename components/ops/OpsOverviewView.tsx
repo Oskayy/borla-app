@@ -102,7 +102,7 @@ export default function OpsOverviewView({
             aria-valuemin={0}
             aria-valuemax={100}
           >
-            <div className="h-full rounded-full bg-highlight transition-[width] duration-700" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-[#b8de9e] transition-[width] duration-700" style={{ width: `${pct}%` }} />
           </div>
         </Kpi>
         <Kpi label="Waiting for a driver" value={waitingForDriver} note={`${withDriver} with a driver · ${collected} collected`} />

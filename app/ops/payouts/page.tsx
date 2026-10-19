@@ -20,9 +20,10 @@ export default async function PayoutRulesPage() {
   const rules = await prisma.payoutRule.findMany({ orderBy: { createdAt: 'desc' } })
 
   return (
-    <div className="grid max-w-3xl gap-8">
+    <div>
       <PageHeader title="Payout rules" lead="Drivers are paid part of each stop at pickup and the rest once the unload is verified. The split is fixed on each order when the customer pays, so a change here only affects orders paid after it. Earnings can be withdrawn 24 hours after the unload and the end of that night's shift." />
 
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] xl:gap-8">
       <PayoutRuleForm current={rules.find((r) => r.active) ?? null} />
 
       <section aria-labelledby="h-history">
@@ -48,6 +49,7 @@ export default async function PayoutRulesPage() {
           ))}
         </ul>
       </section>
+      </div>
     </div>
   )
 }

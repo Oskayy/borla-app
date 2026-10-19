@@ -220,7 +220,7 @@ export default function PlanBoard({
         )}
         {o.isLate && <span className="rounded-full bg-canvas px-2 py-0.5 text-xs font-semibold text-ink-2 ring-1 ring-line">Late booking</span>}
         {(o.rolloverCount ?? 0) > 0 && (
-          <span className="rounded-full bg-danger-wash px-2 py-0.5 text-xs font-semibold text-danger">
+          <span className="rounded-full bg-warn-wash px-2 py-0.5 text-xs font-semibold text-warn-deep">
             Missed {o.rolloverCount}× before
           </span>
         )}
@@ -381,7 +381,7 @@ export default function PlanBoard({
                     </div>
                     <div className="mt-1 h-2 overflow-hidden rounded-full bg-line" aria-hidden>
                       <span
-                        className={`block h-full rounded-full transition-[width] duration-500 ${p.minutes > d.minutesLeft ? 'bg-danger' : 'bg-highlight'}`}
+                        className={`block h-full rounded-full transition-[width] duration-500 ${p.minutes > d.minutesLeft ? 'bg-danger' : 'bg-action'}`}
                         style={{ width: `${Math.min(100, d.minutesLeft > 0 ? (p.minutes / d.minutesLeft) * 100 : 100)}%` }}
                       />
                     </div>

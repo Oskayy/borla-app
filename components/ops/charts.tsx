@@ -3,7 +3,7 @@
 
 const C = {
   main: 'var(--color-action)',
-  soft: 'var(--color-action-wash)',
+  soft: 'var(--chart-soft, var(--color-action-wash))',
   sky: 'var(--color-highlight)',
   line: 'var(--color-line)',
   ink: 'var(--color-ink)',
@@ -171,7 +171,7 @@ export function Gauge({ value, max, centre, sub, label }: { value: number; max: 
             y1={125 - 70 * Math.sin(a)}
             x2={120 + 100 * Math.cos(a)}
             y2={125 - 100 * Math.sin(a)}
-            stroke={on ? (t < 0.5 ? C.sky : C.main) : 'var(--color-canvas)'}
+            stroke={on ? C.main : 'var(--chart-track, var(--color-canvas))'}
             strokeWidth={9}
             strokeLinecap="round"
           />

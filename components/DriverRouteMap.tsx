@@ -50,7 +50,7 @@ export default function DriverRouteMap({
 
     const m = new mapboxgl.Map({
       container: container.current,
-      style: dark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11',
+      style: dark ? 'mapbox://styles/mapbox/navigation-night-v1' : 'mapbox://styles/mapbox/streets-v12',
       center: [start.lng, start.lat],
       zoom: 12,
     })

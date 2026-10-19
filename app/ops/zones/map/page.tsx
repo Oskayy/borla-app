@@ -24,7 +24,7 @@ export default async function ZoneMapPage() {
   const zonesWithCoords = zones.filter((z) => z.centerLat != null && z.centerLng != null)
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <PageHeader
         title="Zone map"
         lead="Each zone's outline, shaded. Click a marker for details."

@@ -51,7 +51,7 @@ export default async function DisposalSitesPage() {
   }))
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <PageHeader
         title="Disposal sites"
         lead={`Where drivers unload. Each trip ends at the best open site that accepts its waste, and the unload photo must be taken inside the site's geofence to release the driver's unload share. The shift runs ${formatClock(

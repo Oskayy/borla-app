@@ -272,6 +272,8 @@ p { text-wrap: pretty; }
   --color-on-highlight: #10202b;
   --color-selected: #233a1e;
   --color-focus: #3e6630;
+  --chart-soft: #b7cba8;
+  --chart-track: #e7ece2;
   background: var(--color-canvas);
   color: var(--color-ink);
 }
@@ -298,7 +300,14 @@ p { text-wrap: pretty; }
   --color-on-highlight: #0d120c;
   --color-selected: #3a5733;
   --color-focus: #a8cf8f;
+  --chart-soft: #3f5937;
+  --chart-track: #222b20;
 }
+
+/* A row of labelled boxes (class "fields" on the grid): every label shares the row's title, box and hint lines, so
+   the boxes line up even when one label wraps onto two lines. Browsers without subgrid simply stack as before. */
+.fields > label { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; align-content: start; }
+.fields > label > :first-child { align-self: end; }
 
 /* The page behind each workspace takes its ground, so overscroll and short pages match. */
 body:has(.theme-driver) { background: #f3f6f3; }

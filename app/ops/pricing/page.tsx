@@ -39,14 +39,16 @@ export default async function PricingRulesPage() {
   ])
 
   return (
-    <div className="grid max-w-3xl gap-8">
+    <div>
       <PageHeader
         title="Pricing"
         lead="Price = (base fee + each bin's fee and per-bin charge) × the zone multiplier (its tier's, or its own), minus the recyclable discount, plus hazard and late surcharges. Worked out on the server; the browser never sets a price. The platform fee is fixed on each order when it is priced, so a change here only affects new bookings."
       />
 
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] xl:gap-8">
       <PricingRuleForm sizes={sizes} />
 
+      <div className="grid gap-6">
       <TierPriceForm current={tierPrices} following={Object.fromEntries(following.map((f) => [f.tier, f._count._all]))} />
 
       <TaxForm current={tax ?? { vatPercent: 0, nhilPercent: 0, getfundPercent: 0, withholdingPercent: 0 }} />
@@ -75,6 +77,8 @@ export default async function PricingRulesPage() {
           })}
         </ul>
       </section>
+      </div>
+      </div>
     </div>
   )
 }

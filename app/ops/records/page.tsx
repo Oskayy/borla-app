@@ -54,7 +54,7 @@ export default async function RecordsPage() {
   const firstDue = oldestYear !== null ? day(dueDate(oldestYear)) : null
 
   return (
-    <div className="grid max-w-3xl gap-8">
+    <div className="grid gap-8">
       <PageHeader
         title="Old records"
         lead={`Orders, payments, payouts and staff logs are kept ${RECORDS_YEARS} years for tax, then their personal details are removed: pins, addresses, wallet numbers and names, notes, comments and reasons. Amounts, dates and the ledger stay, so every total still adds up. Each year needs a super admin to ask and a different super admin or finance user to approve.`}

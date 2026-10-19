@@ -10,7 +10,7 @@ import { worksNight } from '@/lib/availability'
 import { storedSplit } from '@/lib/money-split'
 import { summarizeRatings } from '@/lib/ratings'
 import { DRIVER_LEDGER_TYPES } from '@/lib/earnings'
-import { greeting } from '@/lib/format'
+import { greetingFor } from '@/lib/format'
 import DriverHomeView, { type HomeTip } from '@/components/driver/DriverHomeView'
 import type { MapMarker } from '@/components/kit/Map3D'
 import OutsideTips, { OutsideTipsLoading } from '@/components/driver/OutsideTips'
@@ -80,7 +80,6 @@ export default async function DriverHome() {
     prisma.facility.findMany({ where: { active: true, lat: { not: null }, lng: { not: null } }, select: { id: true, name: true, lat: true, lng: true } }),
   ])
 
-  const firstName = profile.user.name.split(/\s+/)[0] ?? ''
   const online = isDriverAvailable(profile, now, settings)
   const offTonight = !worksNight(profile, date)
 
@@ -132,7 +131,7 @@ export default async function DriverHome() {
 
   return (
     <DriverHomeView
-      greeting={`${greeting()}, ${firstName}`}
+      greeting={greetingFor(profile.user.name)}
       shiftLabel={windowLabel(settings)}
       status={status}
       headline={headline}

@@ -49,7 +49,7 @@ export default function TierPriceForm({ current, following }: { current: TierPri
         The multiplier for each kind of area. A zone that follows its tier uses this number; a zone with its own price (set on the Zones page)
         keeps that. 1.0 is the normal price, 1.3 is 30% more, 0.85 is 15% less. Orders already priced keep their price.
       </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+      <div className="fields mt-4 grid gap-4 sm:grid-cols-3">
         {TIER_LIST.map((t) => (
           <label key={t}>
             <span className="text-sm font-medium text-ink-2">{tierLabel(t)} (×)</span>

@@ -27,7 +27,7 @@ export default async function ShiftSettingsPage() {
   ])
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <PageHeader
         title="Shift hours"
         lead={`Collections run from ${formatClock(s.shiftStartMinutes)} to ${formatClock(s.shiftEndMinutes)} (${s.timezone} time). Orders paid before ${formatClock(

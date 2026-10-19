@@ -97,11 +97,13 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
         </div>
       )}
 
+      {/* Wide screens: the form to add someone beside the list of staff. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] xl:gap-8">
       <section aria-labelledby="h-add" className={PANEL}>
         <h2 id="h-add" className="text-base font-semibold tracking-tight">
           Add a staff member
         </h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="fields mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="text-sm font-medium text-ink-2">Full name</span>
             <input className={`${FIELD} mt-1.5`} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
@@ -186,6 +188,7 @@ export default function StaffClient({ rows, roles }: { rows: StaffRow[]; roles: 
           ))}
         </ul>
       </section>
+      </div>
     </div>
   )
 }

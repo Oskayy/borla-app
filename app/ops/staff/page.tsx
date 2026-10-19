@@ -22,7 +22,7 @@ export default async function StaffPage() {
   const rows: StaffRow[] = staff.map((s) => ({ ...s, createdAt: s.createdAt.toISOString(), isMe: s.id === user.id }))
 
   return (
-    <div className="max-w-4xl">
+    <div>
       <PageHeader
         title="Staff"
         lead="Add staff, change what they can do, or suspend them. New staff get a temporary password to pass on privately, not by email. At first sign-in they choose their own password and set up 2-step verification."
