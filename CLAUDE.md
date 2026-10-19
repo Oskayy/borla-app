@@ -213,7 +213,11 @@ two columns on wide screens (form left, settings and history right), list pages 
 `fields` class (`app/globals.css`, subgrid) so boxes line up when a label wraps. Exceptions: filters in one row, an "All
 clear" card when empty, list beside detail only when there is something. Maps use Mapbox `streets-v12` (light) and
 `navigation-night-v1` (dark), not the pale `light-v11`; unassigned orders on the plan map are red. The driver stop page
-uses a real map (`components/driver/StopMap.tsx`); the 3D look-only map stays on Home. Greetings use `greetingFor(name)`
+uses a real map (`components/driver/StopMap.tsx`), and so does driver Home (`Map3D` with `flat`; the tilted 3D look is
+left only for the customer's pin map). Photos (`components/PhotoCapture.tsx`, every pickup, unload and booking photo)
+are taken with an in-page camera (getUserMedia), because opening the phone's camera app made Android close and reload
+the page and lose the photo; the camera app stays as a fallback, and a reload during it is explained on return.
+Driver Tonight: "Your trips" heading above both columns so the first trip and the map start level. Greetings use `greetingFor(name)`
 (`lib/format.ts`), which skips titles and placeholder words ("Customer", "Driver", "Test").
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 

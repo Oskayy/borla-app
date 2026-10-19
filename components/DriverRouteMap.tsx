@@ -137,5 +137,5 @@ export default function DriverRouteMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [position, loaded])
 
-  return <div ref={container} style={{ width: '100%', height: 280 }} />
+  return <div ref={container} className="h-[280px] w-full md:h-[clamp(340px,60vh,560px)]" />
 }

@@ -28,11 +28,12 @@ export interface DriverHomeViewProps {
 }
 
 // The driver's Home, as the design: one greeting, tonight's job as the dark card, one main button,
-// then the area map and tips. On a computer the map and tips sit beside the job.
+// then the area map and tips. On a tablet or computer the job and tips fill the left column and the map stays in
+// view on the right; on a phone they stack in the order job, map, tips.
 export default function DriverHomeView({ greeting, shiftLabel, status, headline, detail, markers, mapTitle, radius, stops, tips, outsideTips }: DriverHomeViewProps) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-8">
-      <div className="anim-stagger grid gap-5 lg:sticky lg:top-28">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-8">
+      <div className="anim-stagger grid gap-5 lg:col-start-1 lg:row-start-1">
         <h1 className="text-[clamp(1.85rem,4vw,2.5rem)] font-bold leading-[1.05] tracking-[-0.035em]">{greeting}</h1>
 
         <HeroCard aria-labelledby="job-title" className="fx-stars grid gap-2 sm:p-7">
@@ -54,9 +55,11 @@ export default function DriverHomeView({ greeting, shiftLabel, status, headline,
         </Link>
       </div>
 
-      <div className="anim-stagger grid gap-5">
+      <div className="lg:sticky lg:top-28 lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <ZoneMapCard markers={markers} title={mapTitle} radius={radius} stops={stops} />
+      </div>
 
+      <div className="anim-stagger grid gap-5 lg:col-start-1 lg:row-start-2">
         <section aria-labelledby="tips-title" className="grid gap-2.5">
           <h2 id="tips-title" className="px-0.5 text-sm font-semibold text-ink-3">
             For tonight

@@ -29,7 +29,7 @@ export function DriverTabs() {
   const pathname = usePathname()
   return (
     <nav aria-label="Driver" className="hidden lg:block">
-      <ul className="mx-auto flex max-w-5xl gap-2 px-6 pb-3">
+      <ul className="mx-auto flex max-w-6xl gap-2 px-4 pb-3 sm:px-6 lg:px-8">
         {LINKS.map(({ href, label, icon: Icon, exact, also }) => {
           const on = isActive(pathname, href, exact) || !!also?.some((p) => pathname.startsWith(p))
           return (

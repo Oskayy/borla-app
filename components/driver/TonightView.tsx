@@ -248,16 +248,18 @@ export default function TonightView({
       )}
 
       {groups.length > 0 && (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <section aria-labelledby="h-trips" className="grid gap-4">
-            <h2 id="h-trips" className="text-[17px] font-semibold tracking-tight">Your trips</h2>
+        <section aria-labelledby="h-trips" className="grid gap-3">
+          {/* The heading sits above both columns, so the first trip card and the map start level. */}
+          <h2 id="h-trips" className="text-[17px] font-semibold tracking-tight">Your trips</h2>
+          <div className="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <div className="grid gap-4">
             {groups.map((g, i) => (
               <TripCard key={g.key} g={g} firstStopNo={firstStop[i]} current={g.key === currentKey} />
             ))}
-          </section>
+          </div>
 
           {mapPoints.length > 0 && (
-            <figure className="overflow-hidden rounded-card bg-surface lg:sticky lg:top-36">
+            <figure className="overflow-hidden rounded-card bg-surface shadow-card ring-1 ring-line/70 md:sticky md:top-28">
               <DriverRouteMap start={start} points={mapPoints} live={online} />
               <figcaption className="flex flex-wrap gap-x-4 gap-y-1 bg-surface px-4 py-2.5 text-xs text-ink-3">
                 <span className="inline-flex items-center gap-1.5">
@@ -270,7 +272,8 @@ export default function TonightView({
               </figcaption>
             </figure>
           )}
-        </div>
+          </div>
+        </section>
       )}
     </div>
   )

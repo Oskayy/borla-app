@@ -21,7 +21,21 @@ export interface MapMarker {
 // A small, tilted 3D map (Mapbox Standard: real streets and buildings, night lighting in dark mode).
 // Look only: it doesn't move with the finger, so the page scrolls freely. One marker: centred on it;
 // several: framed to show them all. Where Mapbox has no 3D buildings the streets stay flat.
-export default function Map3D({ markers, label, height = 190 }: { markers: MapMarker[]; label: string; height?: number }) {
+// `flat`: an ordinary street map instead (streets by day, the night navigation style in dark mode) that can be
+// dragged and zoomed (two fingers on a phone, so one finger still scrolls the page), framed on every marker.
+export default function Map3D({
+  markers,
+  label,
+  height = 190,
+  flat = false,
+  heightClass,
+}: {
+  markers: MapMarker[]
+  label: string
+  height?: number
+  flat?: boolean
+  heightClass?: string // responsive height (Tailwind classes) instead of the fixed `height`
+}) {
   const box = useRef<HTMLDivElement>(null)
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -38,9 +52,19 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const dark = () => document.documentElement.dataset.theme === 'dark'
     const one = list.length === 1
+    const flatStyle = () => (dark() ? 'mapbox://styles/mapbox/navigation-night-v1' : 'mapbox://styles/mapbox/streets-v12')
     let map: mapboxgl.Map
     try {
-      map = new mapboxgl.Map({
+      map = flat
+        ? new mapboxgl.Map({
+            container: box.current,
+            style: flatStyle(),
+            center: [list[0].lng, list[0].lat],
+            zoom: one ? 15.5 : 13,
+            cooperativeGestures: true,
+            attributionControl: false,
+          })
+        : new mapboxgl.Map({
         container: box.current,
         style: 'mapbox://styles/mapbox/standard',
         config: { basemap: { lightPreset: dark() ? 'night' : 'day', showPointOfInterestLabels: false } },
@@ -56,7 +80,14 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
       return
     }
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right')
-    if (one) map.setPadding({ top: 56, bottom: 0, left: 0, right: 0 })
+    if (flat) {
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
+      if (!one) {
+        const b = new mapboxgl.LngLatBounds()
+        list.forEach((m) => b.extend([m.lng, m.lat]))
+        map.fitBounds(b, { padding: 48, maxZoom: 15, duration: 0 })
+      }
+    } else if (one) map.setPadding({ top: 56, bottom: 0, left: 0, right: 0 })
     else {
       // Frame home and the stops (far-away sites may sit off the edge), close enough for the 3D buildings to show.
       const near = list.filter((m) => m.kind !== 'site')
@@ -83,6 +114,7 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
 
     map.on('load', () => {
       setReady(true)
+      if (flat) return
       if (!still && one) map.easeTo({ zoom: 17, bearing: -16, duration: 1600, essential: false })
       if (!still && !one) map.easeTo({ bearing: -12, duration: 1800, essential: false })
     })
@@ -90,7 +122,8 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
 
     const watch = new MutationObserver(() => {
       try {
-        map.setConfigProperty('basemap', 'lightPreset', dark() ? 'night' : 'day')
+        if (flat) map.setStyle(flatStyle())
+        else map.setConfigProperty('basemap', 'lightPreset', dark() ? 'night' : 'day')
       } catch {
         // style still loading: it picks up the theme on the next switch
       }
@@ -100,10 +133,10 @@ export default function Map3D({ markers, label, height = 190 }: { markers: MapMa
       watch.disconnect()
       map.remove()
     }
-  }, [key])
+  }, [key, flat])
 
   return (
-    <div role="group" aria-label={label} className="relative overflow-hidden rounded-card bg-rail" style={{ height }}>
+    <div role="group" aria-label={label} className={`relative overflow-hidden rounded-card bg-rail ${heightClass ?? ''}`} style={heightClass ? undefined : { height }}>
       <div ref={box} className={`absolute inset-0 h-full w-full transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`} />
       {!ready && !failed && <span aria-hidden className="skeleton absolute inset-0 rounded-none" />}
       {failed && <span className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-ink-3">The map couldn&apos;t load.</span>}

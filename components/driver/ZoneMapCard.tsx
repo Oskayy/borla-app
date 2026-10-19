@@ -30,9 +30,10 @@ export default function ZoneMapCard({
         {radius && <span className="shrink-0 text-xs text-ink-3">{radius}</span>}
       </div>
       <Map3D
+        flat
         markers={markers}
-        height={220}
-        label={`3D map of your area${stops ? ` with tonight's ${stops} ${stops === 1 ? 'stop' : 'stops'}` : ''}, where to unload and your home base`}
+        heightClass="h-[260px] lg:h-[clamp(380px,62vh,560px)]"
+        label={`Map of your area${stops ? ` with tonight's ${stops} ${stops === 1 ? 'stop' : 'stops'}` : ''}, where to unload and your home base`}
       />
       {legend && (
       <p className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-3">
