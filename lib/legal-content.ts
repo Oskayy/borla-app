@@ -54,6 +54,7 @@ export const privacyPolicySections: LegalSection[] = [
         'Supabase: sign-in, database and file storage',
         'Vercel: hosts the app',
         'Mapbox: maps and finding addresses',
+        'Komoot (Photon, Germany): searches OpenStreetMap when you look up your home; it receives the place name you type and your internet address, nothing else',
         "Google Maps: when a driver taps Navigate, the customer's pin is opened in Google Maps on the driver's phone",
         'Arkesel: text messages (SMS), once switched on',
         "Your browser's or phone's push service (for example Google or Apple): delivers alerts you turned on",

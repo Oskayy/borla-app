@@ -74,7 +74,8 @@ export default function PinPicker({
       marker.current.setLngLat([pin.lng, pin.lat])
     }
     if (m.getZoom() < HOUSE_ZOOM - 2 || !m.getBounds()?.contains([pin.lng, pin.lat])) {
-      m.flyTo({ center: [pin.lng, pin.lat], zoom: HOUSE_ZOOM })
+      // Jump, don't fly: flying loads satellite tiles all along the way, which is slow on mobile data.
+      m.jumpTo({ center: [pin.lng, pin.lat], zoom: HOUSE_ZOOM })
     }
   }, [pin])
 

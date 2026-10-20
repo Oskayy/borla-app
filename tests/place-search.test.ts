@@ -61,3 +61,31 @@ describe('searchPlaces', () => {
     expect(calls[0]).toContain('q=a%26b%3Dc%20test-4')
   })
 })
+
+describe('matchLocal (the built-in neighbourhood list)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const path = await import('node:path')
+  const { matchLocal, normalisePlace } = await import('@/lib/place-parse')
+  const list = JSON.parse(readFileSync(path.resolve(__dirname, '../public/places/gh-places.json'), 'utf8')).places
+
+  it('finds areas from two letters, best match first', () => {
+    expect(matchLocal(list, 'kotob')[0].name).toBe('Kotobabi')
+    expect(matchLocal(list, 'east le')[0].name).toBe('East Legon')
+    expect(matchLocal(list, 'ko').length).toBeGreaterThan(0)
+    expect(matchLocal(list, 'k')).toEqual([])
+  })
+
+  it('understands short forms', () => {
+    expect(normalisePlace('Comm. 4')).toBe('community 4')
+    expect(matchLocal(list, 'comm 4')[0].name).toBe('Community 4')
+  })
+
+  it('puts nearer places first when it knows roughly where you are', () => {
+    const nearTema = matchLocal(list, 'community 1', { lat: 5.67, lng: -0.01 })
+    expect(nearTema[0].detail).toBe('Tema')
+  })
+
+  it('is small enough to load on a phone', () => {
+    expect(readFileSync(path.resolve(__dirname, '../public/places/gh-places.json')).length).toBeLessThan(80_000)
+  })
+})

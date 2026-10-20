@@ -219,10 +219,13 @@ are taken with an in-page camera (getUserMedia), because opening the phone's cam
 the page and lose the photo; the camera app stays as a fallback, and a reload during it is explained on return.
 Driver Tonight: "Your trips" heading above both columns so the first trip and the map start level.
 The camera window is a portal into `<body>` (inside an `anim-rise` card, `fixed` was trapped in the card).
-Home pin (20 Oct): one search box with suggestions (`components/PlaceSearch.tsx` → `/api/places`, signed-in customers and
-drivers, 150 an hour) above the map, landmark last. `lib/place-search.ts` asks OpenStreetMap through Photon
-(photon.komoot.io, free, fair use, no uptime promise; it knows Ghana's landmarks, Mapbox doesn't) and falls back to
-Mapbox geocoding v6; cached a day (the old `/api/customer/locate` was removed). Booking bins: one row per bin
+Home pin (20 Oct): one search box with suggestions (`components/PlaceSearch.tsx`) above the map, landmark last. Areas
+match instantly from a built-in list of 1,398 Greater Accra and Kumasi-area place names (`public/places/gh-places.json`,
+~19 KB gzipped, OpenStreetMap/ODbL, loaded when the form opens; matching in `lib/place-parse.ts`). Landmarks come from
+OpenStreetMap's Photon asked straight from the phone (photon.komoot.io, in the CSP and the privacy policy; free, fair
+use, no uptime promise; it knows Ghana's landmarks, Mapbox doesn't); if that fails, `/api/places` (signed-in customers
+and drivers, 150 an hour, `lib/place-search.ts`: Photon, then Mapbox geocoding v6, cached a day). The old
+`/api/customer/locate` was removed. Picking a place jumps the map (no fly, which loaded tiles all the way). Booking bins: one row per bin
 on phones, three cards from `sm` up. Greetings use `greetingFor(name)`
 (`lib/format.ts`), which skips titles and placeholder words ("Customer", "Driver", "Test").
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
