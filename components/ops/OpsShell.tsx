@@ -34,6 +34,7 @@ import {
 import Logo from '@/components/Logo'
 import SignOutButton from '@/components/SignOutButton'
 import OpsAlerts from '@/components/OpsAlerts'
+import OpsLive from '@/components/ops/OpsLive'
 import ThemeToggle from '@/components/ThemeToggle'
 import { RAIL_LABEL, RAIL_OPEN, RailToggle, useRailToggle } from '@/components/kit/IconRail'
 
@@ -441,6 +442,7 @@ export default function OpsShell({
               <HealthMenu health={health} bad={healthBad} />
             </div>
             <ShiftPill shift={shift} />
+            <OpsLive />
 
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <ThemeToggle />

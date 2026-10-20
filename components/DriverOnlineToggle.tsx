@@ -27,6 +27,9 @@ export default function DriverOnlineToggle({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [gps, setGps] = useState<'idle' | 'on' | 'denied'>('idle')
+  // Going offline with stops still to collect: the server asks first (they go to other drivers).
+  const [confirmOff, setConfirmOff] = useState<{ toCollect: number; onBoard: number } | null>(null)
+  const [done, setDone] = useState('')
   const lastSent = useRef(0)
   const router = useRouter()
 
@@ -67,22 +70,35 @@ export default function DriverOnlineToggle({
     }
   }, [online, shiftLabel, router])
 
-  async function toggle() {
+  async function toggle(confirm = false) {
     setError('')
+    setDone('')
     setBusy(true)
     try {
       const res = await fetch('/api/driver/online', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ online: !online }),
+        body: JSON.stringify({ online: !online, confirm }),
       })
       const data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data.needsConfirm) {
+        setConfirmOff({ toCollect: data.toCollect ?? 0, onBoard: data.onBoard ?? 0 })
+        return
+      }
+      setConfirmOff(null)
       if (!res.ok) {
         setError(data.error || 'Could not change your status')
         return
       }
       lastSent.current = 0 // send the first position straight away
       setOnline(data.online)
+      if (typeof data.released === 'number' && data.released > 0) {
+        const s = (n: number) => `${n} ${n === 1 ? 'stop' : 'stops'}`
+        setDone(
+          `You're offline. ${s(data.released)} went to other drivers.` +
+            (data.onBoard > 0 ? ` You still have ${data.onBoard} collected ${data.onBoard === 1 ? 'order' : 'orders'} on board: please unload at the site and confirm.` : '')
+        )
+      }
       router.refresh()
     } catch {
       setError('Could not reach Trashit. Please check your connection and try again.')
@@ -116,7 +132,7 @@ export default function DriverOnlineToggle({
           aria-checked={online}
           aria-label="Online"
           aria-busy={busy}
-          onClick={toggle}
+          onClick={() => toggle()}
           disabled={disabled}
           className="inline-flex min-h-12 shrink-0 items-center gap-2 rounded-full bg-white px-5 text-[15px] font-semibold text-[#111113] transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -124,6 +140,33 @@ export default function DriverOnlineToggle({
           {busy ? 'Saving…' : online ? 'Go offline' : 'Go online'}
         </button>
       </div>
+
+      {confirmOff && (
+        <div role="alertdialog" aria-labelledby="off-title" aria-describedby="off-text" className="mt-4 grid gap-3 rounded-2xl bg-white/10 p-4">
+          <p id="off-title" className="text-[15px] font-semibold">
+            You still have {confirmOff.toCollect} {confirmOff.toCollect === 1 ? 'stop' : 'stops'} to collect
+          </p>
+          <p id="off-text" className="text-sm text-on-hero-2">
+            If you go offline, {confirmOff.toCollect === 1 ? 'it goes' : 'they go'} to other drivers now and you won&apos;t be paid for{' '}
+            {confirmOff.toCollect === 1 ? 'it' : 'them'}.
+            {confirmOff.onBoard > 0 &&
+              (confirmOff.onBoard === 1 ? ' The collected order on board stays with you: unload it at the site first.' : ` The ${confirmOff.onBoard} collected orders on board stay with you: unload them at the site first.`)}
+          </p>
+          <div className="flex flex-wrap gap-2.5">
+            <button type="button" onClick={() => setConfirmOff(null)} disabled={busy} className="inline-flex min-h-11 items-center rounded-full bg-white px-5 text-[15px] font-semibold text-[#111113]">
+              Stay online
+            </button>
+            <button type="button" onClick={() => toggle(true)} disabled={busy} className="inline-flex min-h-11 items-center rounded-full px-5 text-[15px] font-semibold text-on-hero ring-1 ring-white/40 hover:bg-white/10">
+              {busy ? 'Saving…' : 'Go offline anyway'}
+            </button>
+          </div>
+        </div>
+      )}
+      {done && (
+        <p role="status" className="mt-3 rounded-2xl bg-white/10 p-3 text-sm">
+          {done}
+        </p>
+      )}
 
       {children && <div className="mt-5 grid grid-cols-2 gap-2.5">{children}</div>}
 

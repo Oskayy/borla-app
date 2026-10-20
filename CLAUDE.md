@@ -65,6 +65,8 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 - Capacity-based dispatch: drivers make **multiple trips per night** (`maxTripsPerNight`), each trip ends at a disposal site.
 - Drivers must **accept** each assigned stop within `acceptMinutes` (default 15); declined or expired stops are
   **reassigned automatically** (`lib/reassign-server.ts`); a decliner is never offered that order again.
+  Going **offline during the shift** with stops to collect: the app asks first, then those stops go to other drivers
+  the same way and ops are told (`lib/driver-offline-server.ts`); collected orders on board stay with the driver.
 - At 6am, uncollected orders **roll over** to the next night.
 - Navigation uses Google Maps links from the driver's **live GPS** to the customer's pin (`lib/navigation.ts`).
 
@@ -228,6 +230,10 @@ and drivers, 150 an hour, `lib/place-search.ts`: Photon, then Mapbox geocoding v
 `/api/customer/locate` was removed. Picking a place jumps the map (no fly, which loaded tiles all the way). Booking bins: one row per bin
 on phones, three cards from `sm` up. Greetings use `greetingFor(name)`
 (`lib/format.ts`), which skips titles and placeholder words ("Customer", "Driver", "Test").
+Live ops console (20 Oct): every ops page asks `/api/ops/live` (any staff role) every 15 s while visible; it returns a
+hash of what the console shows (`lib/ops-live-server.ts`: orders, refunds, withdrawals, who is online, approvals,
+ratings, disputes, routes; not driver positions). On a change the page calls `router.refresh()` (client state kept;
+waits while a text box has focus). Indicator `components/ops/OpsLive.tsx` in the top bar (a dot; words from 2xl).
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 
 ## Documents (on claude.ai)
