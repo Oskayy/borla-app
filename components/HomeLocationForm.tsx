@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, Search } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import PinPicker from './PinPicker'
-import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
+import PlaceSearch, { type PlaceHit } from './PlaceSearch'
+import { BUTTON_PRIMARY, FIELD } from '@/components/ui'
 
 interface Zone {
   id: string
@@ -46,42 +47,16 @@ export default function HomeLocationForm({ zones, initial, setup = false }: { zo
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     if (el instanceof HTMLInputElement) el.focus({ preventScroll: true })
   }
-  const [finding, setFinding] = useState(false)
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
-  async function findOnMap() {
-    if (!address.trim()) {
-      problem('address', 'Enter your area or street first, or tap your home on the map')
-      return
-    }
+  // A place picked from the search: the map goes there; the person still puts the pin on their own gate.
+  function placePicked(h: PlaceHit) {
     setError('')
-    setFieldError(null)
-    setInfo('')
-    setFinding(true)
-    try {
-      const res = await fetch('/api/customer/locate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Could not find that address')
-        return
-      }
-      setPin({ lat: data.lat, lng: data.lng })
-      setChecked(false)
-      setInfo(
-        data.zoneName
-          ? `That's the area (${data.zoneName}). Map searches are only roughly right: drag the pin onto your own house or gate.`
-          : "That's the area, but we don't collect there yet. If it's wrong, drag the pin to the right spot."
-      )
-    } catch {
-      setError('Could not reach Trashit. Please check your connection and try again.')
-    } finally {
-      setFinding(false)
-    }
+    if (fieldError?.field === 'address') setFieldError(null)
+    setPin({ lat: h.lat, lng: h.lng })
+    setChecked(false)
+    setInfo(`Found ${h.name}. Now zoom in and drag the pin onto your own house or gate.`)
   }
 
   function handlePinChange(newPin: { lat: number; lng: number }) {
@@ -92,7 +67,7 @@ export default function HomeLocationForm({ zones, initial, setup = false }: { zo
 
   async function save() {
     if (!address.trim()) {
-      problem('address', 'Enter your area or street, e.g. Tema Community 4')
+      problem('address', 'Enter your area or street, e.g. Community 4, Tema')
       return
     }
     if (landmark.trim().length < 3) {
@@ -134,28 +109,57 @@ export default function HomeLocationForm({ zones, initial, setup = false }: { zo
     <div className="grid gap-4">
       <div>
         <label htmlFor="home-address" className="text-sm font-semibold text-ink">
-          Area or street
+          Your area, street or a place near you
         </label>
-        <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
-          <input
+        <div className="mt-1.5">
+          <PlaceSearch
             id="home-address"
             value={address}
-            onChange={(e) => {
-              setAddress(e.target.value)
+            onChange={(t) => {
+              setAddress(t)
               if (fieldError?.field === 'address') setFieldError(null)
             }}
-            aria-invalid={fieldError?.field === 'address' || undefined}
-            aria-describedby={fieldError?.field === 'address' ? 'home-address-error' : undefined}
-            className={`${FIELD} sm:flex-1 ${fieldError?.field === 'address' ? 'border-danger ring-3 ring-danger/15' : ''}`}
-            placeholder="e.g. House 12, Tema Community 4"
-            autoComplete="street-address"
+            onPick={placePicked}
+            near={pin}
+            invalid={fieldError?.field === 'address'}
+            describedBy={fieldError?.field === 'address' ? 'home-address-error' : 'home-address-hint'}
+            placeholder="e.g. Community 4 Tema, or Accra Mall"
           />
-          <button type="button" onClick={findOnMap} disabled={finding} className={BUTTON_QUIET}>
-            <Search aria-hidden className="size-4" /> {finding ? 'Finding…' : 'Find on map'}
-          </button>
         </div>
-        {fieldError?.field === 'address' && <FieldError id="home-address-error" text={fieldError.text} />}
+        {fieldError?.field === 'address' ? (
+          <FieldError id="home-address-error" text={fieldError.text} />
+        ) : (
+          <p id="home-address-hint" className="mt-1.5 text-sm text-ink-2">
+            Pick a suggestion to move the map there, then put the pin on your own house or gate. At home? Use your location on the map.
+          </p>
+        )}
       </div>
+
+      <div id="home-pin" className={`overflow-hidden rounded-card ring-1 ${fieldError?.field === 'pin' ? 'ring-2 ring-danger' : 'ring-line'}`}>
+        <PinPicker
+          pin={pin}
+          onPinChange={(p) => {
+            handlePinChange(p)
+            if (fieldError?.field === 'pin') setFieldError(null)
+          }}
+        />
+      </div>
+      {fieldError?.field === 'pin' && <FieldError text={fieldError.text} />}
+
+      {pin && (
+        <label className={`flex cursor-pointer items-start gap-3 rounded-control bg-canvas p-3.5 text-[15px] ${fieldError?.field === 'checked' ? 'ring-2 ring-danger' : ''}`}>
+          <input
+            id="home-checked"
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => {
+              setChecked(e.target.checked)
+              if (fieldError?.field === 'checked') setFieldError(null)
+            }} className="mt-1 size-4 accent-[var(--color-action-deep)]" />
+          <span>I zoomed in and the pin is on my house or gate</span>
+        </label>
+      )}
+      {pin && fieldError?.field === 'checked' && <FieldError text={fieldError.text} />}
 
       <div>
         <label htmlFor="home-landmark" className="text-sm font-semibold text-ink">
@@ -182,36 +186,6 @@ export default function HomeLocationForm({ zones, initial, setup = false }: { zo
           </p>
         )}
       </div>
-
-      <p className="text-sm text-ink-2">
-        Drivers go exactly to this pin at night, so put it on your house or gate. At home? Use your location. Otherwise zoom in until you
-        see your roof and tap it.
-      </p>
-      <div id="home-pin" className={`overflow-hidden rounded-card ring-1 ${fieldError?.field === 'pin' ? 'ring-2 ring-danger' : 'ring-line'}`}>
-        <PinPicker
-          pin={pin}
-          onPinChange={(p) => {
-            handlePinChange(p)
-            if (fieldError?.field === 'pin') setFieldError(null)
-          }}
-        />
-      </div>
-      {fieldError?.field === 'pin' && <FieldError text={fieldError.text} />}
-
-      {pin && (
-        <label className={`flex cursor-pointer items-start gap-3 rounded-control bg-canvas p-3.5 text-[15px] ${fieldError?.field === 'checked' ? 'ring-2 ring-danger' : ''}`}>
-          <input
-            id="home-checked"
-            type="checkbox"
-            checked={checked}
-            onChange={(e) => {
-              setChecked(e.target.checked)
-              if (fieldError?.field === 'checked') setFieldError(null)
-            }} className="mt-1 size-4 accent-[var(--color-action-deep)]" />
-          <span>I zoomed in and the pin is on my house or gate</span>
-        </label>
-      )}
-      {pin && fieldError?.field === 'checked' && <FieldError text={fieldError.text} />}
 
       {info && (
         <p role="status" className="text-sm text-ok-deep">

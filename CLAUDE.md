@@ -217,7 +217,13 @@ uses a real map (`components/driver/StopMap.tsx`), and so does driver Home (`Map
 left only for the customer's pin map). Photos (`components/PhotoCapture.tsx`, every pickup, unload and booking photo)
 are taken with an in-page camera (getUserMedia), because opening the phone's camera app made Android close and reload
 the page and lose the photo; the camera app stays as a fallback, and a reload during it is explained on return.
-Driver Tonight: "Your trips" heading above both columns so the first trip and the map start level. Greetings use `greetingFor(name)`
+Driver Tonight: "Your trips" heading above both columns so the first trip and the map start level.
+The camera window is a portal into `<body>` (inside an `anim-rise` card, `fixed` was trapped in the card).
+Home pin (20 Oct): one search box with suggestions (`components/PlaceSearch.tsx` → `/api/places`, signed-in customers and
+drivers, 150 an hour) above the map, landmark last. `lib/place-search.ts` asks OpenStreetMap through Photon
+(photon.komoot.io, free, fair use, no uptime promise; it knows Ghana's landmarks, Mapbox doesn't) and falls back to
+Mapbox geocoding v6; cached a day (the old `/api/customer/locate` was removed). Booking bins: one row per bin
+on phones, three cards from `sm` up. Greetings use `greetingFor(name)`
 (`lib/format.ts`), which skips titles and placeholder words ("Customer", "Driver", "Test").
 If every `/api` route suddenly answers 404 in `npm run dev`, stop the server, delete `.next/dev` and start it again.
 

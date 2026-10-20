@@ -525,18 +525,21 @@ function BookingFormInner({
             {sizes.length === 0 ? (
               <p className="mt-3 text-sm text-danger">Booking is not available right now. Please try again later.</p>
             ) : (
-              <ul className="mt-3 grid grid-cols-3 gap-2 sm:gap-2.5">
+              // A phone: one row per bin (picture, size, stepper). Wider screens: three cards side by side.
+              <ul className="mt-3 grid gap-2.5 sm:grid-cols-3">
                 {sizes.map((size) => {
                   const count = bins[size.code] ?? 0
                   return (
                     <li
                       key={size.code}
-                      className={`rounded-card px-1.5 py-3.5 text-center ring-1 transition sm:p-4 ${count > 0 ? 'bg-action-wash ring-2 ring-action-deep' : 'ring-line-strong'}`}
+                      className={`flex items-center gap-3 rounded-card px-3 py-2.5 ring-1 transition sm:block sm:p-4 sm:text-center ${count > 0 ? 'bg-action-wash ring-2 ring-action-deep' : 'ring-line-strong'}`}
                     >
-                      <BinIllustration litres={size.litres} active={count > 0} className="mx-auto h-24 w-auto text-ink" />
-                      <p className="mt-1.5 font-semibold">{size.litres} L</p>
-                      <p className="text-xs text-ink-3">{size.label}</p>
-                      <div className="mt-3 flex items-center justify-center gap-1.5 sm:gap-3">
+                      <BinIllustration litres={size.litres} active={count > 0} className="h-16 w-14 shrink-0 text-ink sm:mx-auto sm:h-24 sm:w-auto" />
+                      <div className="min-w-0 flex-1 sm:mt-1.5">
+                        <p className="text-[17px] font-semibold sm:text-base">{size.litres} L</p>
+                        <p className="text-sm text-ink-3 sm:text-xs">{size.label}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 sm:mt-3 sm:justify-center sm:gap-3">
                         <button
                           type="button"
                           aria-label={`Remove one ${size.label.toLowerCase()}`}

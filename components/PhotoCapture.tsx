@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Camera, RotateCcw, X } from "lucide-react";
 import { compressImage } from "@/lib/compress-image";
 
@@ -19,7 +20,9 @@ const PENDING_KEY = "trashit:camera-app-open";
 // Takes a photo inside the page: a full-screen live camera with a shutter, so the page never goes to the background
 // (opening the phone's camera app made some Android phones reload the page and lose the photo). When the browser
 // can't open the camera here (no permission, an old phone), the phone's camera app is offered instead. The location
-// is looked up while the camera is open, so confirming doesn't wait for GPS.
+// is looked up while the camera is open, so confirming doesn't wait for GPS. The camera is drawn straight into
+// <body> (a portal): inside a card with a slide-in animation, "fixed" would be trapped in the card's box and the
+// camera squeezed into a thin strip.
 export default function PhotoCapture({ onCapture, label = "Take Photo", buttonClassName = "btn-primary" }: PhotoCaptureProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -205,7 +208,8 @@ export default function PhotoCapture({ onCapture, label = "Take Photo", buttonCl
         </p>
       )}
 
-      {open && (
+      {open &&
+        createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -263,8 +267,9 @@ export default function PhotoCapture({ onCapture, label = "Take Photo", buttonCl
               </button>
             )}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
     </div>
   );
 }
