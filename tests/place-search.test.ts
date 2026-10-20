@@ -82,10 +82,21 @@ describe('matchLocal (the built-in neighbourhood list)', async () => {
 
   it('puts nearer places first when it knows roughly where you are', () => {
     const nearTema = matchLocal(list, 'community 1', { lat: 5.67, lng: -0.01 })
-    expect(nearTema[0].detail).toBe('Tema')
+    expect(nearTema[0].detail).toBe('Tema, Greater Accra')
   })
 
-  it('is small enough to load on a phone', () => {
-    expect(readFileSync(path.resolve(__dirname, '../public/places/gh-places.json')).length).toBeLessThan(80_000)
+  it('covers every region and stays small enough to load on a phone', () => {
+    const regions = new Set(list.map((p: [string, number, number, string]) => p[3].split(', ').pop()))
+    expect(regions.size).toBe(16)
+    expect(readFileSync(path.resolve(__dirname, '../public/places/gh-places.json')).length).toBeLessThan(450_000)
+    expect(matchLocal(list, 'bolga')[0].detail).toBe('Upper East')
+    expect(matchLocal(list, 'asokwa')[0].detail).toBe('Kumasi, Ashanti')
+  })
+
+  it('matches fast enough to run on every keystroke', () => {
+    matchLocal(list, 'warm up')
+    const t = performance.now()
+    for (const q of ['ko', 'kot', 'koto', 'kotob', 'east l', 'comm 4', 'tamale', 'ho']) matchLocal(list, q)
+    expect((performance.now() - t) / 8).toBeLessThan(15)
   })
 })

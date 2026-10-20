@@ -55,7 +55,8 @@ export function dedupePlaces(hits: PlaceHit[], max = 6): PlaceHit[] {
 
 // ---- The built-in list of neighbourhoods and towns (public/places/gh-places.json), matched instantly ----
 
-export type LocalPlace = [name: string, lat: number, lng: number, nearTown: string, kind: number]
+// [name, lat, lng, detail ("nearest town, region"), kind]. All 16 regions, ~7,400 places.
+export type LocalPlace = [name: string, lat: number, lng: number, detail: string, kind: number]
 
 // Lower case, no punctuation, and the usual short forms written out ("comm 4" finds "Community 4").
 export function normalisePlace(s: string): string {
@@ -80,12 +81,18 @@ const km = (a: { lat: number; lng: number }, lat: number, lng: number) => {
 
 // Best matches first: the name starts with what was typed, then a word in it does, then it appears anywhere; towns
 // before villages; nearer places first when we know roughly where the person is.
+// Each list's names, normalised once (not on every keystroke: the list has thousands of names).
+const normalised = new WeakMap<readonly LocalPlace[], string[]>()
+
 export function matchLocal(list: readonly LocalPlace[], query: string, near?: { lat: number; lng: number } | null, max = 5): PlaceHit[] {
   const q = normalisePlace(query)
   if (q.length < 2) return []
+  let names = normalised.get(list)
+  if (!names) normalised.set(list, (names = list.map((p) => normalisePlace(p[0]))))
   const scored: { p: LocalPlace; s: number }[] = []
-  for (const p of list) {
-    const n = normalisePlace(p[0])
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i]
+    const n = names[i]
     const at = n.indexOf(q)
     if (at < 0) continue
     let s = at === 0 ? 0 : n.charAt(at - 1) === ' ' ? 10 : 20
