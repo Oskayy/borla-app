@@ -113,6 +113,8 @@ function BookingFormInner({
   const fieldError = (field: string) => (errorField === field ? error : undefined)
   const [loading, setLoading] = useState(false)
 
+  // The booking already made on this screen: pressing Pay again (e.g. after a price change) pays it, not a new one.
+  const [createdId, setCreatedId] = useState<string | null>(null)
   const [pendingConfirm, setPendingConfirm] = useState<{
     orderId: string
     distanceMeters: number
@@ -206,8 +208,10 @@ function BookingFormInner({
       const data = await res.json()
 
       if (!res.ok) {
+        // A new price (it changed since it was shown) is in the message; pressing Pay again pays it.
         setError(data.error || 'Could not start payment')
         setLoading(false)
+        if (data.paid) router.push(`/dashboard/customer/orders/${orderId}`)
         return
       }
 
@@ -235,6 +239,11 @@ function BookingFormInner({
     setError('')
     setErrorField(null)
     setLoading(true)
+
+    if (createdId) {
+      await payNow(createdId)
+      return
+    }
 
     const orderRes = await fetch('/api/orders/create', {
       method: 'POST',
@@ -272,6 +281,7 @@ function BookingFormInner({
       return
     }
 
+    setCreatedId(orderData.id) // booked with its photo: a retry now only pays
     const evidenceData = await evidenceRes.json()
 
     if (evidenceData.flagged) {

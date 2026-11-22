@@ -10,13 +10,13 @@ import { releaseDisposal } from '@/lib/disposal-release'
 import { getShiftSettings } from '@/lib/settings'
 import { notifyCustomersCompleted } from '@/lib/customer-updates'
 import { caught } from '@/lib/errors'
+import { parseTicket, UNLOAD_AUDIT_RATE, unloadNeedsReview } from '@/lib/unload-checks'
+import { hasCleanRecord } from '@/lib/unload-checks-server'
 
-// Extra metres allowed on top of a site's geofence, because phone GPS drifts.
-const GPS_TOLERANCE_M = 50
-
-// The driver unloads one trip at its disposal site and takes one photo there.
-// Inside the site's geofence: every collected order on the trip is completed and the disposal share is paid.
-// Outside it, or with no GPS: the orders wait for ops to review the photo, and nothing is paid yet.
+// The driver unloads one trip at its disposal site and takes one photo there (lib/unload-checks.ts).
+// Inside the site's geofence, with the site's gate code and ticket number if it asks for them: every collected order
+// on the trip is completed and the disposal share is paid; a random few are checked by ops afterwards (the pay waits).
+// Otherwise: the orders wait for ops to review the photo, and nothing is paid yet.
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
   if (!auth.ok) return auth.response
@@ -67,13 +67,23 @@ export async function POST(req: NextRequest) {
 
   const site = route.trips[0]?.facility ?? null
 
-  // Is the photo inside the site's geofence?
+  const ticket = parseTicket(body?.ticketNumber)
+  if (site?.ticketRequired && !ticket) {
+    return NextResponse.json({ error: 'Please type the number on your weighbridge ticket (letters and numbers).' }, { status: 400 })
+  }
+  const code = typeof body?.unloadCode === 'string' ? body.unloadCode.slice(0, 40) : null
+
+  // Where the photo was taken, and whether this unload can be paid straight away.
   let distanceM: number | null = null
-  let inside = false
   if (site?.lat != null && site?.lng != null && gps.lat != null && gps.lng != null) {
     distanceM = Math.round(distanceInMeters(gps.lat, gps.lng, site.lat, site.lng))
-    inside = distanceM <= site.geofenceRadiusM + GPS_TOLERANCE_M
   }
+  const ticketUsedBefore = ticket
+    ? !!(await prisma.orderEvidence.findFirst({ where: { type: 'driver_disposal', ticketNumber: ticket, orderId: { notIn: onBoard.map((o) => o.id) } }, select: { id: true } }))
+    : false
+  const reviewWhy = unloadNeedsReview(site, { distanceM, code, ticket, ticketUsedBefore, cleanRecord: await hasCleanRecord(user.id) })
+  const inside = reviewWhy === null
+  const audit = inside && Math.random() < UNLOAD_AUDIT_RATE // checked by ops afterwards; the pay waits for that look
 
   const settings = await getShiftSettings()
   const takenAt = parseTakenAt(body?.takenAt)
@@ -90,6 +100,7 @@ export async function POST(req: NextRequest) {
             gpsLat: gps.lat,
             gpsLng: gps.lng,
             capturedAt: takenAt,
+            ticketNumber: ticket,
           })),
         })
 
@@ -102,17 +113,18 @@ export async function POST(req: NextRequest) {
             facilityId: site!.id,
             method: 'geofence',
             actorId: user.id,
-            reason: `Unloaded at ${site!.name} (photo ${distanceM} m from site, trip ${tripNumber})`,
+            reason: `Unloaded at ${site!.name} (photo ${distanceM} m from site${ticket ? `, ticket ${ticket}` : ''}, trip ${tripNumber})`,
           })
+          if (audit) {
+            await tx.dispute.createMany({
+              data: onBoard.map((o) => ({ orderId: o.id, raisedBy: 'system', kind: 'UNLOAD_AUDIT', reason: `UNLOAD AUDIT: random check of the unload at ${site!.name}` })),
+            })
+          }
           return { verified: true, paid }
         }
 
-        // Needs a human look: outside the geofence, no GPS, or no site on the trip.
-        const why = !site
-          ? 'no disposal site was set for this trip'
-          : distanceM == null
-          ? 'the photo had no GPS location'
-          : `the photo was ${distanceM} m from ${site.name} (allowed ${site.geofenceRadiusM + GPS_TOLERANCE_M} m)`
+        // Needs a human look: outside the geofence, no GPS, no site on the trip, a wrong site code or a used ticket.
+        const why = reviewWhy!
         const moved = await tx.order.updateMany({
           where: { id: { in: onBoard.map((o) => o.id) }, driverId: user.id, status: 'PICKED_UP' },
           data: { status: 'DISPOSAL_PENDING' },

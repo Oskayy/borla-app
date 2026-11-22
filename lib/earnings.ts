@@ -13,6 +13,7 @@
 import { zonedInstant } from './offers'
 
 export const CLEARING_HOURS = 24 // placeholder
+export const NEW_DRIVER_CLEARING_HOURS = 48 // in their first NEW_DRIVER_DAYS, so a complaint can arrive before pay clears (placeholder)
 export const NEW_DRIVER_DAYS = 30 // new drivers keep a small reserve for this long (placeholder)
 export const RESERVE_BPS = 1_000 // reserve: 10% of the last RESERVE_WINDOW_DAYS of earnings (placeholder)
 export const RESERVE_WINDOW_DAYS = 7
@@ -31,6 +32,11 @@ export const DRIVER_LEDGER_TYPES = [...EARNING_TYPES, CLAWBACK_TYPE]
 export function clearsAt(unloadedAt: Date, shiftEndsAt: Date | null, hours = CLEARING_HOURS): Date {
   const from = Math.max(unloadedAt.getTime(), shiftEndsAt?.getTime() ?? 0)
   return new Date(from + hours * 3600_000)
+}
+
+// The clearing period for a driver approved at `approvedAt`: longer while they are new.
+export function clearingHoursFor(approvedAt: Date | null, now: Date): number {
+  return approvedAt && now.getTime() - approvedAt.getTime() < NEW_DRIVER_DAYS * 86_400_000 ? NEW_DRIVER_CLEARING_HOURS : CLEARING_HOURS
 }
 
 // When the night's shift ends: the morning after the shift date when the shift crosses midnight (8pm-6am).

@@ -5,8 +5,10 @@
 //  1. Hardest orders first: those the fewest drivers can reach, then the oldest.
 //  2. Each order goes to the eligible driver (online if the shift is running, within radius, with room left)
 //     whose planned stops are closest to it, so each driver gets a tight cluster. Ties go to the emptier driver.
-//  3. Each driver's stops are put in a sensible driving order (nearest next stop), then split into trips
-//     that fill the vehicle to about 90% before a disposal run.
+//     Orders are matched as a batch: the next one placed is the one that would lose most if its best driver were
+//     taken ("regret"), so one driver isn't filled with easy stops that others could have done.
+//  3. Each driver's stops are put in a sensible driving order (nearest next stop, then shortened by 2-opt), then
+//     split into trips that fill the vehicle to about 90% before a disposal run.
 //  4. An order only goes to a driver if their whole night still fits: no more trips than they have left,
 //     and no longer than the time left in the shift (lib/trip-time.ts). Otherwise the next-closest driver is tried.
 //  5. Hazardous orders are never planned automatically: ops plan them by hand.
@@ -134,7 +136,30 @@ export function orderStops(start: { lat: number; lng: number } | null, orders: P
     result.push(next)
     here = { lat: next.latitude!, lng: next.longitude! }
   }
-  return [...result, ...unlocated]
+  return [...twoOpt(start, result), ...unlocated]
+}
+
+// Shortens a route that starts at `start` and ends at its last stop by reversing stretches of it while that makes it
+// shorter (2-opt). Nearest-next alone often leaves a long jump back at the end; this removes most crossings.
+export function twoOpt(start: { lat: number; lng: number }, stops: PlanOrder[]): PlanOrder[] {
+  const route = [...stops]
+  const pt = (i: number) => (i < 0 ? start : { lat: route[i].latitude!, lng: route[i].longitude! })
+  const d = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => km(a.lat, a.lng, b.lat, b.lng)
+  for (let pass = 0, improved = true; improved && pass < 50; pass++) {
+    improved = false
+    for (let i = 0; i < route.length - 1; i++) {
+      for (let j = i + 1; j < route.length; j++) {
+        // Reverse route[i..j]: the edges (i-1 -> i) and (j -> j+1) become (i-1 -> j) and (i -> j+1).
+        const before = d(pt(i - 1), pt(i)) + (j + 1 < route.length ? d(pt(j), pt(j + 1)) : 0)
+        const after = d(pt(i - 1), pt(j)) + (j + 1 < route.length ? d(pt(i), pt(j + 1)) : 0)
+        if (after < before - 1e-9) {
+          route.splice(i, j - i + 1, ...route.slice(i, j + 1).reverse())
+          improved = true
+        }
+      }
+    }
+  }
+  return route
 }
 
 // Splits stops (already in driving order) into trips of at most `perTrip` litres.
@@ -245,6 +270,7 @@ export function proposePlan(
     candidates.set(o.id, drivers.filter((d) => !declined.has(d.id) && assessDriver(d, [o], shiftRunning, now).eligible))
   }
 
+  // Fewest drivers first, then oldest: the order ties are broken in below.
   const sorted = [...orders].sort((a, b) => {
     const ca = candidates.get(a.id)!.length
     const cb = candidates.get(b.id)!.length
@@ -258,10 +284,52 @@ export function proposePlan(
   const misses = new Map<string, number>() // driverId -> orders in a row that didn't fit their night
   const unassigned: Plan['unassigned'] = manual.map((o) => ({ orderId: o.id, reason: 'Hazardous waste: plan it by hand' }))
 
+  // Distance from each order to each candidate driver's nearest planned stop (or their start point), kept up to date
+  // as orders are placed, so choosing the next order stays fast on big nights.
+  const near = new Map<string, Map<string, number>>()
   for (const o of sorted) {
+    const m = new Map<string, number>()
+    for (const d of candidates.get(o.id)!) {
+      const start = driverPosition(d, shiftRunning, now)
+      m.set(d.id, o.latitude == null || o.longitude == null || !start ? 0 : km(start.lat, start.lng, o.latitude, o.longitude))
+    }
+    near.set(o.id, m)
+  }
+  const room = (d: DispatchDriver) => nightCapacity(d) - d.loadLitres - (used.get(d.id) ?? 0)
+  const full = (d: DispatchDriver) =>
+    (d.minutesLeft != null && (planMinutes.get(d.id) ?? 0) + STOP_MINUTES > d.minutesLeft) || (misses.get(d.id) ?? 0) >= 3
+  const tieBreak = (d: DispatchDriver) => (d.loadLitres + (used.get(d.id) ?? 0)) / Math.max(1, nightCapacity(d)) / 100
+  const costs = (o: PlanOrder) =>
+    candidates
+      .get(o.id)!
+      .filter((d) => o.litres <= room(d))
+      .map((d) => ({ d, score: near.get(o.id)!.get(d.id)! + tieBreak(d) }))
+      .sort((a, b) => a.score - b.score)
+
+  // Batch matching: rather than taking orders strictly in turn, place next the order that loses most if its best
+  // driver is taken (the gap between its best and second-best driver, "regret"). Orders only one driver can take come
+  // first; ties go to the order with fewer drivers, then the older one.
+  const pending = new Set(sorted.map((o) => o.id))
+  const byId = new Map(sorted.map((o) => [o.id, o]))
+  while (pending.size > 0) {
+    let o: PlanOrder | null = null
+    let regret = -1
+    for (const x of sorted) {
+      if (!pending.has(x.id)) continue
+      const c = costs(x).filter((y) => !full(y.d))
+      const r = c.length <= 1 ? Infinity : c[1].score - c[0].score
+      if (r > regret) {
+        o = x
+        regret = r
+        if (r === Infinity) break
+      }
+    }
+    o = o!
+    pending.delete(o.id)
+
     const options = candidates.get(o.id)!
     if (options.length === 0) {
-      const anyone = drivers.map((d) => assessDriver(d, [o], shiftRunning, now))
+      const anyone = drivers.map((d) => assessDriver(d, [o!], shiftRunning, now))
       const reason =
         drivers.length === 0
           ? 'No drivers yet'
@@ -274,32 +342,12 @@ export function proposePlan(
       continue
     }
 
-    // Score every driver with room, then take the closest whose night still fits (trips and time).
-    const scored: { d: DispatchDriver; score: number }[] = []
-    for (const d of options) {
-      const room = nightCapacity(d) - d.loadLitres - (used.get(d.id) ?? 0)
-      if (o.litres > room) continue
-      // Distance from this order to the driver's nearest planned stop (or their start point).
-      const mine = assigned.get(d.id) ?? []
-      const points = mine
-        .filter((m) => m.latitude != null && m.longitude != null)
-        .map((m) => ({ lat: m.latitude!, lng: m.longitude! }))
-      const start = driverPosition(d, shiftRunning, now)
-      if (start) points.push({ lat: start.lat, lng: start.lng })
-      const score =
-        o.latitude == null || o.longitude == null || points.length === 0
-          ? 0
-          : Math.min(...points.map((p) => km(p.lat, p.lng, o.latitude!, o.longitude!)))
-      const tieBreak = (d.loadLitres + (used.get(d.id) ?? 0)) / Math.max(1, nightCapacity(d)) / 100
-      scored.push({ d, score: score + tieBreak })
-    }
-    scored.sort((a, b) => a.score - b.score)
-
+    // Take the closest driver with room whose night still fits (trips and time).
+    const scored = costs(o)
     let best: DispatchDriver | null = null
     for (const { d } of scored) {
       // Cheap skips first: a driver whose night is already full, or who missed several orders in a row (keeps big nights fast).
-      if (d.minutesLeft != null && (planMinutes.get(d.id) ?? 0) + STOP_MINUTES > d.minutesLeft) continue
-      if ((misses.get(d.id) ?? 0) >= 3) continue
+      if (full(d)) continue
       const trial = buildDriverPlan(d, [...(assigned.get(d.id) ?? []), o], shiftRunning, now, sites)
       if (limitProblems(d, trial.trips.length, trial.minutes).length === 0) {
         best = d
@@ -319,6 +367,17 @@ export function proposePlan(
     }
     assigned.set(best.id, [...(assigned.get(best.id) ?? []), o])
     used.set(best.id, (used.get(best.id) ?? 0) + o.litres)
+    // The new stop is now the nearest point of this driver's plan for orders around it.
+    if (o.latitude != null && o.longitude != null) {
+      for (const id of pending) {
+        const m = near.get(id)!
+        const was = m.get(best.id)
+        if (was == null) continue
+        const x = byId.get(id)!
+        if (x.latitude == null || x.longitude == null) continue
+        m.set(best.id, Math.min(was, km(o.latitude, o.longitude, x.latitude, x.longitude)))
+      }
+    }
   }
 
   const plans = drivers

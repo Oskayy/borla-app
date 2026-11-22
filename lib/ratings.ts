@@ -1,7 +1,7 @@
 // Customer ratings and the driver's own analytics. Pure functions (no database) so they can be tested.
 
 // Orders the customer can rate: the driver has collected the bins.
-export const RATEABLE_STATUSES = ['PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED']
+export const RATEABLE_STATUSES = ['PICKED_UP', 'DISPOSAL_PENDING', 'COMPLETED']
 export const RATING_WINDOW_DAYS = 14 // after the pickup
 export const LOW_RATING = 2 // this many stars or fewer goes to ops
 export const MAX_COMMENT = 500

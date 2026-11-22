@@ -8,7 +8,8 @@ import { ROLE_NAMES, sectionsFor } from '@/lib/ops-nav'
 import { queueCounts } from '@/lib/ops-queue'
 import { systemHealth } from '@/lib/system-health'
 import { getShiftSettings } from '@/lib/settings'
-import { isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
+import { isWithinShift, windowLabel } from '@/lib/shift'
+import { driverPresence, PRESENCE_SELECT } from '@/lib/presence'
 import OpsShell from '@/components/ops/OpsShell'
 import EnableAlerts from '@/components/EnableAlerts'
 
@@ -20,12 +21,13 @@ async function shiftNow() {
   const now = new Date()
   const drivers = await prisma.driverProfile.findMany({
     where: { isOnline: true, approvalStatus: 'APPROVED' },
-    select: { isOnline: true, onlineOverrideUntil: true },
+    select: PRESENCE_SELECT,
   })
   return {
     hours: windowLabel(settings),
     running: isWithinShift(now, settings),
-    online: drivers.filter((d) => isDriverAvailable(d, now, settings)).length,
+    // Only drivers really there: online with a recent location in or near their area (lib/presence.ts).
+    online: drivers.filter((d) => driverPresence(d, now, settings).available).length,
   }
 }
 

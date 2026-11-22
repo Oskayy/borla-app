@@ -198,3 +198,30 @@ export async function quoteFromBooking(
   }
   return quoteAtPoint(input, address, { lat: body.pinLat, lng: body.pinLng }, 'pin')
 }
+
+// Prices an unpaid booking again at checkout, from what it records (bins, waste type, pin): a draft never pays an old
+// price (prices, the zone's tier or the late surcharge may have changed since it was priced), and the platform fee
+// stored with it is the one in force when the customer pays. The address text and where the pin came from are kept.
+export async function requoteDraft(order: { latitude: number | null; longitude: number | null; quoteSnapshot: unknown }): Promise<QuoteResult> {
+  const s = order.quoteSnapshot as Partial<QuoteSnapshot> | null
+  if (!s || order.latitude == null || order.longitude == null || !s.bins || !s.wasteType) {
+    return fail(400, "We couldn't work out the price for this booking. Please book again, or contact Trashit support.")
+  }
+  const input: OrderInput = { bins: s.bins, wasteType: s.wasteType, hazardous: s.hazardous === true }
+  // A booking re-priced at the zone its photo was taken in (app/api/orders/add-evidence) keeps that zone; otherwise
+  // the zone is the one the pin is in now.
+  const zone =
+    s.requotedFrom && s.zoneId
+      ? await prisma.zone.findFirst({ where: { id: s.zoneId, active: true }, select: { id: true, name: true, priceMultiplier: true } })
+      : await findZoneForPoint(order.latitude, order.longitude)
+  if (!zone) return fail(400, "Sorry, we don't serve this area any more. Please delete this booking.")
+  const priced = await quoteForZone(input, zone)
+  if (!priced.ok) return priced
+  const quote: QuoteSnapshot = {
+    ...priced.quote,
+    address: s.address,
+    ...(s.locationSource ? { locationSource: s.locationSource } : {}),
+    ...(s.requotedFrom ? { requotedFrom: s.requotedFrom } : {}),
+  }
+  return { ...priced, quote, lat: order.latitude, lng: order.longitude }
+}

@@ -17,16 +17,10 @@ export interface CustomerStatus {
 
 const S: Record<string, CustomerStatus> = {
   DRAFT: { label: 'Not paid', message: 'This booking is not paid yet, so it is not scheduled.', stage: -1, tone: 'neutral', active: false },
-  PENDING_PAYMENT: { label: 'Paying', message: 'We are waiting for your payment to be confirmed.', stage: -1, tone: 'neutral', active: true },
   PAID: { label: 'Booked', message: 'Payment received. Your pickup is scheduled.', stage: 0, tone: 'waiting', active: true },
-  READY_FOR_BATCH: { label: 'Booked', message: 'Payment received. Your pickup is scheduled.', stage: 0, tone: 'waiting', active: true },
   ASSIGNED: { label: 'Driver assigned', message: 'A driver has your stop for the night. Put your bins out before 8pm.', stage: 1, tone: 'progress', active: true },
-  EN_ROUTE: { label: 'On the way', message: 'Your driver is on the way.', stage: 1, tone: 'progress', active: true },
-  ARRIVED: { label: 'Driver at gate', message: 'Your driver is at your gate.', stage: 1, tone: 'progress', active: true },
-  PICKUP_PENDING_REVIEW: { label: 'Collected', message: 'Your bins were collected and are being checked.', stage: 2, tone: 'waiting', active: true },
   PICKED_UP: { label: 'Collected', message: 'Your bins were collected and are on the way to a disposal site.', stage: 2, tone: 'waiting', active: true },
   DISPOSAL_PENDING: { label: 'Collected', message: 'Your bins were collected and are being unloaded at a disposal site.', stage: 2, tone: 'waiting', active: true },
-  DISPOSAL_VERIFIED: { label: 'Done', message: 'Unloaded at a licensed disposal site. All done.', stage: 3, tone: 'done', active: false },
   COMPLETED: { label: 'Done', message: 'Unloaded at a licensed disposal site. All done.', stage: 3, tone: 'done', active: false },
   CANCELLED: { label: 'Cancelled', message: 'This pickup was cancelled.', stage: -1, tone: 'neutral', active: false },
   FAILED_PICKUP: { label: 'Missed', message: 'The driver could not collect this pickup. Support will follow up.', stage: 1, tone: 'problem', active: false },

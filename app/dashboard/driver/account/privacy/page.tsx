@@ -11,7 +11,7 @@ import { driverDeleteBlockers } from '@/lib/driver-delete'
 
 export const dynamic = 'force-dynamic'
 
-const OPEN = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP', 'DISPOSAL_PENDING', 'FAILED_PICKUP', 'DISPUTED'] as const
+const OPEN = ['ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING', 'FAILED_PICKUP', 'DISPUTED'] as const
 const accraDate = (d: Date) => d.toLocaleString('en-GB', { timeZone: 'Africa/Accra', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 
 export default async function DriverPrivacyPage() {

@@ -4,7 +4,8 @@ import type { OrderStatus } from '@prisma/client'
 import { createClient } from '@/utils/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { getShiftSettings } from '@/lib/settings'
-import { addDays, isDriverAvailable, isWithinShift, localParts, windowLabel } from '@/lib/shift'
+import { addDays, isWithinShift, localParts, windowLabel } from '@/lib/shift'
+import { driverPresence, PRESENCE_SELECT, type PresenceInput } from '@/lib/presence'
 import { dbDate, planningShiftDate } from '@/lib/schedule'
 import { worksNight } from '@/lib/availability'
 import { REFUND_ROLES } from '@/lib/refunds'
@@ -55,24 +56,25 @@ function tonightInfo(settings: Awaited<ReturnType<typeof getShiftSettings>>) {
   return { night, label, running: isWithinShift(now, settings) }
 }
 
-// Drivers who count as online right now (online and inside the shift, or with an ops override).
-function onlineNow<T extends { isOnline: boolean; onlineOverrideUntil: Date | null }>(drivers: T[], settings: Awaited<ReturnType<typeof getShiftSettings>>): T[] {
+// Drivers who count as online right now: online in the shift (or with an ops override), with a recent location in
+// or near their area (lib/presence.ts).
+function onlineNow<T extends PresenceInput>(drivers: T[], settings: Awaited<ReturnType<typeof getShiftSettings>>): T[] {
   const now = new Date()
-  return drivers.filter((d) => isDriverAvailable(d, now, settings))
+  return drivers.filter((d) => driverPresence(d, now, settings).available)
 }
 
 // Roles that see what tonight is worth.
 const MONEY_VIEW = ['SUPER_ADMIN', 'OPS_MANAGER', 'FINANCE', 'ANALYST']
 
 // Collected at least as far as the driver's vehicle.
-const COLLECTED = ['PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED'] as OrderStatus[]
+const COLLECTED = ['PICKED_UP', 'DISPOSAL_PENDING', 'COMPLETED'] as OrderStatus[]
 
 // Stages of tonight's orders.
 const STAGES = [
-  { key: 'waiting', statuses: ['PAID', 'READY_FOR_BATCH'] },
-  { key: 'withDriver', statuses: ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW'] },
+  { key: 'waiting', statuses: ['PAID'] },
+  { key: 'withDriver', statuses: ['ASSIGNED'] },
   { key: 'collected', statuses: ['PICKED_UP', 'DISPOSAL_PENDING'] },
-  { key: 'unloaded', statuses: ['DISPOSAL_VERIFIED', 'COMPLETED'] },
+  { key: 'unloaded', statuses: ['COMPLETED'] },
 ] as const
 
 export default async function OpsOverview() {
@@ -95,8 +97,7 @@ export default async function OpsOverview() {
       where: { approvalStatus: 'APPROVED', isActive: true, user: { active: true } },
       select: {
         userId: true,
-        isOnline: true,
-        onlineOverrideUntil: true,
+        ...PRESENCE_SELECT,
         workNights: true,
         nightsOff: true,
         vehicleType: true,
@@ -150,7 +151,7 @@ export default async function OpsOverview() {
   // What each driver online is doing tonight.
   const theirs = onlineDrivers.length
     ? await prisma.order.findMany({
-        where: { shiftDate: dbDate(night), driverId: { in: onlineDrivers.map((d) => d.userId) }, status: { in: ['ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED'] } },
+        where: { shiftDate: dbDate(night), driverId: { in: onlineDrivers.map((d) => d.userId) }, status: { in: ['ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING', 'COMPLETED'] } },
         select: { driverId: true, status: true },
       })
     : []
@@ -181,7 +182,7 @@ export default async function OpsOverview() {
   }))
   const zoneCounts = await prisma.order.groupBy({
     by: ['zoneId'],
-    where: { shiftDate: dbDate(night), status: { notIn: ['DRAFT', 'PENDING_PAYMENT', 'CANCELLED'] } },
+    where: { shiftDate: dbDate(night), status: { notIn: ['DRAFT', 'CANCELLED'] } },
     _count: { _all: true },
   })
   const zoneNames = await prisma.zone.findMany({ where: { id: { in: zoneCounts.map((z) => z.zoneId).filter((x): x is string => !!x) } }, select: { id: true, name: true } })
@@ -194,7 +195,7 @@ export default async function OpsOverview() {
   const seesMoney = MONEY_VIEW.includes(me.role)
   const booked = seesMoney
     ? await prisma.order.aggregate({
-        where: { shiftDate: dbDate(night), status: { notIn: ['DRAFT', 'PENDING_PAYMENT', 'CANCELLED'] } },
+        where: { shiftDate: dbDate(night), status: { notIn: ['DRAFT', 'CANCELLED'] } },
         _sum: { pricePesewas: true },
       })
     : null

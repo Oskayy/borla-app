@@ -93,7 +93,7 @@ export default function PayoutRuleForm({ current }: { current: PayoutRuleValues 
       </div>
 
       <h3 className="mt-6 text-sm font-semibold">Distance bonus</h3>
-      <p className="text-sm text-ink-3">For stops far from the driver&apos;s home base, paid from Trashit&apos;s fee and fixed when the stop is assigned. Set GHS per km to 0 to turn it off.</p>
+      <p className="text-sm text-ink-3">For stops far from where the driver comes from (their live position, or the stop before it on their route), paid from Trashit&apos;s fee and never more than Trashit keeps after Paystack&apos;s fee. Fixed when the stop is assigned. Set GHS per km to 0 to turn it off.</p>
       <div className="fields mt-3 grid gap-4 sm:grid-cols-3">
         <Field label="Free distance (km)" value={v.distanceFreeKm} onChange={set('distanceFreeKm')} step={0.5} />
         <Field label="GHS per km beyond it" value={v.distanceBonusPerKm} onChange={set('distanceBonusPerKm')} step={0.1} />

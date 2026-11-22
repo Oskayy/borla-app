@@ -31,7 +31,7 @@ import { driverDeleteBlockers } from '@/lib/driver-delete'
 //   without their name, phone, email or wallet number; ratings stay as numbers;
 // - the login is deleted.
 
-const IN_PROGRESS = ['PENDING_PAYMENT', 'PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP', 'DISPOSAL_PENDING'] as const
+const IN_PROGRESS = ['PAID', 'ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING'] as const
 const OPEN_REFUNDS = ['AWAITING_APPROVAL', 'PENDING', 'PROCESSING', 'NEEDS_ATTENTION']
 
 export async function POST(req: NextRequest) {
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
 }
 
 
-const DRIVER_OPEN = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP', 'DISPOSAL_PENDING', 'FAILED_PICKUP', 'DISPUTED'] as const
+const DRIVER_OPEN = ['ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING', 'FAILED_PICKUP', 'DISPUTED'] as const
 const accraDate = (d: Date) => d.toLocaleString('en-GB', { timeZone: 'Africa/Accra', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 
 async function deleteDriver(id: string) {

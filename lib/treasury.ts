@@ -55,6 +55,23 @@ export function planSweep(candidates: PayoutCandidate[]): SweepPlan {
   return plan
 }
 
+// When the Paystack balance can't cover every automatic payout: pay the smallest balances first (the most drivers
+// paid for the money there is), and keep the rest for later runs. `balance` null (Paystack didn't answer) pays nobody.
+export function fitToBalance(plan: SweepPlan, balance: number | null): { send: SweepPlan; later: SweepPlan['auto']; shortBy: number } {
+  const total = sweepTotal(plan)
+  if (balance != null && balance >= total.amount + total.fees) return { send: plan, later: [], shortBy: 0 }
+  const send: SweepPlan['auto'] = []
+  const later: SweepPlan['auto'] = []
+  let left = balance ?? 0
+  for (const p of [...plan.auto].sort((a, b) => a.amount - b.amount)) {
+    if (balance != null && p.amount + TRANSFER_FEE_PESEWAS <= left) {
+      send.push(p)
+      left -= p.amount + TRANSFER_FEE_PESEWAS
+    } else later.push(p)
+  }
+  return { send: { auto: send, forFinance: plan.forFinance }, later, shortBy: Math.max(0, total.amount + total.fees - (balance ?? 0)) }
+}
+
 export function sweepTotal(plan: SweepPlan): { amount: number; fees: number } {
   const amount = plan.auto.reduce((s, p) => s + p.amount, 0)
   return { amount, fees: plan.auto.length * TRANSFER_FEE_PESEWAS }

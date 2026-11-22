@@ -13,7 +13,7 @@ import { CUSTOMER_PAGE_ROLES } from '@/lib/ops-nav'
 export const dynamic = 'force-dynamic'
 
 // Who books, where and how often. Read-only. Phone numbers are masked; there is nothing here to change.
-const PAID: OrderStatus[] = ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED']
+const PAID: OrderStatus[] = ['PAID', 'ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING', 'COMPLETED']
 const VIEWS = { all: 'All', recent: 'Booked in 7 days', nopin: 'No home pin', quiet: 'Gone quiet' } as const
 type View = keyof typeof VIEWS
 const PAGE = 50

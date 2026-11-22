@@ -30,7 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (paymentId !== undefined && !isUuid(paymentId)) return NextResponse.json({ error: 'Invalid payment' }, { status: 400 })
 
   const driverFault = body?.driverFault === true
-  const result = await refundOrder({ orderId: id, amount, reason, actorId: auth.user.id, cancel: body?.cancel === true, paymentId, staffApproval: true, driverFault })
+  const requestKey = typeof body?.requestKey === 'string' ? body.requestKey : undefined
+  const result = await refundOrder({ orderId: id, amount, reason, actorId: auth.user.id, cancel: body?.cancel === true, paymentId, staffApproval: true, driverFault, requestKey })
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
 
   if (result.awaitingApproval) {

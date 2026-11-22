@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { createRefund } from '@/lib/paystack'
 import { LIVE_REFUND_STATUSES, needsSecondApprover, REFUND_APPROVAL_THRESHOLD_GHS, REFUND_ROLES, refundable, refundStatusFromPaystack } from '@/lib/refunds'
-import { notifyUser, notifyUsers } from '@/lib/notify'
+import { notifyOps, notifyUser, notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
 import { CLAWBACK_TYPE } from '@/lib/earnings'
 import { balance, orderPosition, postJournal } from '@/lib/journal-server'
@@ -27,6 +27,7 @@ export async function refundOrder(args: {
   paymentId?: string // a specific payment (e.g. a duplicate payment); default: the order's successful payment
   staffApproval?: boolean // a staff refund: at or above REFUND_APPROVAL_THRESHOLD_GHS it waits for a second approver
   driverFault?: boolean // ops recorded the driver as at fault: their shares of this order are taken back once refunded
+  requestKey?: string // from the staff screen: the same key again (a double tap, a retry) makes no second refund
 }): Promise<RefundOutcome> {
   const order = await prisma.order.findUnique({
     where: { id: args.orderId },
@@ -49,6 +50,12 @@ export async function refundOrder(args: {
   // Work out what's left and record the refund (holding the amount) in one serializable step,
   // so two refunds at the same moment (e.g. a double tap) can't both take the full amount.
   let refund: { id: string; amount: number; status: string }
+  let earlierOnOrder = 0 // refunds already made on this order (an alert goes to ops on the second)
+  const key = typeof args.requestKey === 'string' && /^[A-Za-z0-9-]{8,64}$/.test(args.requestKey) ? args.requestKey : null
+  if (key) {
+    const seen = await prisma.refund.findUnique({ where: { requestKey: key }, select: { amount: true, status: true } })
+    if (seen) return { ok: true, error: '', refunded: seen.status === 'AWAITING_APPROVAL' ? 0 : seen.amount, ...(seen.status === 'AWAITING_APPROVAL' ? { awaitingApproval: seen.amount } : {}) }
+  }
   try {
     refund = await prisma.$transaction(
       async (tx) => {
@@ -60,7 +67,17 @@ export async function refundOrder(args: {
         const amount = args.amount == null ? available : Math.round(args.amount * 100) / 100
         if (amount <= 0) throw new Error('NOTHING_LEFT')
         if (amount > available) throw new Error(`TOO_MUCH:${available.toFixed(2)}`)
-        const status = args.staffApproval === true && needsSecondApprover(amount) ? 'AWAITING_APPROVAL' : 'PENDING'
+        // The second-approver limit counts everything staff have refunded on this order, so splitting a large refund
+        // into small ones doesn't get round it. Customer self-cancellations never need approval.
+        const onOrder = await tx.refund.findMany({
+          where: { orderId: order.id, status: { in: LIVE_REFUND_STATUSES } },
+          select: { amount: true, requestedBy: true },
+        })
+        earlierOnOrder = onOrder.length
+        const staffBefore = onOrder
+          .filter((r: { requestedBy: string }) => r.requestedBy !== order.customerId)
+          .reduce((s: number, r: { amount: number }) => s + Math.round(r.amount * 100), 0)
+        const status = args.staffApproval === true && needsSecondApprover((staffBefore + Math.round(amount * 100)) / 100) ? 'AWAITING_APPROVAL' : 'PENDING'
         return tx.refund.create({
           data: {
             orderId: order.id,
@@ -71,6 +88,7 @@ export async function refundOrder(args: {
             cancelOrder: args.cancel,
             status,
             driverFault: args.driverFault === true && !!order.driverId,
+            requestKey: key,
           },
           select: { id: true, amount: true, status: true },
         })
@@ -84,9 +102,18 @@ export async function refundOrder(args: {
       return { ok: false, error: `At most GHS ${e.message.slice(9)} can be refunded`, refunded: 0 }
     }
     if (e?.code === 'P2034') return { ok: false, error: 'Another refund is being made on this order. Please refresh and try again.', refunded: 0 }
+    if (e?.code === 'P2002' && key) return { ok: true, error: '', refunded: 0 } // the same request, recorded a moment ago
     throw err
   }
   const amount = refund.amount
+  if (earlierOnOrder > 0) {
+    const address = (order.quoteSnapshot as { address?: string } | null)?.address ?? 'An order'
+    await notifyOps({
+      title: 'More than one refund on an order',
+      body: `${address} now has ${earlierOnOrder + 1} refunds (latest GHS ${amount.toFixed(2)}: ${args.reason}). Check they're right on the Exceptions page.`,
+      url: '/ops/exceptions',
+    })
+  }
 
   if (refund.status === 'AWAITING_APPROVAL') {
     await prisma.auditLog.create({

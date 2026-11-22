@@ -97,7 +97,18 @@ export default async function DriverDashboard() {
         tripNumber,
         orders: [],
         site: f
-          ? { name: f.name, lat: f.lat, lng: f.lng, hours: describeHours(f), notes: f.notes, status: f.status, unloadMinutes: f.avgUnloadMinutes }
+          ? {
+              name: f.name,
+              lat: f.lat,
+              lng: f.lng,
+              hours: describeHours(f),
+              notes: f.notes,
+              status: f.status,
+              unloadMinutes: f.avgUnloadMinutes,
+              // Never the code itself: the driver reads it at the site gate.
+              needsCode: !!f.unloadCode,
+              needsTicket: f.ticketRequired,
+            }
           : null,
         minutes: null,
       }

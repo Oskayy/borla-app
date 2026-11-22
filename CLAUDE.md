@@ -43,31 +43,61 @@ handle money and exceptions. The project began as "Borla"; the product is now **
   **own price** (all zones from before 19 Oct). Only Super Admin and Finance change either (`lib/tier-price*.ts`); saving a
   tier price updates every zone following it in one transaction, logged `TIER_PRICES_CHANGED`. A tier change that would
   change a zone's price needs a Super Admin (Ops Managers are refused). Customers must drop an exact
-  pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser.
+  pin (`locationSource` `home_pin` or `pin`); the price is worked out on the server, never trusted from the browser,
+  and **again at checkout** (`requoteDraft`, `lib/pricing.ts`; a changed price is shown before paying; a photo-zone re-quote
+  is kept).
+- **Payments** (`lib/payment-confirm-server.ts`): each checkout has our own reference (`Order.paystackReference`); the order
+  becomes PAID through `confirmCharge`, from the webhook **or** by asking Paystack (Verify) when the customer returns and every
+  scheduler run for checkouts of the last 24 h. A draft with a checkout in that window can't be deleted (Paystack is asked
+  first); Pay pressed twice within 30 min reuses the checkout page.
 - Platform fee is taken off the top; the **driver pool** is paid **40% at pickup, 60% at disposal**
   (disposal released by the site geofence, or by ops review on "Unloads to Check"). `PayoutRule` table.
   The split is **frozen on the order at payment** in whole pesewas and basis points, remainder last (`lib/money-split.ts`).
-- Driver earnings **clear 24 h** after the later of unload and shift end, unless a complaint or refund is open; pickup
+  The **distance bonus** is measured from the driver's live position (or the stop before it on their route; home base only
+  as a last resort) and is never more than Trashit keeps (fee minus Paystack's fee) (`lib/distance-bonus-server.ts`).
+- Driver earnings **clear 24 h** (48 h in a driver's first 30 days) after the later of unload and shift end, unless an open
+  dispute (driver report, customer report, pickup check or unload audit; `Dispute.kind`) or refund holds them; pickup
   shares wait for the unload; new drivers keep a small reserve (`lib/earnings.ts`). Refunds with **driver fault** claw back
   their shares; customer-fault failed pickups keep an **attempt fee of 0-25%** (Pricing page, `attemptFeePercent`; **0% since 13 Oct
   2026**, so a full refund), partly paid to the driver; the rest is always refunded and ops "Close" only works once
   nothing is left to refund. Trashit absorbs
   Paystack's 1.95%.
 - Every morning (Accra): **7am** reconciliation of yesterday + Paystack top-up check; from **10am** the daily payout sweep
-  (automatic up to GHS 1,000, minimum GHS 20, only when the Paystack balance covers it all). "Cash out now": first one
+  (automatic up to GHS 1,000, minimum GHS 20; if the Paystack balance is short it pays the smallest balances first and tells
+  Finance the shortfall once a day, the rest on later runs). "Cash out now": first one
   free each day, then GHS 1; instant up to GHS 500 (`lib/treasury.ts`). All placeholders.
 - Money safeguards: replacing a driver's MoMo wallet needs the password again and **pauses withdrawals 24 h**
   (`PAYOUT_CHANGE_HOLD_HOURS`, `lib/wallet.ts`). Manual "mark paid" withdrawals wait in `CONFIRMING` until a
   **different** finance user confirms. Staff refunds of **GHS 100+** (`REFUND_APPROVAL_THRESHOLD_GHS`, placeholder,
-  `lib/refunds.ts`) wait in `AWAITING_APPROVAL` for a different staff member; customer self-cancellations don't.
-- Pickup checks (`lib/plausibility.ts`) flag, never block: no/weak GPS, photo far from the pin, impossible speed
-  between pickups, the same photo reused. They appear on the Exceptions page.
+  `lib/refunds.ts`) wait in `AWAITING_APPROVAL` for a different staff member; customer self-cancellations don't. The limit
+  counts **everything staff have refunded on the order** (no splitting round it); a second refund on an order alerts ops;
+  staff refunds carry a `requestKey` so a double tap makes one refund.
+- Pickup proof: **GPS is required** with the pickup photo. Checks (`lib/plausibility.ts`) never block the pickup: weak GPS
+  only flags; a photo far from the pin, far from the phone's live position, impossible speed or a reused photo also open a
+  `PICKUP_CHECK` dispute that **holds the pay** until ops "Mark checked" on Exceptions. "Gate locked" reports need a photo
+  with GPS; 3+ in a week alert ops. Customers can **report a problem** for 72 h after collection, or answer a "gate locked"
+  report (`/api/orders/[id]/report`, `lib/customer-reports.ts`; asked at 8am the morning after); a report holds the pay.
+- Unload proof (`lib/unload-checks.ts`): inside the site geofence (twice the radius for a driver with a clean record,
+  `lib/unload-checks-server.ts`), plus the site's gate code (`Facility.unloadCode`) and weighbridge ticket number
+  (`ticketRequired`, a reused number goes to review) when the site asks; 10% of automatic unloads get a random
+  `UNLOAD_AUDIT` that holds the pay until ops look.
 - Capacity-based dispatch: drivers make **multiple trips per night** (`maxTripsPerNight`), each trip ends at a disposal site.
 - Drivers must **accept** each assigned stop within `acceptMinutes` (default 15); declined or expired stops are
   **reassigned automatically** (`lib/reassign-server.ts`); a decliner is never offered that order again.
   Going **offline during the shift** with stops to collect: the app asks first, then those stops go to other drivers
   the same way and ops are told (`lib/driver-offline-server.ts`); collected orders on board stay with the driver.
-- At 6am, uncollected orders **roll over** to the next night.
+  A stop not taken by 2 drivers alerts ops once ("keeps bouncing").
+- **Presence** (`lib/presence.ts`): a driver gets new stops only when online in the shift, with a phone location in the
+  last 15 min, **inside their zone or within 3 km of it** (no zone: home base + radius + 3 km). Ops see "Online, not getting
+  stops" with the reason; the driver sees it under the switch. Everyone is switched **offline at 6am**. Every driver
+  working tonight is reminded at 7:45pm and 8pm (push + SMS). An approved driver's **home base or zone move waits for ops**
+  (Drivers page; `lib/home-change.ts`). Only **Super Admin and Ops Manager** may override driver checks (`OVERRIDE_ROLES`);
+  overrides are listed on the Assign page and sent to them every Monday. 3 accepted-but-not-collected stops in 7 days
+  **auto-pause** a driver (`lib/driver-misses-server.ts`; ops Pause/Resume on the Drivers page).
+- The planner matches waiting orders as a batch (regret: the order that loses most without its best driver goes first)
+  and shortens each route with 2-opt (`lib/planner.ts`). Straight-line times are still estimates (no road matrix yet).
+- At 6am, uncollected orders **roll over** to the next night; after 2 missed nights the customer is offered a refund and
+  ops are told.
 - Navigation uses Google Maps links from the driver's **live GPS** to the customer's pin (`lib/navigation.ts`).
 
 ## How it is built
@@ -118,6 +148,10 @@ handle money and exceptions. The project began as "Borla"; the product is now **
 `NEXT_PUBLIC_OAUTH_PROVIDERS` (not a secret: which "Continue with …" buttons show, e.g. `google`; empty = none).
 
 ## Open work (as of 13 Oct 2026)
+
+**Pending (22 Nov 2026):** migration `20261122120000_assignment_payment_review` (checkout reference, home moves, unload codes,
+refund keys, dispute kinds, and it drops the six order statuses that were never used) is written but **not applied**:
+`npx prisma migrate deploy` then `npx prisma generate`, before deploying the code that needs it.
 
 **State (checked 13 Oct 2026):** all migrations applied (latest `20261019120000_tier_prices`, applied 19 Oct); build, lint and tests
 pass; work committed and pushed. The payment flow rewrite (steps 2–7) is live. Paystack is still in **test mode**.

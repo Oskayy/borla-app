@@ -14,7 +14,7 @@ const OVERPASS = 'https://overpass-api.de/api/interpreter'
 const HEADERS = { 'User-Agent': 'Trashit ops (zone planning, Ghana)', 'Content-Type': 'application/x-www-form-urlencoded' }
 const DAY = 86_400_000
 const MAX_CELLS = 60
-const PAID: OrderStatus[] = ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED']
+const PAID: OrderStatus[] = ['PAID', 'ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING', 'COMPLETED']
 
 const cache = new Map<string, { at: number; value: unknown }>()
 

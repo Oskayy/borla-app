@@ -43,6 +43,8 @@ export default async function DisposalSitesPage() {
     status: s.status,
     avgUnloadMinutes: s.avgUnloadMinutes,
     tippingFee: s.tippingFee,
+    unloadCode: s.unloadCode,
+    ticketRequired: s.ticketRequired,
     notes: s.notes,
     zoneId: s.zoneId,
     active: s.active,

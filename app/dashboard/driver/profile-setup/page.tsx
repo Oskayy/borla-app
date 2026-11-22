@@ -6,6 +6,7 @@ import { Card, PageHeader } from '@/components/ui'
 import VehicleChangeCard from '@/components/driver/VehicleChangeCard'
 import { VEHICLE_CHANGE_DOC, vehicleChangeStage } from '@/lib/vehicle-change'
 import { driverPhotoUrls } from '@/lib/driver-photos'
+import Note from '@/components/kit/Note'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,6 +41,9 @@ export default async function DriverProfileSetupPage() {
         pendingRadiusKm: true,
         pendingVehicleAt: true,
         vehicleChangeNote: true,
+        pendingHomeAt: true,
+        pendingHomeAddress: true,
+        homeChangeNote: true,
       },
     }),
   ])
@@ -77,6 +81,16 @@ export default async function DriverProfileSetupPage() {
           />
         </div>
       )}
+      {profile?.pendingHomeAt ? (
+        <Note tone="info" className="mb-6">
+          Your new home base{profile.pendingHomeAddress ? ` (${profile.pendingHomeAddress})` : ''} is waiting for Trashit to approve it. Until
+          then your stops are planned from your current home base.
+        </Note>
+      ) : profile?.homeChangeNote ? (
+        <Note tone="warn" className="mb-6">
+          Trashit sent your home base move back: {profile.homeChangeNote}
+        </Note>
+      ) : null}
       <Card>
         <DriverProfileSetupForm
           zones={zones}

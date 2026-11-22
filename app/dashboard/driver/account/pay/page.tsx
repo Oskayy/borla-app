@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { Card } from '@/components/ui'
 import { BackToAccount } from '@/components/driver/AccountRow'
 import { attemptFeeBps, attemptSplit, pctToBps, splitOrder } from '@/lib/money-split'
-import { CLEARING_HOURS, NEW_DRIVER_DAYS, RESERVE_BPS, RESERVE_CAP_PESEWAS } from '@/lib/earnings'
+import { CLEARING_HOURS, NEW_DRIVER_CLEARING_HOURS, NEW_DRIVER_DAYS, RESERVE_BPS, RESERVE_CAP_PESEWAS } from '@/lib/earnings'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,8 +80,9 @@ export default async function DriverPayPage() {
               <span className="block font-semibold">4. You can withdraw it {CLEARING_HOURS} hours after the shift ends</span>
               <span className="block text-ink-2">
                 You see both shares straight away as &ldquo;Clearing&rdquo;. They become available {CLEARING_HOURS} hours after you unload or the
-                shift ends, whichever is later, unless the customer has complained. A pickup that&apos;s never unloaded isn&apos;t paid until
-                Trashit checks it.
+                shift ends, whichever is later ({NEW_DRIVER_CLEARING_HOURS} hours in your first {NEW_DRIVER_DAYS} days), unless the customer has
+                reported a problem or Trashit is checking the pickup or unload. A pickup that&apos;s never unloaded isn&apos;t paid until Trashit
+                checks it.
               </span>
             </span>
           </li>
@@ -122,8 +123,8 @@ export default async function DriverPayPage() {
             <li>
               <span className="block font-semibold">Far stops</span>
               <span className="block text-ink-2">
-                {money(payout.distanceBonusPerKm)} for each km beyond {payout.distanceFreeKm} km from your home base, up to {money(payout.distanceBonusCap)} a
-                stop. It&apos;s fixed when the stop is given to you, shown with the stop, and paid with the unload share.
+                {money(payout.distanceBonusPerKm)} for each km beyond {payout.distanceFreeKm} km from where you are (or your stop before it), up to{' '}
+                {money(payout.distanceBonusCap)} a stop. It&apos;s fixed when the stop is given to you, shown with the stop, and paid with the unload share.
               </span>
             </li>
           )}

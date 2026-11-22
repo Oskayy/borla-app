@@ -11,7 +11,7 @@ export const RECORDS_APPROVE_ROLES = ['SUPER_ADMIN', 'FINANCE'] as const
 export const RECORDS_PAGE_ROLES = ['SUPER_ADMIN', 'FINANCE'] as const
 
 // Orders in these states are settled; anything else is left alone and counted as skipped.
-export const SETTLED_ORDER_STATUSES = ['COMPLETED', 'CANCELLED', 'DISPOSAL_VERIFIED'] as const
+export const SETTLED_ORDER_STATUSES = ['COMPLETED', 'CANCELLED'] as const
 export const SETTLED_WITHDRAWAL_STATUSES = ['PAID', 'FAILED', 'REJECTED'] as const
 
 export const REMOVED = 'Removed (older than 6 years)'

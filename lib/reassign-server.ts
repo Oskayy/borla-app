@@ -12,6 +12,11 @@ import { fixDistanceBonus } from '@/lib/distance-bonus-server'
 
 const LOAD = new Set<string>(LOAD_STATUSES)
 
+// A stop declined, left unanswered or dropped by this many drivers is "bouncing": ops are told once a night, so a
+// person can call a driver instead of the stop going round until 6am.
+export const CHURN_ALERT_OFFERS = 2
+const CHURN_TAG = 'BOUNCING'
+
 export interface AttachableOrder {
   id: string
   latitude: number | null
@@ -131,6 +136,22 @@ async function attachInner(
   )
 }
 
+// Tells ops (once per order per night: declines are cleared when an order rolls over) that a stop keeps bouncing.
+async function churnAlert(orderId: string, times: number, snapshot: unknown): Promise<void> {
+  const since = new Date(Date.now() - 12 * 3600_000)
+  const told = await prisma.auditLog.findFirst({ where: { orderId, reason: { startsWith: CHURN_TAG }, createdAt: { gte: since } }, select: { id: true } })
+  if (told) return
+  const address = (snapshot as { address?: string } | null)?.address ?? 'A stop'
+  await prisma.auditLog.create({
+    data: { orderId, actorId: null, fromState: 'PAID', toState: 'PAID', reason: `${CHURN_TAG}: not taken by ${times} drivers tonight` },
+  })
+  await notifyOps({
+    title: 'A stop keeps bouncing',
+    body: `${address} has been declined or left unanswered by ${times} drivers tonight. Call a driver near it, or assign it by hand on the Assign page.`,
+    url: '/ops/assign',
+  })
+}
+
 export interface ReassignOutcome {
   reassigned: boolean
   driverId: string | null
@@ -152,6 +173,7 @@ export async function reassignOrder(orderId: string, actorId: string | null): Pr
 
   const declines = await prisma.orderDecline.findMany({ where: { orderId }, select: { driverId: true } })
   const declinedBy: string[] = declines.map((d: { driverId: string }) => d.driverId)
+  if (declinedBy.length >= CHURN_ALERT_OFFERS) await churnAlert(orderId, declinedBy.length, order.quoteSnapshot)
 
   const { drivers, shiftRunning, now } = await loadDispatchDrivers()
   const litres = orderLitres(order.quoteSnapshot).litres

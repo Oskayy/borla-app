@@ -16,8 +16,8 @@ import InstallPrompt from '@/components/InstallPrompt'
 
 export const dynamic = 'force-dynamic'
 
-const ACTIVE = ['PENDING_PAYMENT', 'PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP', 'DISPOSAL_PENDING'] as const
-const DONE = ['DISPOSAL_VERIFIED', 'COMPLETED'] as const
+const ACTIVE = ['PAID', 'ASSIGNED', 'PICKED_UP', 'DISPOSAL_PENDING'] as const
+const DONE = ['COMPLETED'] as const
 
 // Read outside the component: these use the clock.
 function hintNow(s: ShiftSettings): string {
@@ -227,7 +227,7 @@ export default async function CustomerHome() {
         </dl>
 
         {/* Alerts are switched on in Settings; only the install offer shows here, once a pickup is on the way. */}
-        {active && active.status !== 'PENDING_PAYMENT' && (
+        {active && (
           <div className="grid gap-4 empty:hidden">
             <InstallPrompt />
           </div>

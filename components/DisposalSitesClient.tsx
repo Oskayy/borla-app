@@ -21,6 +21,8 @@ export interface SiteRow {
   status: string
   avgUnloadMinutes: number
   tippingFee: number
+  unloadCode: string | null
+  ticketRequired: boolean
   notes: string | null
   zoneId: string | null
   active: boolean
@@ -38,6 +40,8 @@ interface FormState {
   acceptedWaste: string[]
   avgUnloadMinutes: string
   tippingFee: string
+  unloadCode: string
+  ticketRequired: boolean
   notes: string
   zoneId: string
   active: boolean
@@ -64,6 +68,8 @@ function toForm(s?: SiteRow): FormState {
     acceptedWaste: s?.acceptedWaste ?? ['general', 'recyclable'],
     avgUnloadMinutes: String(s?.avgUnloadMinutes ?? 15),
     tippingFee: String(s?.tippingFee ?? 0),
+    unloadCode: s?.unloadCode ?? '',
+    ticketRequired: s?.ticketRequired ?? false,
     notes: s?.notes ?? '',
     zoneId: s?.zoneId ?? '',
     active: s?.active ?? true,
@@ -249,6 +255,29 @@ export default function DisposalSitesClient({
                 className={`${FIELD} mt-1.5 tabular-nums`}
               />
               <span className="mt-1 block text-xs text-ink-3">Recorded only for now; drivers aren&apos;t reimbursed yet.</span>
+            </label>
+          </div>
+
+          <div className="fields mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className={label}>Site code posted at the gate (optional)</span>
+              <input
+                value={form.unloadCode}
+                onChange={(e) => set('unloadCode', e.target.value)}
+                autoComplete="off"
+                autoCapitalize="characters"
+                className={`${FIELD} mt-1.5 uppercase tracking-wider`}
+              />
+              <span className="mt-1 block text-xs text-ink-3">
+                Drivers type it when unloading; a wrong or missing code sends the unload to ops. Change it now and then.
+              </span>
+            </label>
+            <label className="flex min-h-11 items-start gap-2 pt-6 text-[15px] font-medium">
+              <input type="checkbox" checked={form.ticketRequired} onChange={(e) => set('ticketRequired', e.target.checked)} className={`${CHECK} mt-1`} />
+              <span>
+                Ask for the weighbridge ticket number
+                <span className="mt-0.5 block text-xs font-normal text-ink-3">A ticket number used twice sends the unload to ops.</span>
+              </span>
             </label>
           </div>
 

@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, parseGps, readJson } from '@/lib/validate'
 import { evidenceFileExists, evidenceFileHash, isValidEvidencePath } from '@/lib/storage'
-import { PICKUP_CHECK_MARKER, pickupFlags } from '@/lib/plausibility'
+import { PICKUP_CHECK_MARKER, pickupChecks } from '@/lib/plausibility'
 import { ensureSplit } from '@/lib/order-split-server'
 import { PICKUP_TYPE } from '@/lib/earnings'
 import { postJournal } from '@/lib/journal-server'
@@ -34,6 +34,13 @@ export async function POST(req: NextRequest) {
   }
   if (!isValidEvidencePath(photoPath, orderId)) {
     return NextResponse.json({ error: 'A valid photo is required to confirm pickup' }, { status: 400 })
+  }
+  // The photo's position is part of the proof: without it a pickup can't be checked at all.
+  if (gps.lat == null || gps.lng == null) {
+    return NextResponse.json(
+      { error: "Your phone didn't record where the photo was taken. Turn on location for Trashit, then retake the photo.", needsGps: true },
+      { status: 400 }
+    )
   }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest) {
   // When the photo was taken: a pickup sent late keeps its own time, so the speed check between pickups stays right.
   const takenAt = parseTakenAt(body?.takenAt, now)
   const late = minutesLate(takenAt, now)
-  const [photoHash, previous] = await Promise.all([
+  const [photoHash, previous, me] = await Promise.all([
     evidenceFileHash(photoPath),
     prisma.orderEvidence.findFirst({
       where: {
@@ -80,17 +87,19 @@ export async function POST(req: NextRequest) {
       orderBy: { capturedAt: 'desc' },
       select: { gpsLat: true, gpsLng: true, capturedAt: true },
     }),
+    prisma.driverProfile.findUnique({ where: { userId: user.id }, select: { currentLat: true, currentLng: true, lastLocationAt: true } }),
   ])
   const reused = photoHash
     ? await prisma.orderEvidence.findFirst({ where: { photoHash, orderId: { not: orderId } }, select: { id: true } })
     : null
-  const checks = pickupFlags({
+  const { flags: checks, serious } = pickupChecks({
     gps: gps.lat != null && gps.lng != null ? { lat: gps.lat, lng: gps.lng } : null,
     accuracyM: accuracy,
     pin: order.latitude != null && order.longitude != null ? { lat: order.latitude, lng: order.longitude } : null,
     previous: previous ? { lat: previous.gpsLat!, lng: previous.gpsLng!, at: previous.capturedAt } : null,
     at: takenAt,
     photoUsedElsewhere: !!reused,
+    live: me?.currentLat != null && me.currentLng != null && me.lastLocationAt ? { lat: me.currentLat, lng: me.currentLng, at: me.lastLocationAt } : null,
   })
 
   let payoutPesewas = 0
@@ -129,6 +138,10 @@ export async function POST(req: NextRequest) {
         data: { orderId, type: PICKUP_TYPE, amount: split.pickup / 100, amountPesewas: split.pickup, idempotencyKey, driverId: user.id, clearsAt: null },
       })
       await postJournal(tx, { key: idempotencyKey, event: 'earned', orderId, driverId: user.id, lines: earnedLines(orderId, user.id, split.pickup) })
+      // Serious doubts about the proof hold this order's pay until ops have looked (an open dispute stops it clearing).
+      if (serious.length > 0) {
+        await tx.dispute.create({ data: { orderId, raisedBy: 'system', kind: 'PICKUP_CHECK', reason: `${PICKUP_CHECK_MARKER}: ${serious.join('; ')}` } })
+      }
       await tx.auditLog.create({
         data: { orderId, actorId: user.id, fromState: 'ASSIGNED', toState: 'PICKED_UP', reason: auditReason },
       })

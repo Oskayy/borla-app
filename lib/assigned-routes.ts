@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { driverPosition, type DispatchDriver } from '@/lib/dispatch'
 import type { MapRoute } from '@/components/ops/AssignMap'
 
-const ON_ROUTE = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP'] as const
+const ON_ROUTE = ['ASSIGNED', 'PICKED_UP'] as const
 
 const initialsOf = (name: string) =>
   name

@@ -7,6 +7,8 @@ import { PICKUP_CHECK_MARKER } from '@/lib/plausibility'
 import ExceptionsClient, { type ExceptionItem, type RefundRow } from '@/components/ExceptionsClient'
 import { PageHeader } from '@/components/ui'
 import { Kpi } from '@/components/ops/kit'
+import { createAdminClient } from '@/lib/supabase-admin'
+import { EVIDENCE_BUCKET } from '@/lib/storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +35,21 @@ export default async function ExceptionsPage() {
     select: { id: true, amount: true, status: true, refunds: { select: { amount: true, status: true } } },
     orderBy: { createdAt: 'asc' as const },
   }
+
+  // Open holds raised by customers (reports) and by random unload audits, on orders not already in the failed list.
+  const holdQuery = (kind: string) =>
+    prisma.order.findMany({
+      where: { status: { notIn: ['FAILED_PICKUP', 'DISPUTED'] }, disputes: { some: { status: 'OPEN', kind } } },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        driver: { select: { name: true } },
+        disputes: { where: { status: 'OPEN', kind }, orderBy: { createdAt: 'desc' }, take: 1 },
+        payments: paymentSelect,
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+    })
+  const [reports, audits] = await Promise.all([holdQuery('CUSTOMER'), holdQuery('UNLOAD_AUDIT')])
 
   const [flagged, gps, paymentProblems, refunds] = await Promise.all([
     prisma.order.findMany({
@@ -89,7 +106,7 @@ export default async function ExceptionsPage() {
     }),
   ])
 
-  function toItem(o: (typeof gps)[number], kind: ExceptionItem['kind'], reason: string): ExceptionItem {
+  function toItem(o: Omit<(typeof gps)[number], 'auditLogs'>, kind: ExceptionItem['kind'], reason: string): ExceptionItem {
     const snap = o.quoteSnapshot as Snap
     return {
       kind,
@@ -116,9 +133,24 @@ export default async function ExceptionsPage() {
 
   const items: ExceptionItem[] = [
     ...flagged.map((o) => toItem(o, 'flagged', o.disputes[0]?.reason ?? o.auditLogs[0]?.reason ?? 'No reason recorded')),
+    ...reports.map((o) => toItem(o, 'report', o.disputes[0]?.reason ?? 'Customer report')),
     ...paymentProblems.map((o) => toItem(o, 'payment', o.auditLogs[0]?.reason ?? 'Payment problem')),
     ...gps.map((o) => toItem(o, 'gps', o.auditLogs[0]?.reason ?? 'Pickup check')),
+    ...audits.map((o) => toItem(o, 'audit', o.disputes[0]?.reason ?? 'Unload audit')),
   ]
+  // The driver's photo for each item (unload photo for audits, otherwise the pickup or gate photo), as a 30-minute link.
+  const evidence = await prisma.orderEvidence.findMany({
+    where: { orderId: { in: items.map((i) => i.orderId) }, type: { in: ['driver_pickup', 'driver_disposal'] } },
+    orderBy: { createdAt: 'desc' },
+    select: { orderId: true, type: true, photoUrl: true },
+  })
+  const storage = createAdminClient().storage.from(EVIDENCE_BUCKET)
+  for (const item of items) {
+    const want = item.kind === 'audit' ? 'driver_disposal' : 'driver_pickup'
+    const path = evidence.find((e) => e.orderId === item.orderId && e.type === want)?.photoUrl
+    if (path) item.photoUrl = (await storage.createSignedUrl(path, 60 * 30)).data?.signedUrl ?? null
+  }
+
   const refundRows: RefundRow[] = refunds.map((r) => ({
     id: r.id,
     orderId: r.orderId,

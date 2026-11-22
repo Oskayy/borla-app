@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CheckCircle2, CreditCard, MapPinOff, Phone, Undo2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ClipboardCheck, CreditCard, MapPinOff, MessageSquareWarning, Phone, Undo2 } from 'lucide-react'
 import { BUTTON_DANGER, BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 import { dateTimeLabel } from '@/lib/format'
 import { attemptFeeBps } from '@/lib/money-split'
 
 export interface ExceptionItem {
-  kind: 'flagged' | 'payment' | 'gps'
+  kind: 'flagged' | 'report' | 'payment' | 'gps' | 'audit'
   orderId: string
   status: string
   address: string
@@ -19,6 +19,7 @@ export interface ExceptionItem {
   reason: string
   updatedAt: string
   payments: { id: string; amount: number; status: string; refundable: number }[]
+  photoUrl?: string | null // the driver's photo (30-minute link)
 }
 
 export interface RefundRow {
@@ -36,10 +37,20 @@ export interface RefundRow {
 const SECTIONS: Record<ExceptionItem['kind'], { title: string; hint: string; icon: typeof AlertTriangle }> = {
   flagged: { title: 'Failed pickups and disputes', hint: 'The driver couldn’t collect, or the customer disputes it.', icon: AlertTriangle },
   payment: { title: 'Payment problems', hint: 'The amount paid didn’t match the price, or a payment arrived twice or late.', icon: CreditCard },
+  report: {
+    title: 'Customer reports',
+    hint: 'The customer says something went wrong, or disputes a "gate locked" report. The driver’s pay for the order waits until you deal with it.',
+    icon: MessageSquareWarning,
+  },
   gps: {
     title: 'Pickup checks',
-    hint: 'Collected and paid, but the location or photo looked off. Worth a look; nothing is blocked.',
+    hint: 'Collected, but the location or photo looked off. Serious ones hold the driver’s pay for the order until you mark them checked.',
     icon: MapPinOff,
+  },
+  audit: {
+    title: 'Unload audits',
+    hint: 'A random check of unloads that were paid automatically. Look at the photo; the driver’s pay for the order waits until you do.',
+    icon: ClipboardCheck,
   },
 }
 
@@ -51,7 +62,6 @@ const ORDER_STATUS: Record<string, string> = {
   ASSIGNED: 'With a driver',
   PICKED_UP: 'Collected',
   DISPOSAL_PENDING: 'Collected, unload not confirmed',
-  DISPOSAL_VERIFIED: 'Unloaded',
   COMPLETED: 'Done',
   CANCELLED: 'Cancelled',
 }
@@ -198,6 +208,8 @@ export default function ExceptionsClient({
   const [amount, setAmount] = useState('')
   const [paymentId, setPaymentId] = useState('')
   const [cancelToo, setCancelToo] = useState(true)
+  // One key per opened refund form: a double tap or a retry after a lost answer makes one refund, not two.
+  const [requestKey, setRequestKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<Record<string, { ok: boolean; text: string }>>({})
   const [filter, setFilter] = useState<'all' | ExceptionItem['kind']>('all')
@@ -214,6 +226,7 @@ export default function ExceptionsClient({
     setAmount(pay ? pay.refundable.toFixed(2) : '')
     setCancelToo(item.kind === 'flagged')
     setDriverFault(false)
+    setRequestKey(crypto.randomUUID())
   }
 
   async function submit(item: ExceptionItem) {
@@ -225,10 +238,19 @@ export default function ExceptionsClient({
         res = await fetch(`/api/admin/orders/${item.orderId}/refund`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: Number(amount), reason: note, cancel: cancelToo, paymentId: paymentId || undefined, driverFault }),
+          body: JSON.stringify({ amount: Number(amount), reason: note, cancel: cancelToo, paymentId: paymentId || undefined, driverFault, requestKey }),
         })
       } else {
-        const action = mode === 'review' ? (item.kind === 'gps' ? 'gps_reviewed' : 'payment_reviewed') : mode
+        const action =
+          mode === 'review'
+            ? item.kind === 'gps'
+              ? 'gps_reviewed'
+              : item.kind === 'audit'
+                ? 'audit_reviewed'
+                : item.kind === 'report'
+                  ? 'report_resolved'
+                  : 'payment_reviewed'
+            : mode
         res = await fetch(`/api/admin/exceptions/${item.orderId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -301,6 +323,11 @@ export default function ExceptionsClient({
                             {item.driverName && <span>Driver: {item.driverName}</span>}
                           </p>
                           <p className="mt-2.5 rounded-control bg-canvas p-3 text-sm text-ink">{item.reason}</p>
+                          {item.photoUrl && (
+                            <a href={item.photoUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-action-deep hover:underline">
+                              See the driver&apos;s {item.kind === 'audit' ? 'unload' : 'pickup'} photo
+                            </a>
+                          )}
                           {item.payments.length > 0 && (
                             <p className="mt-2 text-sm text-ink-3">
                               {item.payments.map((p) => `Paid GHS ${p.amount.toFixed(2)}${PAYMENT_STATE[p.status] ? ` (${PAYMENT_STATE[p.status]})` : ''}, GHS ${p.refundable.toFixed(2)} refundable`).join(' · ')}
@@ -327,7 +354,7 @@ export default function ExceptionsClient({
                           )}
                           {item.kind !== 'flagged' && (
                             <button type="button" className={BUTTON_QUIET} onClick={() => start(item, 'review')}>
-                              Mark checked
+                              {item.kind === 'report' ? 'Mark dealt with' : 'Mark checked'}
                             </button>
                           )}
                           {canRefundThis && (
@@ -343,7 +370,12 @@ export default function ExceptionsClient({
                           <p className="text-sm text-ink-2">
                             {mode === 'retry' && 'The order goes back into tonight’s queue (or the coming night) and is assigned to a driver as usual. The customer is told.'}
                             {mode === 'close' && 'Nothing is left to refund, so the order is just cancelled. The customer is told, with your note.'}
-                            {mode === 'review' && 'Takes this off the list. Nothing else changes.'}
+                            {mode === 'review' &&
+                              (item.kind === 'report'
+                                ? 'Closes the report and tells the customer, with your note. Refund first if they should get money back (tick “driver at fault” to take back the driver’s share). The driver’s pay for the order is released.'
+                                : item.kind === 'payment'
+                                  ? 'Takes this off the list. Nothing else changes.'
+                                  : 'Takes this off the list and releases the driver’s pay for the order if it was held. If the proof was fake, refund with “driver at fault” instead.')}
                             {mode === 'refund' && 'Sends money back to the account the customer paid with, through Paystack.'}
                             {mode === 'attempt_fee' &&
                               item.price != null &&
@@ -446,7 +478,7 @@ export default function ExceptionsClient({
     )
   }
 
-  const kinds: ExceptionItem['kind'][] = ['flagged', 'payment', 'gps']
+  const kinds: ExceptionItem['kind'][] = ['flagged', 'report', 'payment', 'gps', 'audit']
   const shown = filter === 'all' ? items : items.filter((i) => i.kind === filter)
   const current = shown.find((i) => `${i.kind}-${i.orderId}` === selected) ?? shown[0] ?? null
   const openRefunds = refunds.filter((r) => ['AWAITING_APPROVAL', 'NEEDS_ATTENTION', 'PENDING', 'PROCESSING'].includes(r.status)).length

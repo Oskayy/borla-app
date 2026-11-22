@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { getMaxTripsPerNight, getShiftSettings } from '@/lib/settings'
-import { isDriverAvailable, isWithinShift, localParts } from '@/lib/shift'
+import { isWithinShift, localParts } from '@/lib/shift'
+import { driverPresence } from '@/lib/presence'
 import { dbDate, planningShiftDate } from '@/lib/schedule'
 import { shiftLengthMinutes, tripMinutes, type Point } from '@/lib/trip-time'
 import { worksNight } from '@/lib/availability'
@@ -10,9 +11,9 @@ import { assessDriver, driverPosition, orderLitres, type DispatchDriver, type Di
 
 // Orders that are on a driver's vehicle or on their list and not yet unloaded.
 // (DISPOSAL_PENDING is left out: the load is already off the vehicle, only the paperwork is waiting.)
-export const LOAD_STATUSES = ['ASSIGNED', 'EN_ROUTE', 'ARRIVED', 'PICKUP_PENDING_REVIEW', 'PICKED_UP'] as const
+export const LOAD_STATUSES = ['ASSIGNED', 'PICKED_UP'] as const
 
-const TO_COLLECT = new Set(['ASSIGNED', 'EN_ROUTE', 'ARRIVED'])
+const TO_COLLECT = new Set(['ASSIGNED'])
 const OPEN = new Set<string>(LOAD_STATUSES)
 
 type NightStop = {
@@ -78,6 +79,7 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
           currentLat: true,
           currentLng: true,
           lastLocationAt: true,
+          zone: { select: { name: true, boundary: true } },
           vehicleTypeRef: { select: { name: true, capacityLitres: true } },
         },
       },
@@ -116,11 +118,13 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
 
   const drivers: DispatchDriver[] = users.map((u) => {
     const p = u.driverProfile!
+    const presence = driverPresence(p, now, settings)
     const d: DispatchDriver = {
       id: u.id,
       name: u.name,
       isActive: p.isActive,
-      available: isDriverAvailable(p, now, settings),
+      available: presence.available,
+      awayReason: presence.state === 'offline' ? undefined : presence.reason,
       offNight: !worksNight(p, night),
       radiusKm: p.radiusKm,
       capacityLitres: p.vehicleTypeRef?.capacityLitres ?? null,
@@ -146,13 +150,19 @@ export async function loadDispatchDrivers(onlyDriverId?: string): Promise<{ driv
   return { drivers, shiftRunning, now }
 }
 
-// Server-side check before assigning. Ops can override (e.g. a driver agreed to go further),
+// Who may go past the driver checks (radius, capacity, online, trips, time). Overrides are listed weekly for ops
+// managers (lib/overrides-server.ts).
+export const OVERRIDE_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER']
+export const OVERRIDE_ROLE_ERROR = 'Only an Ops Manager or Super Admin can go past the driver checks'
+
+// Server-side check before assigning. Senior ops can override (e.g. a driver agreed to go further),
 // but must give a reason, which is written to each order's audit log.
 export async function checkAssignment(
   driverId: string,
   orders: { id: string; latitude: number | null; longitude: number | null; quoteSnapshot: unknown }[],
   override: unknown,
-  overrideReason: unknown
+  overrideReason: unknown,
+  actorRole: string
 ): Promise<{ ok: boolean; error: string; note: string; fit: DriverFit }> {
   const { drivers, shiftRunning, now } = await loadDispatchDrivers(driverId)
   const driver = drivers[0]
@@ -173,6 +183,7 @@ export async function checkAssignment(
   if (override !== true) {
     return { ok: false, error: `This driver can't take these orders: ${fit.reasons.join('; ')}`, note: '', fit }
   }
+  if (!OVERRIDE_ROLES.includes(actorRole)) return { ok: false, error: `${OVERRIDE_ROLE_ERROR}: ${fit.reasons.join('; ')}`, note: '', fit }
   if (reason.length < 3) {
     return { ok: false, error: 'Please give a reason for overriding the driver checks', note: '', fit }
   }

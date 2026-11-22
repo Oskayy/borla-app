@@ -17,6 +17,11 @@ import { SWEEP_MINUTES, TOPUP_CHECK_MINUTES } from '@/lib/treasury'
 import { morningTopUpCheck, runDailySweep } from '@/lib/treasury-server'
 import { RETENTION_CLEANUP_ON } from '@/lib/retention'
 import { retentionSummary, runRetention } from '@/lib/retention-server'
+import { worksNight } from '@/lib/availability'
+import { pauseRepeatMissers } from '@/lib/driver-misses-server'
+import { checkRecentCheckouts } from '@/lib/payment-confirm-server'
+import { customerCheckPrompt, CUSTOMER_CHECK_MINUTES } from '@/lib/customer-reports-server'
+import { overridesDigest } from '@/lib/overrides-server'
 
 // "1 order", "3 orders": for messages people read.
 const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -26,6 +31,8 @@ const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? on
 
 const MIN_GAP_MS = 60_000
 const MAX_ORDERS_PER_RUN = 300
+export const REMIND_BEFORE_MINUTES = 15 // drivers working tonight are reminded this long before the shift starts
+export const REFUND_OFFER_ROLLOVERS = 2 // after this many missed nights the customer is offered a refund and ops are told
 
 let lastRun = 0
 let running: Promise<JobSummary> | null = null
@@ -60,9 +67,17 @@ async function runAll(force: boolean): Promise<JobSummary> {
     summary.rolledOver = await rollOver(ended)
     return `${summary.rolledOver} order(s) moved to ${addDays(ended, 1)}`
   })
+  // Everyone still online from that night goes offline (a closed app or a flat battery used to leave drivers looking
+  // online the next night). Drivers with extra hours from ops keep them.
+  await once(`offline:${ended}`, async () => `${await switchEveryoneOffline(now)} driver(s) switched offline`)
+  // Drivers who keep accepting stops and not collecting them are paused for ops to talk to (lib/driver-misses-server.ts).
+  await once(`misses:${ended}`, async () => `${await pauseRepeatMissers(now)} driver(s) paused`)
 
   // 2. Stops drivers didn't accept in time go to other drivers.
   summary.expired = await sweepExpiredOffers(force)
+
+  // 2b. Checkouts whose Paystack message hasn't arrived: ask Paystack directly (lib/payment-confirm-server.ts).
+  if (force) await checkRecentCheckouts(now).catch((e) => console.error('[jobs] checkout check failed', e))
 
   // 3. Planning snapshot: tell ops tonight's plan is ready.
   const planDate = snapshotWindowDate(now, settings)
@@ -72,6 +87,10 @@ async function runAll(force: boolean): Promise<JobSummary> {
       return planReadyNotice(planDate, formatClock(settings.shiftStartMinutes))
     })
   }
+
+  // 3b. Shortly before the shift: every driver working tonight is reminded to go online and accept their stops.
+  const soon = reminderWindowDate(now, settings)
+  if (soon) await once(`remind:${soon}`, () => preShiftReminder(soon, formatClock(settings.shiftStartMinutes)))
 
   // 4. During the shift: shift-start reminders once, then automatic assignment of anything waiting.
   const shiftDate = runningShiftDate(now, settings)
@@ -87,6 +106,14 @@ async function runAll(force: boolean): Promise<JobSummary> {
   // 6. Money, on the scheduler's runs only (they call Paystack): 7am settlements, yesterday's reconciliation and the
   //    Paystack top-up check; from 10am the daily driver payout (retried until the balance covers it).
   if (force) await moneyJobs(now, settings.timezone, settings.shiftStartMinutes)
+
+  // 6b. In the morning: customers collected last night are asked if all went well (lib/customer-reports-server.ts),
+  //     and on Mondays ops managers get last week's driver-check overrides (lib/overrides-server.ts).
+  const today = localParts(now, settings.timezone)
+  if (today.minutes >= CUSTOMER_CHECK_MINUTES && today.minutes < settings.shiftStartMinutes) {
+    await once(`customer-check:${ended}`, () => customerCheckPrompt(ended))
+    if (new Date(`${today.date}T12:00:00Z`).getUTCDay() === 1) await once(`overrides:${today.date}`, () => overridesDigest(now))
+  }
 
   // 7. Once a day, delete personal data past its time (privacy policy section 6, lib/retention.ts).
   if (force && RETENTION_CLEANUP_ON) {
@@ -112,6 +139,58 @@ async function moneyJobs(now: Date, timezone: string, shiftStartMinutes: number)
       return r.summary
     })
   }
+}
+
+// The last REMIND_BEFORE_MINUTES before the shift starts: the date of tonight's shift.
+function reminderWindowDate(now: Date, s: { timezone: string; shiftStartMinutes: number }): string | null {
+  const { date, minutes } = localParts(now, s.timezone)
+  return minutes >= s.shiftStartMinutes - REMIND_BEFORE_MINUTES && minutes < s.shiftStartMinutes ? date : null
+}
+
+// Approved, active drivers who work this night (their availability), with whether they are online.
+async function workingDrivers(shiftDate: string) {
+  const drivers = await prisma.driverProfile.findMany({
+    where: { approvalStatus: 'APPROVED', isActive: true, user: { active: true } },
+    select: { userId: true, isOnline: true, workNights: true, nightsOff: true },
+  })
+  return drivers.filter((d) => worksNight(d, shiftDate))
+}
+
+// Unaccepted stops per driver, right now.
+async function unacceptedByDriver(): Promise<Map<string, number>> {
+  const rows = await prisma.order.groupBy({
+    by: ['driverId'],
+    where: { status: 'ASSIGNED', driverAcceptedAt: null, driverId: { not: null } },
+    _count: { _all: true },
+  })
+  return new Map((rows as { driverId: string; _count: { _all: number } }[]).map((r) => [r.driverId, r._count._all]))
+}
+
+async function preShiftReminder(shiftDate: string, startLabel: string): Promise<string> {
+  const [drivers, waiting] = await Promise.all([workingDrivers(shiftDate), unacceptedByDriver()])
+  let n = 0
+  for (const d of drivers) {
+    const stops = waiting.get(d.userId) ?? 0
+    if (d.isOnline && stops === 0) continue
+    const accept = stops > 0 ? ` Accept your ${count(stops, 'stop')} now so they stay yours.` : ''
+    await notifyUser(d.userId, {
+      title: `The shift starts at ${startLabel}`,
+      body: `You're working tonight. Open Trashit and go online at ${startLabel} so stops near you come to you.${accept}`,
+      url: '/dashboard/driver',
+      sms: `Trashit: you're working tonight. Go online in the app at ${startLabel}.${stops > 0 ? ` You have ${count(stops, 'stop')} to accept.` : ''}`,
+    })
+    n++
+  }
+  return `${n} driver(s) reminded`
+}
+
+// Everyone online goes offline, except drivers with extra hours from ops that haven't run out.
+async function switchEveryoneOffline(now: Date): Promise<number> {
+  const r = await prisma.driverProfile.updateMany({
+    where: { isOnline: true, OR: [{ onlineOverrideUntil: null }, { onlineOverrideUntil: { lte: now } }] },
+    data: { isOnline: false, wentOnlineAt: null, currentLat: null, currentLng: null, lastLocationAt: null },
+  })
+  return r.count
 }
 
 // "Tuesday 29 Sep" for a YYYY-MM-DD date.
@@ -188,21 +267,25 @@ async function planReadyNotice(shiftDate: string, startLabel: string): Promise<s
 }
 
 async function shiftStartNotice(shiftDate: string, auto: boolean): Promise<string> {
-  const [waiting, unaccepted, acceptMinutes] = await Promise.all([
+  const [waiting, unaccepted, acceptMinutes, working] = await Promise.all([
     prisma.order.count({ where: { status: 'PAID', shiftDate: { lte: dbDate(shiftDate) } } }),
-    prisma.order.groupBy({
-      by: ['driverId'],
-      where: { status: 'ASSIGNED', driverAcceptedAt: null, driverId: { not: null } },
-      _count: { _all: true },
-    }),
+    unacceptedByDriver(),
     getAcceptMinutes(),
+    workingDrivers(shiftDate),
   ])
 
-  for (const g of unaccepted as { driverId: string; _count: { _all: number } }[]) {
-    await notifyUser(g.driverId, {
+  // Drivers with stops to accept, and every driver working tonight who isn't online yet.
+  const remind = new Set<string>([...unaccepted.keys(), ...working.filter((d) => !d.isOnline).map((d) => d.userId)])
+  for (const id of remind) {
+    const stops = unaccepted.get(id) ?? 0
+    await notifyUser(id, {
       title: 'The shift has started',
-      body: `Go online and accept your ${count(g._count._all, 'stop')} within ${acceptMinutes} min, or they go to another driver.`,
+      body:
+        stops > 0
+          ? `Go online and accept your ${count(stops, 'stop')} within ${acceptMinutes} min, or they go to another driver.`
+          : "You're working tonight. Go online now so stops near you come to you.",
       url: '/dashboard/driver',
+      sms: stops > 0 ? `Trashit: the shift has started. Go online and accept your ${count(stops, 'stop')} within ${acceptMinutes} min.` : "Trashit: the shift has started. Go online in the app so stops near you come to you.",
     })
   }
   if (waiting > 0) {
@@ -229,7 +312,7 @@ async function shiftStartNotice(shiftDate: string, auto: boolean): Promise<strin
     })
   }
 
-  return `${waiting} waiting, ${unaccepted.length} driver(s) reminded, ${customers.length} customer(s) reminded`
+  return `${waiting} waiting, ${remind.size} driver(s) reminded, ${customers.length} customer(s) reminded`
 }
 
 // Assigns waiting orders to online drivers, using the same rules as the suggested plan.
@@ -275,11 +358,12 @@ async function autoDispatch(shiftDate: string): Promise<number> {
 async function rollOver(endedShiftDate: string): Promise<number> {
   const next = addDays(endedShiftDate, 1)
   let moved = 0
+  let repeatedTotal = 0
 
   for (;;) {
     const batch = await prisma.order.findMany({
       where: { status: { in: ['PAID', 'ASSIGNED'] }, shiftDate: { lte: dbDate(endedShiftDate) } },
-      select: { id: true, customerId: true, status: true },
+      select: { id: true, customerId: true, status: true, rolloverCount: true },
       take: 200,
     })
     if (batch.length === 0) break
@@ -333,8 +417,21 @@ async function rollOver(endedShiftDate: string): Promise<number> {
     )
     moved += ids.length
 
+    // Orders that have now missed REFUND_OFFER_ROLLOVERS nights or more: the customer is offered their money back.
+    const repeated = batch.filter((o: { rolloverCount: number }) => o.rolloverCount + 1 >= REFUND_OFFER_ROLLOVERS)
+    repeatedTotal += repeated.length
+    const offerRefund = new Set(repeated.map((o: { customerId: string }) => o.customerId))
     const customers = Array.from(new Set(batch.map((o: { customerId: string }) => o.customerId)))
     for (const c of customers) {
+      if (offerRefund.has(c)) {
+        await notifyUser(c as string, {
+          title: 'Sorry, we missed your pickup again',
+          body: `We couldn't collect on ${nightName(endedShiftDate)} night either. Your pickup is booked for ${nightName(next)} night, or you can cancel it for a full refund on your order page before the shift starts.`,
+          url: '/dashboard/customer/orders',
+          sms: `Trashit: sorry, we missed your pickup again. It is booked for ${nightName(next)} night, or cancel it in the app for a full refund.`,
+        })
+        continue
+      }
       await notifyUser(c as string, {
         title: 'Your pickup has moved to tonight',
         body: `Sorry, we couldn't collect on ${nightName(endedShiftDate)} night. Your pickup is now booked for ${nightName(next)} night. Please leave your bins out again. There's nothing extra to pay.`,
@@ -355,6 +452,13 @@ async function rollOver(endedShiftDate: string): Promise<number> {
         (moved > 0 ? `${count(moved, "order wasn't", "orders weren't")} collected and moved to the night of ${dateLabel(`${next}T12:00:00Z`)}. ` : '') +
         (stillOnBoard > 0 ? `${count(stillOnBoard, "collected order hasn't", "collected orders haven't")} been confirmed as unloaded yet.` : ''),
       url: moved > 0 ? '/ops/assign' : '/ops/disposal-review',
+    })
+  }
+  if (repeatedTotal > 0) {
+    await notifyOps({
+      title: `${count(repeatedTotal, 'order has', 'orders have')} missed ${REFUND_OFFER_ROLLOVERS}+ nights`,
+      body: `${count(repeatedTotal, 'customer was', 'customers were')} offered a refund. Put these orders first on the Assign page tonight, or call the customers.`,
+      url: '/ops/assign',
     })
   }
   return moved

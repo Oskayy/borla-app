@@ -37,7 +37,17 @@ export interface TripGroup {
     approximate: boolean // the customer didn't pin this spot; the position was looked up from text
     customerPhone: string | null
   }[]
-  site: { name: string; lat: number | null; lng: number | null; hours: string; notes: string | null; status: string; unloadMinutes?: number } | null
+  site: {
+    name: string
+    lat: number | null
+    lng: number | null
+    hours: string
+    notes: string | null
+    status: string
+    unloadMinutes?: number
+    needsCode?: boolean // the site posts a code at its gate, typed when unloading
+    needsTicket?: boolean // the weighbridge ticket number is typed when unloading
+  } | null
   minutes: number | null // about how long what's left of this trip takes (null once it's done)
 }
 
@@ -171,6 +181,8 @@ function TripCard({ g, firstStopNo, current }: { g: TripGroup; firstStopNo: numb
                     photoOrderId={collected[0].id}
                     collectedCount={collected.length}
                     waitingCount={toCollect}
+                    needsCode={!!g.site?.needsCode}
+                    needsTicket={!!g.site?.needsTicket}
                   />
                 )}
                 {collected.length === 0 && toCollect > 0 && <p className="text-sm text-ink-3">Collect the stops above first.</p>}

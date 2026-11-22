@@ -36,10 +36,12 @@ export async function runRetention(now: Date, dryRun: boolean): Promise<Retentio
     OR: [{ latitude: { not: null } }, { longitude: { not: null } }],
   }
   const notificationWhere: Prisma.NotificationWhereInput = { createdAt: { lt: daysBefore(now, NOTIFICATION_DAYS) } }
-  // Never-paid bookings with nothing money-related attached.
+  // Never-paid bookings with nothing money-related attached, and no checkout started in the last couple of days
+  // (one could still be paid; lib/payment-confirm-server.ts).
   const draftWhere: Prisma.OrderWhereInput = {
     status: 'DRAFT',
     createdAt: { lt: daysBefore(now, DRAFT_DAYS) },
+    OR: [{ checkoutStartedAt: null }, { checkoutStartedAt: { lt: daysBefore(now, 2) } }],
     payments: { none: {} },
     ledgerEntries: { none: {} },
     refunds: { none: {} },

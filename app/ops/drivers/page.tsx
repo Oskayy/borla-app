@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { OPS_ROLES } from '@/lib/auth'
 import { getShiftSettings } from '@/lib/settings'
 import { hasActiveOverride, isDriverAvailable, isWithinShift, windowLabel } from '@/lib/shift'
+import { driverPresence } from '@/lib/presence'
+import { distanceInMeters } from '@/lib/geo'
+import { NO_ZONE } from '@/lib/home-change'
 import DriversClient from '@/components/DriversClient'
 import { PageHeader } from '@/components/ui'
 import { APPROVAL_ROLES, DRIVER_DOCS_BUCKET } from '@/lib/driver-docs'
@@ -39,10 +42,18 @@ export default async function DriversPage() {
             onlineOverrideUntil: true,
             radiusKm: true,
             homeLat: true,
+            homeLng: true,
+            currentLat: true,
+            currentLng: true,
             lastLocationAt: true,
             vehicleTypeRef: { select: { name: true, capacityLitres: true } },
-            zone: { select: { name: true } },
+            zone: { select: { name: true, boundary: true } },
             ghanaCardNumber: true,
+            pendingHomeLat: true,
+            pendingHomeLng: true,
+            pendingHomeAddress: true,
+            pendingZoneId: true,
+            pendingHomeAt: true,
           },
         },
         // Card photos uploaded before the number was asked for (to copy the number from).
@@ -65,6 +76,7 @@ export default async function DriversPage() {
     }
   }
 
+  const zoneNames = new Map((await prisma.zone.findMany({ select: { id: true, name: true } })).map((z) => [z.id, z.name]))
   const now = new Date()
   const night = planningShiftDate(now, settings)
   const since = new Date(now.getTime() - 35 * 86_400_000)
@@ -79,19 +91,30 @@ export default async function DriversPage() {
   const ratings = await prisma.orderRating.findMany({ where: { driverId: { in: ids }, createdAt: { gte: since } }, select: { driverId: true, stars: true, createdAt: true } })
   const misses = await prisma.driverMiss.groupBy({ by: ['driverId'], where: { driverId: { in: ids }, createdAt: { gte: since30 } }, _count: { _all: true } })
   const trend = weeklyAverages(ratings, now)
-  const DONE = ['PICKED_UP', 'DISPOSAL_PENDING', 'DISPOSAL_VERIFIED', 'COMPLETED']
+  const DONE = ['PICKED_UP', 'DISPOSAL_PENDING', 'COMPLETED']
 
   const rows = drivers
     .filter((d) => d.driverProfile)
     .map((d) => {
       const p = d.driverProfile!
       const available = isDriverAvailable(p, now, settings)
+      const presence = driverPresence(p, now, settings)
       return {
         id: d.id,
         name: d.name,
         phone: d.phone,
         active: p.isActive,
         online: available,
+        counted: presence.available,
+        notCountedWhy: available && !presence.available ? presence.reason : null,
+        pendingHome:
+          p.pendingHomeAt && p.pendingHomeLat != null && p.pendingHomeLng != null
+            ? {
+                address: p.pendingHomeAddress,
+                movedKm: p.homeLat != null && p.homeLng != null ? distanceInMeters(p.homeLat, p.homeLng, p.pendingHomeLat, p.pendingHomeLng) / 1000 : 0,
+                zone: p.pendingZoneId && p.pendingZoneId !== NO_ZONE ? zoneNames.get(p.pendingZoneId) ?? null : null,
+              }
+            : null,
         onlineSince: available && p.wentOnlineAt ? p.wentOnlineAt.toISOString() : null,
         overrideUntil: hasActiveOverride(p, now) ? p.onlineOverrideUntil!.toISOString() : null,
         vehicle: p.vehicleTypeRef?.name ?? null,

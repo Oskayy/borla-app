@@ -76,6 +76,10 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
   }
 
   async function submitIssue() {
+    if (issueType === 'LOCKED_GATE' && !file) {
+      setError('Take a photo of the locked gate or the bins you can’t reach first (with location on).')
+      return
+    }
     setError('')
     setLoading(true)
     try {
@@ -83,7 +87,7 @@ export default function ConfirmPickupButton({ orderId }: { orderId: string }) {
       const res = await fetch('/api/orders/report-issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, issueType, note, photoPath, gpsLat, gpsLng }),
+        body: JSON.stringify({ orderId, issueType, note, photoPath, gpsLat, gpsLng, gpsAccuracy }),
       })
       setLoading(false)
       if (res.ok) {

@@ -8,6 +8,9 @@ import { notifyOps, notifyUser } from '@/lib/notify'
 import { caught } from '@/lib/errors'
 
 const ISSUE_TYPES = ['LOCKED_GATE', 'SPILL_HAZARD']
+// A driver reporting this many locked gates in REPEAT_WINDOW_DAYS is pointed out to ops (a way to skip stops).
+const REPEAT_GATES = 3
+const REPEAT_WINDOW_DAYS = 7
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['DRIVER'])
@@ -30,6 +33,13 @@ export async function POST(req: NextRequest) {
   }
   if (photoPath !== null && !isValidEvidencePath(photoPath, orderId)) {
     return NextResponse.json({ error: 'Please take the photo again.' }, { status: 400 })
+  }
+  // "Gate locked" ends the stop and can cost the customer, so it needs proof: a photo of the gate, with its position.
+  if (issueType === 'LOCKED_GATE' && (photoPath === null || gps.lat == null || gps.lng == null)) {
+    return NextResponse.json(
+      { error: 'Please take a photo of the locked gate or the bins you can’t reach (with location on) before reporting.' },
+      { status: 400 }
+    )
   }
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
@@ -62,6 +72,7 @@ export async function POST(req: NextRequest) {
             photoUrl: photoPath,
             gpsLat: gps.lat,
             gpsLng: gps.lng,
+            gpsAccuracy: typeof body?.gpsAccuracy === 'number' && Number.isFinite(body.gpsAccuracy) ? body.gpsAccuracy : null,
             capturedAt: new Date(),
           },
         })
@@ -96,7 +107,7 @@ export async function POST(req: NextRequest) {
   if (issueType === 'LOCKED_GATE') {
     await notifyUser(order.customerId, {
       title: 'We couldn’t reach your bins',
-      body: 'Our driver found the gate locked or the bins out of reach. Trashit will contact you about another try.',
+      body: 'Our driver found the gate locked or the bins out of reach. If that’s not right, reply on your order page. Trashit will contact you about another try.',
       url: `/dashboard/customer/orders/${orderId}`,
       sms: 'Trashit: our driver couldn’t reach your bins tonight (gate locked or bins not out). We’ll contact you about another try.',
     })
@@ -106,6 +117,18 @@ export async function POST(req: NextRequest) {
     body: `${address}${note ? `: ${note}` : ''}. See the Exceptions page.`,
     url: '/ops/exceptions',
   })
+
+  if (issueType === 'LOCKED_GATE') {
+    const since = new Date(Date.now() - REPEAT_WINDOW_DAYS * 86_400_000)
+    const gates = await prisma.auditLog.count({ where: { actorId: user.id, reason: { startsWith: 'Driver reported: LOCKED_GATE' }, createdAt: { gte: since } } })
+    if (gates === REPEAT_GATES || (gates > REPEAT_GATES && gates % REPEAT_GATES === 0)) {
+      await notifyOps({
+        title: `${auth.dbUser.name} reported ${gates} locked gates this week`,
+        body: 'Check their photos on the Exceptions page and call a customer or two.',
+        url: '/ops/exceptions',
+      })
+    }
+  }
 
   return NextResponse.json({ success: true, status: newStatus })
 }

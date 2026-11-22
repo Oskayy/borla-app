@@ -14,7 +14,11 @@ interface DriverRow {
   name: string
   phone: string
   active: boolean
-  online: boolean
+  online: boolean // tapped online, inside the shift (or with extra hours)
+  counted: boolean // and really there: a recent location in or near their area (lib/presence.ts)
+  notCountedWhy: string | null
+  // An approved driver asked to move their home base (or zone); it waits for ops (lib/home-change.ts).
+  pendingHome: { address: string | null; movedKm: number; zone: string | null } | null
   onlineSince: string | null
   overrideUntil: string | null
   vehicle: string | null
@@ -170,6 +174,35 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
     }
   }
 
+  // Pause or resume (a note is kept on the log and sent to the driver).
+  async function setPaused(d: DriverRow, paused: boolean) {
+    const note = window.prompt(paused ? `Why pause ${d.name}? (sent to them)` : `Note for resuming ${d.name}`)
+    if (!note || note.trim().length < 3) return
+    await post(d.id, `/api/admin/drivers/${d.id}/pause`, { paused, note })
+  }
+
+  // Approve or send back a home base move.
+  async function decideHome(d: DriverRow, approve: boolean) {
+    const note = approve ? '' : window.prompt(`Why send ${d.name}'s home base move back? (shown to them)`)
+    if (!approve && (!note || note.trim().length < 3)) return
+    await post(d.id, `/api/admin/drivers/${d.id}/home-change`, { approve, note })
+  }
+
+  async function post(driverId: string, url: string, body: unknown) {
+    setBusy(driverId)
+    setMessage('')
+    try {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) setMessage(data.error || 'Could not update the driver')
+      else router.refresh()
+    } catch {
+      setMessage('Could not reach Trashit. Please try again.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   if (drivers.length === 0) return <AllClear>No drivers yet.</AllClear>
 
   return (
@@ -198,7 +231,8 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
                 <span className="font-semibold">{d.name}</span>
                 <span className="sr-only">{d.online ? 'online' : 'offline'}</span>
                 {!d.active && <Chip tone="danger">Paused</Chip>}
-                {d.online && <Chip tone="driver">Online</Chip>}
+                {d.online && d.counted && <Chip tone="driver">Online</Chip>}
+                {d.online && !d.counted && <Chip tone="danger">Online, not getting stops</Chip>}
               </p>
               <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
                 <a href={`tel:${d.phone}`} className="inline-flex items-center gap-1 font-medium text-action-deep hover:underline">
@@ -220,6 +254,22 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
                   {' · '}
                   {d.lastLocationAt ? `location ${now == null ? 'received' : ago(d.lastLocationAt, now)}` : 'waiting for location'}
                 </p>
+              )}
+              {d.notCountedWhy && <p className="mt-1 text-sm font-medium text-warn-deep">{d.notCountedWhy}. New stops go to other drivers.</p>}
+              {d.pendingHome && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 rounded-control bg-canvas p-2.5 text-sm">
+                  <span className="min-w-0 flex-1 basis-56">
+                    <strong>Home base move waiting:</strong> {d.pendingHome.movedKm.toFixed(1)} km
+                    {d.pendingHome.address && ` to ${d.pendingHome.address}`}
+                    {d.pendingHome.zone && ` · zone ${d.pendingHome.zone}`}. It sets their radius and distance bonus.
+                  </span>
+                  <button type="button" onClick={() => decideHome(d, true)} disabled={busy === d.id} className={BUTTON_PRIMARY}>
+                    Approve
+                  </button>
+                  <button type="button" onClick={() => decideHome(d, false)} disabled={busy === d.id} className={BUTTON_QUIET}>
+                    Send back
+                  </button>
+                </div>
               )}
               {d.overrideUntil && (
                 <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-warn-deep">
@@ -247,6 +297,9 @@ export default function DriversClient({ drivers, canEditId = false }: { drivers:
             </dl>
 
             <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setPaused(d, d.active)} disabled={busy === d.id} className={BUTTON_QUIET}>
+                {d.active ? 'Pause' : 'Resume'}
+              </button>
               {d.overrideUntil ? (
                 <button type="button" onClick={() => setOverride(d.id, 0)} disabled={busy === d.id} className={BUTTON_QUIET}>
                   Remove extra hours

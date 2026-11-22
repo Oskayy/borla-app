@@ -88,11 +88,12 @@ export function splitOrder(price: number, feeBps: number, pickupBps: number, x?:
   return { price, feeBps, pickupBps, platformFee, pool, pickup, unload: pool - pickup }
 }
 
-// Distance bonus (step 7): for a stop far from the driver's home base, a bonus per km beyond the free distance,
-// capped, and never more than Trashit's platform fee on the order (it is paid from it).
-export function distanceBonus(km: number, rule: { freeKm: number; perKmPesewas: number; capPesewas: number }, platformFee: number): number {
+// Distance bonus (step 7): for a stop far from where the driver comes from (lib/distance-bonus-server.ts), a bonus per
+// km beyond the free distance, capped, and never more than `trashitKeeps`: the platform fee minus Paystack's fee on
+// the payment, so a far stop never costs Trashit money.
+export function distanceBonus(km: number, rule: { freeKm: number; perKmPesewas: number; capPesewas: number }, trashitKeeps: number): number {
   if (!Number.isFinite(km) || km <= rule.freeKm || rule.perKmPesewas <= 0) return 0
-  return Math.max(0, Math.min(Math.floor((km - rule.freeKm) * rule.perKmPesewas), rule.capPesewas, platformFee))
+  return Math.max(0, Math.min(Math.floor((km - rule.freeKm) * rule.perKmPesewas), rule.capPesewas, trashitKeeps))
 }
 
 export interface AttemptSplit {

@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (toCheck.length !== ids.length) {
     return NextResponse.json({ error: 'Some selected orders are no longer available. Refresh and try again.' }, { status: 409 })
   }
-  const check = await checkAssignment(driverId, toCheck, body?.override, body?.overrideReason)
+  const check = await checkAssignment(driverId, toCheck, body?.override, body?.overrideReason, auth.dbUser.role)
   if (!check.ok) return NextResponse.json({ error: check.error }, { status: 409 })
 
   const orders = await prisma.order.findMany({ where: { id: { in: ids }, status: 'PAID' } })

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { isUuid, readJson } from '@/lib/validate'
+import { draftDeletable } from '@/lib/payment-confirm-server'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(['CUSTOMER'])
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
   if (order.status !== 'DRAFT') {
     return NextResponse.json({ error: 'Only bookings that are not paid yet can be deleted.' }, { status: 400 })
   }
+  // Never while a payment may still be going through: the money would arrive for a booking that no longer exists.
+  const deletable = await draftDeletable(orderId, order.checkoutStartedAt, new Date())
+  if (!deletable.ok) return NextResponse.json({ error: deletable.error }, { status: 409 })
 
   // Delete evidence rows first (foreign key), then the order itself.
   // Note: this does not delete the uploaded photo file from Supabase Storage —
@@ -27,7 +31,8 @@ export async function POST(req: NextRequest) {
   // item, not a functional problem.
   await prisma.$transaction([
     prisma.orderEvidence.deleteMany({ where: { orderId } }),
-    prisma.order.delete({ where: { id: orderId } }),
+    prisma.auditLog.deleteMany({ where: { orderId } }),
+    prisma.order.deleteMany({ where: { id: orderId, status: 'DRAFT' } }),
   ])
 
   return NextResponse.json({ success: true })

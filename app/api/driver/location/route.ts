@@ -5,6 +5,7 @@ import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isValidLat, isValidLng, readJson } from '@/lib/validate'
 import { getShiftSettings } from '@/lib/settings'
 import { isDriverAvailable } from '@/lib/shift'
+import { driverPresence, presenceHint, PRESENCE_SELECT } from '@/lib/presence'
 
 // Live position from the driver's phone. Only stored while the driver is online and working
 // (during the shift, or with an ops override). Otherwise the driver is switched offline and nothing is kept.
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   const profile = await prisma.driverProfile.findUnique({
     where: { userId: auth.user.id },
-    select: { isOnline: true, onlineOverrideUntil: true },
+    select: PRESENCE_SELECT,
   })
   if (!profile) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
 
@@ -39,10 +40,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, offline: true }, { status: 409 })
   }
 
+  const now = new Date()
   await prisma.driverProfile.update({
     where: { userId: auth.user.id },
-    data: { currentLat: body.lat, currentLng: body.lng, lastLocationAt: new Date() },
+    data: { currentLat: body.lat, currentLng: body.lng, lastLocationAt: now },
   })
 
-  return NextResponse.json({ success: true })
+  // Tell the driver straight away if this position is too far from their area to be offered stops (lib/presence.ts).
+  const presence = driverPresence({ ...profile, currentLat: body.lat, currentLng: body.lng, lastLocationAt: now }, now, settings)
+  return NextResponse.json({ success: true, hint: presenceHint(presence) })
 }

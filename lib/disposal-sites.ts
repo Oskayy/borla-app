@@ -48,6 +48,8 @@ export interface SiteInput {
   acceptedWaste: string[]
   avgUnloadMinutes: number
   tippingFee: number // GHS a driver pays to tip here (recorded only for now)
+  unloadCode: string | null // posted at the gate; drivers type it for an unload to be paid automatically
+  ticketRequired: boolean // drivers type the weighbridge ticket number
   notes: string | null
   zoneId: string | null
   active: boolean
@@ -98,6 +100,12 @@ export function parseSiteBody(body: JsonBody): { ok: boolean; error: string; dat
   const tippingFee = body?.tippingFee === undefined || body?.tippingFee === '' ? 0 : inRange(Number(body.tippingFee), 0, 1000)
   if (tippingFee === null || Math.abs(tippingFee * 100 - Math.round(tippingFee * 100)) > 1e-6) return bad('Tipping fee must be GHS 0 to 1,000')
 
+  // A code posted at the site gate (lib/unload-checks.ts): letters and digits, 3 to 12. Empty = none.
+  const rawCode = typeof body?.unloadCode === 'string' ? body.unloadCode.replace(/\s+/g, '').toUpperCase() : ''
+  if (rawCode && !/^[A-Z0-9]{3,12}$/.test(rawCode)) return bad('The site code must be 3 to 12 letters or numbers')
+  const unloadCode = rawCode || null
+  const ticketRequired = body?.ticketRequired === true
+
   const notes = body?.notes ? cleanText(body.notes, 500) : null
   if (body?.notes && !notes) return bad('Notes are too long')
 
@@ -119,6 +127,8 @@ export function parseSiteBody(body: JsonBody): { ok: boolean; error: string; dat
       acceptedWaste: [...acceptedWaste],
       avgUnloadMinutes: unload,
       tippingFee,
+      unloadCode,
+      ticketRequired,
       notes,
       zoneId,
       active,

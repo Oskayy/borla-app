@@ -174,8 +174,8 @@ export default function DriverProfileSetupForm({
         setError(data.error || 'Could not save your profile')
         return
       }
-      if (data.vehicleChange === 'pending') {
-        // Stay here: the vehicle change card at the top asks for the new vehicle's photo.
+      if (data.vehicleChange === 'pending' || data.homeChange === 'pending') {
+        // Stay here: the card at the top asks for the new vehicle's photo, or says the home base move waits for ops.
         router.refresh()
         window.scrollTo({ top: 0, behavior: 'smooth' })
         return

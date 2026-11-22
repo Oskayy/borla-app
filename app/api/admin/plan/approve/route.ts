@@ -4,7 +4,7 @@ import { requireAuth, OPS_ROLES } from '@/lib/auth'
 import { enforceRateLimit, tooManyRequests } from '@/lib/rate-limit'
 import { isUuid, readJson } from '@/lib/validate'
 import { logAdminAction } from '@/lib/admin-log'
-import { checkAssignment, loadDispatchDrivers, loadPlanSites } from '@/lib/dispatch-server'
+import { checkAssignment, loadDispatchDrivers, loadPlanSites, OVERRIDE_ROLE_ERROR, OVERRIDE_ROLES } from '@/lib/dispatch-server'
 import { orderLitres } from '@/lib/dispatch'
 import { buildDriverPlan, limitProblems, orderWasteKind, type PlanOrder } from '@/lib/planner'
 import { notifyUser } from '@/lib/notify'
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       continue
     }
 
-    const check = await checkAssignment(driverId, orders, p.override === true, p.overrideReason)
+    const check = await checkAssignment(driverId, orders, p.override === true, p.overrideReason, auth.dbUser.role)
     if (!check.ok) {
       results.push({ driverId, ok: false, message: check.error })
       continue
@@ -104,6 +104,10 @@ export async function POST(req: NextRequest) {
     let limitNote = ''
     if (limits.length > 0) {
       const reason = typeof p.overrideReason === 'string' ? p.overrideReason.trim().slice(0, 200) : ''
+      if (p.override === true && !OVERRIDE_ROLES.includes(auth.dbUser.role)) {
+        results.push({ driverId, ok: false, message: `${OVERRIDE_ROLE_ERROR}: ${limits.join('; ')}` })
+        continue
+      }
       if (p.override !== true || reason.length < 3) {
         results.push({
           driverId,

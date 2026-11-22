@@ -30,6 +30,8 @@ export default function DriverOnlineToggle({
   // Going offline with stops still to collect: the server asks first (they go to other drivers).
   const [confirmOff, setConfirmOff] = useState<{ toCollect: number; onBoard: number } | null>(null)
   const [done, setDone] = useState('')
+  // Online but too far from their area to be offered stops (from the server's answer to each position).
+  const [away, setAway] = useState('')
   const lastSent = useRef(0)
   const router = useRouter()
 
@@ -54,7 +56,9 @@ export default function DriverOnlineToggle({
               setOnline(false)
               setError(`The shift has ended, so you've been switched offline. See you at ${shiftLabel.split(' – ')[0]}.`)
               router.refresh()
+              return
             }
+            if (res.ok) res.json().then((d) => setAway(typeof d?.hint === 'string' ? d.hint : '')).catch(() => {})
           })
           .catch(() => {
             // A missed update isn't worth interrupting the driver over.
@@ -179,6 +183,11 @@ export default function DriverOnlineToggle({
         )}
         {online && gps === 'idle' && <p className="mt-3 text-sm text-on-hero-2">Getting your location…</p>}
       </div>
+      {online && away && (
+        <p role="status" className="mt-3 rounded-2xl bg-white/10 p-3 text-sm font-medium text-[#ffd9a8]">
+          {away}
+        </p>
+      )}
       {online && gps === 'denied' && (
         <p role="alert" className="mt-3 rounded-2xl bg-white/10 p-3 text-sm font-medium text-[#ffc2b8]">
           Location is blocked. Turn it on in your browser settings so we can send you nearby pickups.

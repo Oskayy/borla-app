@@ -56,6 +56,8 @@ async function loadQueueCounts(role: string): Promise<QueueCounts> {
       (SELECT count(*) FROM "Order" o
         WHERE EXISTS (SELECT 1 FROM "AuditLog" a WHERE a."orderId" = o.id AND (a.reason LIKE 'PAYMENT AMOUNT MISMATCH%' OR a.reason LIKE 'DUPLICATE OR LATE PAYMENT%'))
           AND NOT EXISTS (SELECT 1 FROM "AuditLog" a WHERE a."orderId" = o.id AND a.reason LIKE 'PAYMENT PROBLEM RESOLVED%')) AS "payments",
+      (SELECT count(DISTINCT d."orderId") FROM "Dispute" d JOIN "Order" o ON o.id = d."orderId"
+        WHERE d.status = 'OPEN' AND d.kind IN ('CUSTOMER', 'UNLOAD_AUDIT') AND o.status NOT IN ('FAILED_PICKUP', 'DISPUTED')) AS "holds",
       (SELECT count(*) FROM "DriverProfile" WHERE "approvalStatus" = 'PENDING' AND "submittedAt" IS NOT NULL) AS "approvals",
       (SELECT count(*) FROM "DriverProfile" WHERE "pendingVehicleAt" IS NOT NULL) AS "vehicleChanges",
       (SELECT count(*) FROM "OrderRating" WHERE stars <= ${LOW_RATING} AND "reviewedAt" IS NULL) AS "lowRatings",
@@ -67,7 +69,7 @@ async function loadQueueCounts(role: string): Promise<QueueCounts> {
   const all: QueueCounts = {
     needsDriver: n('needsDriver'),
     unloads: n('unloads'),
-    exceptions: n('flagged') + n('checks') + n('payments'),
+    exceptions: n('flagged') + n('checks') + n('payments') + n('holds'),
     approvals: n('approvals') + n('vehicleChanges'),
     lowRatings: n('lowRatings'),
     withdrawals: n('withdrawals'),

@@ -16,7 +16,8 @@ export interface DispatchDriver {
   id: string
   name: string
   isActive: boolean
-  available: boolean // online now (see isDriverAvailable)
+  available: boolean // online and really there now (lib/presence.ts)
+  awayReason?: string // why an online driver doesn't count (no recent location, outside their area)
   offNight?: boolean // the driver marked this night as off (lib/availability.ts): dispatch leaves them out
   radiusKm: number | null
   capacityLitres: number | null
@@ -99,7 +100,7 @@ export function assessDriver(
   }
   if (shiftRunning && !d.available) {
     counts = false
-    reasons.push('Offline')
+    reasons.push(d.awayReason || 'Offline')
   }
 
   const position = driverPosition(d, shiftRunning, now)

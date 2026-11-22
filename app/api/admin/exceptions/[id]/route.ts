@@ -11,7 +11,7 @@ import { REFUND_ROLES } from '@/lib/refunds'
 import { ensureSplit } from '@/lib/order-split-server'
 import { attemptFeeBps, attemptSplit } from '@/lib/money-split'
 import { LIVE_REFUND_STATUSES, refundable } from '@/lib/refunds'
-import { ATTEMPT_TYPE, clearsAt, shiftEndsAt } from '@/lib/earnings'
+import { ATTEMPT_TYPE, clearingHoursFor, clearsAt, shiftEndsAt } from '@/lib/earnings'
 import { postJournal } from '@/lib/journal-server'
 import { earnedLines, feeIncomeLines } from '@/lib/accounts'
 import { notifyUser } from '@/lib/notify'
@@ -25,9 +25,18 @@ import { caught } from '@/lib/errors'
 //   attempt_fee      -> failed pickup that was the customer's fault: Trashit keeps the pricing rule's attempt fee
 //                       (0-25%) and pays the driver from it, the customer gets the rest back, the order is cancelled
 //                       (lib/money-split.ts attemptSplit). At 0% it is a full refund.
-//   gps_reviewed     -> a GPS mismatch was checked and is fine
+//   gps_reviewed     -> a pickup check was looked at and is fine: the pay it held is released
+//   audit_reviewed   -> a random unload audit was looked at and is fine: the pay it held is released
+//   report_resolved  -> a customer's report was dealt with (refund it first if needed): the pay it held is released
 //   payment_reviewed -> a payment problem was dealt with (e.g. refunded) and can leave the list
 // Refunds go through /api/admin/orders/[id]/refund.
+const REVIEW_TAGS = {
+  gps_reviewed: 'GPS REVIEWED',
+  payment_reviewed: 'PAYMENT PROBLEM RESOLVED',
+  audit_reviewed: 'UNLOAD AUDIT REVIEWED',
+  report_resolved: 'CUSTOMER REPORT RESOLVED',
+} as const
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(EXCEPTION_ROLES)
   if (!auth.ok) return auth.response
@@ -50,10 +59,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
   const flagged = order.status === 'FAILED_PICKUP' || order.status === 'DISPUTED'
 
-  if (action === 'gps_reviewed' || action === 'payment_reviewed') {
-    const tag = action === 'gps_reviewed' ? 'GPS REVIEWED' : 'PAYMENT PROBLEM RESOLVED'
-    await prisma.auditLog.create({ data: { orderId: id, actorId: auth.user.id, fromState: order.status, toState: order.status, reason: `${tag}: ${note}` } })
-    await logAdminAction(auth.user.id, action === 'gps_reviewed' ? 'GPS_MISMATCH_REVIEWED' : 'PAYMENT_PROBLEM_RESOLVED', id, note)
+  if (action === 'gps_reviewed' || action === 'payment_reviewed' || action === 'audit_reviewed' || action === 'report_resolved') {
+    const tag = REVIEW_TAGS[action]
+    // The holds this review clears (lib/plausibility.ts pickup checks, unload audits, customer reports).
+    const kind = action === 'gps_reviewed' ? 'PICKUP_CHECK' : action === 'audit_reviewed' ? 'UNLOAD_AUDIT' : action === 'report_resolved' ? 'CUSTOMER' : null
+    await prisma.$transaction([
+      prisma.auditLog.create({ data: { orderId: id, actorId: auth.user.id, fromState: order.status, toState: order.status, reason: `${tag}: ${note}` } }),
+      ...(kind
+        ? [
+            prisma.dispute.updateMany({
+              where: { orderId: id, status: 'OPEN', kind },
+              data: { status: 'RESOLVED', resolution: `${tag}: ${note}`, resolvedBy: auth.user.id, resolvedAt: new Date() },
+            }),
+          ]
+        : []),
+    ])
+    await logAdminAction(auth.user.id, tag.replace(/ /g, '_'), id, note)
+    if (action === 'report_resolved') {
+      await notifyUser(order.customerId, { title: 'About your report', body: `Trashit looked into your report: ${note}`, url: `/dashboard/customer/orders/${id}` })
+    }
     return NextResponse.json({ success: true })
   }
 
@@ -113,6 +137,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const rule = await prisma.pricingRule.findFirst({ where: { active: true }, orderBy: { createdAt: 'desc' }, select: { attemptFeePercent: true } })
     const feeBps = attemptFeeBps(rule?.attemptFeePercent)
     const driverId = order.driverId
+    const approvedAt = (await prisma.driverProfile.findUnique({ where: { userId: driverId }, select: { reviewedAt: true } }))?.reviewedAt ?? null
     let split: ReturnType<typeof attemptSplit>
     try {
       split = await prisma.$transaction(async (tx) => {
@@ -128,7 +153,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               amountPesewas: s.driverShare,
               driverId,
               idempotencyKey: `attempt-${id}`,
-              clearsAt: clearsAt(new Date(), shiftEndsAt(full?.shiftDate ?? null, settings)),
+              clearsAt: clearsAt(new Date(), shiftEndsAt(full?.shiftDate ?? null, settings), clearingHoursFor(approvedAt, new Date())),
             },
           })
         }

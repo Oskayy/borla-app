@@ -6,7 +6,7 @@ import PhotoCapture from '@/components/PhotoCapture'
 import { AlertCircle, Check, Flag } from 'lucide-react'
 import { flash } from '@/components/driver/Flash'
 import { sendOrQueue } from '@/lib/outbox'
-import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/ui'
+import { BUTTON_PRIMARY, BUTTON_QUIET, FIELD } from '@/components/ui'
 
 // One photo at the disposal site confirms the whole trip.
 export default function ConfirmTripUnload({
@@ -15,13 +15,19 @@ export default function ConfirmTripUnload({
   photoOrderId,
   collectedCount,
   waitingCount,
+  needsCode = false,
+  needsTicket = false,
 }: {
   routeId: string
   tripNumber: number
   photoOrderId: string // one of the collected orders; the photo is stored under it
   collectedCount: number
   waitingCount: number // stops on this trip not collected yet
+  needsCode?: boolean // the site posts a code at its gate
+  needsTicket?: boolean // the site gives a weighbridge ticket
 }) {
+  const [code, setCode] = useState('')
+  const [ticket, setTicket] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [gpsLat, setGpsLat] = useState<number | null>(null)
   const [gpsLng, setGpsLng] = useState<number | null>(null)
@@ -35,6 +41,10 @@ export default function ConfirmTripUnload({
       setError('Please take a photo at the disposal site first')
       return
     }
+    if (needsTicket && ticket.trim().length < 3) {
+      setError('Please type the number on your weighbridge ticket')
+      return
+    }
     setError('')
     setLoading(true)
 
@@ -43,7 +53,7 @@ export default function ConfirmTripUnload({
       kind: 'trip-unload',
       label: `Unload for trip ${tripNumber}`,
       url: '/api/driver/trip-disposal',
-      body: { routeId, tripNumber, gpsLat, gpsLng },
+      body: { routeId, tripNumber, gpsLat, gpsLng, unloadCode: code.trim() || undefined, ticketNumber: ticket.trim() || undefined },
       photo: file,
       photoPath: `${photoOrderId}/disposal-trip-${Date.now()}.jpg`,
     })
@@ -68,6 +78,8 @@ export default function ConfirmTripUnload({
     // The trip card folds away on refresh, so keep the message on the page above it.
     flash(message, r.status === 'sent' && r.data.verified ? 'ok' : 'warn')
     setFile(null)
+    setCode('')
+    setTicket('')
     if (r.status === 'sent') router.refresh()
   }
 
@@ -99,6 +111,22 @@ export default function ConfirmTripUnload({
           </span>
         )}
       </div>
+      {(needsCode || needsTicket) && (
+        <div className="fields grid gap-3 sm:grid-cols-2">
+          {needsCode && (
+            <label className="grid gap-1.5 text-sm font-medium text-ink-2">
+              Site code (posted at the gate)
+              <input value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" autoCapitalize="characters" className={FIELD} />
+            </label>
+          )}
+          {needsTicket && (
+            <label className="grid gap-1.5 text-sm font-medium text-ink-2">
+              Weighbridge ticket number
+              <input value={ticket} onChange={(e) => setTicket(e.target.value)} autoComplete="off" inputMode="text" className={FIELD} />
+            </label>
+          )}
+        </div>
+      )}
       {error && (
         <p role="alert" className="flex items-start gap-1.5 text-sm text-danger">
           <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" /> {error}

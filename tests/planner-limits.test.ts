@@ -126,7 +126,7 @@ describe('work already assigned tonight', () => {
   const route = { driverId: 'd1', createdAt: NOW, trips: [{ tripNumber: 1, facility: { lat: SITE.lat, lng: SITE.lng, avgUnloadMinutes: 15 } }] }
   it('counts trips, and only open trips use time', () => {
     const done = nightWork(
-      [{ routeId: 'r', tripNumber: 1, sequence: 1, order: { status: 'DISPOSAL_VERIFIED', latitude: HOME.lat, longitude: HOME.lng }, route }],
+      [{ routeId: 'r', tripNumber: 1, sequence: 1, order: { status: 'COMPLETED', latitude: HOME.lat, longitude: HOME.lng }, route }],
       HOME
     )
     expect(done).toEqual({ tripsUsed: 1, committedMinutes: 0 })

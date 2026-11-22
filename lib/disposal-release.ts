@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { ensureSplit } from '@/lib/order-split-server'
-import { BONUS_TYPE, clearsAt, PICKUP_TYPE, shiftEndsAt, UNLOAD_TYPE } from '@/lib/earnings'
+import { BONUS_TYPE, clearingHoursFor, clearsAt, PICKUP_TYPE, shiftEndsAt, UNLOAD_TYPE } from '@/lib/earnings'
 import type { ShiftSettings } from '@/lib/shift'
 import { balance, postJournal } from '@/lib/journal-server'
 import { ACCOUNTS, earnedLines, feeIncomeLines } from '@/lib/accounts'
@@ -35,10 +35,12 @@ export async function releaseDisposal(
   if (moved.count !== ids.length) throw new Error('STATE_CHANGED')
 
   const now = new Date()
+  const driver = await tx.driverProfile.findUnique({ where: { userId: args.driverId }, select: { reviewedAt: true } })
+  const hours = clearingHoursFor(driver?.reviewedAt ?? null, now) // longer for new drivers
   let total = 0
   for (const o of args.orders) {
     const split = await ensureSplit(tx, o.id)
-    const clears = clearsAt(now, shiftEndsAt(o.shiftDate, args.settings))
+    const clears = clearsAt(now, shiftEndsAt(o.shiftDate, args.settings), hours)
     total += split.unload
     await tx.ledgerEntry.create({
       data: {

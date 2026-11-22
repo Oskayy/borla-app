@@ -9,6 +9,8 @@ import { DRIVER_DOCS_BUCKET } from '@/lib/driver-docs'
 import { planVehicleChange, VEHICLE_CHANGE_DOC } from '@/lib/vehicle-change'
 import { parseGhanaCard, parsePlate } from '@/lib/ghana-card'
 import { caught } from '@/lib/errors'
+import { NO_ZONE, planHomeChange } from '@/lib/home-change'
+import { notifyOps } from '@/lib/notify'
 
 // Saves the driver's vehicle, home base (where they start each night) and working radius.
 // An approved driver's change of vehicle type waits for ops (lib/vehicle-change.ts); everything else saves now.
@@ -63,7 +65,18 @@ export async function POST(req: NextRequest) {
 
   const current = await prisma.driverProfile.findUnique({
     where: { userId: auth.user.id },
-    select: { approvalStatus: true, vehicleTypeId: true, pendingVehicleTypeId: true, vehicleTypeRef: { select: { maxRadiusKm: true } } },
+    select: {
+      approvalStatus: true,
+      vehicleTypeId: true,
+      pendingVehicleTypeId: true,
+      vehicleTypeRef: { select: { maxRadiusKm: true } },
+      homeLat: true,
+      homeLng: true,
+      homeAddress: true,
+      zoneId: true,
+      pendingHomeAt: true,
+      user: { select: { name: true } },
+    },
   })
   if (!current) return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 })
 
@@ -87,7 +100,31 @@ export async function POST(req: NextRequest) {
     requestedRadiusKm: radiusKm,
     currentMaxRadiusKm: current.vehicleTypeRef?.maxRadiusKm ?? null,
   })
-  const place = { vehiclePlate, zoneId, homeAddress, homeLat, homeLng, ...(ghanaCardNumber ? { ghanaCardNumber } : {}) }
+  // An approved driver's move of home base or zone waits for ops (lib/home-change.ts); a small correction saves now.
+  const move = planHomeChange({
+    approved,
+    current: { homeLat: current.homeLat, homeLng: current.homeLng, zoneId: current.zoneId },
+    requested: { homeLat, homeLng, zoneId },
+  })
+  const place =
+    move.kind === 'now'
+      ? { vehiclePlate, zoneId, homeAddress, homeLat, homeLng, pendingHomeLat: null, pendingHomeLng: null, pendingHomeAddress: null, pendingZoneId: null, pendingHomeAt: null, ...(ghanaCardNumber ? { ghanaCardNumber } : {}) }
+      : {
+          vehiclePlate,
+          pendingHomeLat: homeLat,
+          pendingHomeLng: homeLng,
+          pendingHomeAddress: homeAddress,
+          pendingZoneId: zoneId ?? NO_ZONE,
+          pendingHomeAt: new Date(),
+          homeChangeNote: null,
+        }
+  if (move.kind === 'pending' && !current.pendingHomeAt) {
+    await notifyOps({
+      title: 'Home base move to approve',
+      body: `${current.user.name} asked to move their home base ${move.movedKm.toFixed(1)} km. Approve it on the Drivers page.`,
+      url: '/ops/drivers',
+    })
+  }
 
   if (plan.kind === 'pending') {
     // Keep working on today's vehicle; the new one waits for a photo and ops approval.
@@ -105,7 +142,7 @@ export async function POST(req: NextRequest) {
     })
     // A different vehicle than the one already asked for needs a new photo.
     if (changed) await removeChangePhotos(auth.user.id)
-    return NextResponse.json({ success: true, vehicleChange: 'pending' })
+    return NextResponse.json({ success: true, vehicleChange: 'pending', homeChange: move.kind === 'pending' ? 'pending' : undefined })
   }
 
   try {
@@ -133,7 +170,7 @@ export async function POST(req: NextRequest) {
   }
   if (current.pendingVehicleTypeId) await removeChangePhotos(auth.user.id)
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, homeChange: move.kind === 'pending' ? 'pending' : undefined })
 }
 
 // Deletes the photo sent with a vehicle change (records and files).

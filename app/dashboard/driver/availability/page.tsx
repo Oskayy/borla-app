@@ -18,7 +18,7 @@ export default async function DriverAvailabilityPage() {
   const [profile, settings, stopsTonight] = await Promise.all([
     prisma.driverProfile.findUnique({ where: { userId: user.id }, select: { workNights: true, nightsOff: true } }),
     getShiftSettings(),
-    prisma.order.count({ where: { driverId: user.id, status: { in: ['ASSIGNED', 'EN_ROUTE', 'ARRIVED'] } } }),
+    prisma.order.count({ where: { driverId: user.id, status: { in: ['ASSIGNED'] } } }),
   ])
   if (!profile) redirect('/dashboard/driver/profile-setup')
   const tonight = planningShiftDate(new Date(), settings)

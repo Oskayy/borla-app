@@ -213,7 +213,7 @@ export const termsSections: LegalSection[] = [
     blocks: [
       { type: 'bullets', items: [
         "For each stop, a driver earns a share of the price after Trashit's fee: part for the pickup and the rest once the unload at a disposal site is confirmed. The split is fixed when the customer pays and shown in the app.",
-        "Earnings become available to withdraw 24 hours after the later of the unload and the end of that night's shift, unless a complaint or refund about that order is still open. New drivers have a small part kept back for their first 30 days.",
+        "Earnings become available to withdraw 24 hours after the later of the unload and the end of that night's shift (48 hours in a driver's first 30 days), unless a complaint, a refund or a check of the pickup or unload about that order is still open. New drivers also have a small part kept back for their first 30 days.",
         "Available earnings are paid to the driver’s mobile money wallet each morning. Drivers can also cash out sooner from the app; the first cash-out each day is free and later ones the same day cost a small fee shown before you confirm.",
         "If a refund is given because a driver was at fault, that driver’s pay for the order is taken back from their earnings. If a pickup fails because of the customer, the driver receives part of any attempt fee.",
         "The amounts, times and limits in this section can change; the app always shows the current ones. Changes do not affect stops already paid for.",

@@ -3,7 +3,7 @@ import { getBalancePesewas } from '@/lib/paystack'
 import { getWalletState, PAYOUT_ROLES } from '@/lib/wallet-server'
 import { OPEN_WITHDRAWAL_STATUSES, payoutHoldEndsAt } from '@/lib/wallet'
 import { EARNING_TYPES } from '@/lib/earnings'
-import { planSweep, sweepTotal, topUpCheck, type PayoutCandidate } from '@/lib/treasury'
+import { fitToBalance, planSweep, sweepTotal, topUpCheck, type PayoutCandidate } from '@/lib/treasury'
 import { createWithdrawal, sendClaimedWithdrawal } from '@/lib/payouts-server'
 import { notifyUsers } from '@/lib/notify'
 import { caught } from '@/lib/errors'
@@ -84,9 +84,9 @@ export async function morningTopUpCheck(day: string): Promise<string> {
   return `due ${ghs(check.due)} to ${plan.auto.length} driver(s), balance ${balance == null ? 'unknown' : ghs(balance)}, top-up ${ghs(check.topUp)}`
 }
 
-// 10am onwards: pays every driver their available balance in one transfer. It never starts payouts it can't
-// finish: if the Paystack balance doesn't cover them all, nothing is sent and it tries again on the next run.
-// Returns done=false to be retried.
+// 10am onwards: pays every driver their available balance in one transfer. If the Paystack balance doesn't cover
+// them all, it pays as many as it can (smallest balances first), tells Finance the exact shortfall once a day, and
+// tries the rest again on the next run. Returns done=false to be retried.
 export async function runDailySweep(): Promise<{ done: boolean; summary: string }> {
   const sweep = planSweep(await payoutCandidates())
   // Paystack transfers switched off (Finance page): nothing is sent; every payout waits for Finance to pay by hand.
@@ -94,13 +94,24 @@ export async function runDailySweep(): Promise<{ done: boolean; summary: string 
   const plan = transfers
     ? sweep
     : { auto: [], forFinance: [...sweep.auto.map((p) => ({ ...p, why: 'Paystack transfers are off: pay by hand' })), ...sweep.forFinance] }
-  const total = sweepTotal(plan)
+  let later: { driverId: string; amount: number }[] = []
   if (plan.auto.length > 0) {
     const balance = await getBalancePesewas()
-    if (balance == null || balance < total.amount + total.fees) {
-      return { done: false, summary: `waiting: needs ${ghs(total.amount + total.fees)}, balance ${balance == null ? 'unknown' : ghs(balance)}` }
+    const fit = fitToBalance(plan, balance)
+    if (fit.later.length > 0) {
+      later = fit.later
+      await tellFinanceOnce(
+        'Paystack balance short for payouts',
+        `Add ${ghs(fit.shortBy)} to pay everyone: ${fit.send.auto.length} payout(s) can go now, ${fit.later.length} wait until the balance covers them` +
+          (balance == null ? ' (Paystack did not report the balance).' : ` (the balance is ${ghs(balance)}).`)
+      )
+      if (fit.send.auto.length === 0 && plan.forFinance.length === 0) {
+        return { done: false, summary: `waiting: short by ${ghs(fit.shortBy)}, balance ${balance == null ? 'unknown' : ghs(balance)}` }
+      }
+      plan.auto = fit.send.auto
     }
   }
+  const total = sweepTotal(plan)
 
   let sent = 0
   let waiting = 0
@@ -134,5 +145,18 @@ export async function runDailySweep(): Promise<{ done: boolean; summary: string 
         '.'
     )
   }
+  if (later.length > 0) return { done: false, summary: `${sent} sent, ${later.length} waiting for the balance` }
   return { done: true, summary: `${sent} sent, ${waiting} for Finance, ${problems.length} problem(s)` }
+}
+
+// A message to Finance at most once a day (the sweep is retried every few minutes while it waits).
+async function tellFinanceOnce(title: string, body: string) {
+  const day = new Date().toISOString().slice(0, 10) // Accra is on UTC all year
+  try {
+    await prisma.jobRun.create({ data: { key: `sweep-short:${day}` } })
+  } catch (err) {
+    if (caught(err)?.code === 'P2002') return
+    throw err
+  }
+  await tellFinance(title, body)
 }

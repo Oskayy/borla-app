@@ -13,6 +13,9 @@ import { AlertTriangle, CalendarClock, CheckCircle2, ChevronRight } from 'lucide
 import { PageHeader } from '@/components/ui'
 import { loadAssignedRoutes } from '@/lib/assigned-routes'
 import TonightMap from '@/components/ops/TonightMap'
+import { recentOverrides } from '@/lib/overrides-server'
+import { OVERRIDE_ROLES } from '@/lib/dispatch-server'
+import { TZ } from '@/lib/format'
 
 const ALLOWED_ROLES = ['SUPER_ADMIN', 'OPS_MANAGER', 'DISPATCHER']
 
@@ -30,6 +33,9 @@ export default async function AssignOrdersPage() {
 
   // Run the night's automatic jobs first (expired stops, rollover...), so this page shows what still needs a driver.
   await runScheduledJobs().catch((e) => console.error('[assign] scheduled jobs failed', e))
+
+  // Overrides of the driver checks this week, for the people who may make them.
+  const overrides = OVERRIDE_ROLES.includes(dbUser.role) ? await recentOverrides(7) : []
 
   // Only tonight's orders (and any older ones). Orders already booked for a later night wait for that night.
   const settings = await getShiftSettings()
@@ -139,6 +145,26 @@ export default async function AssignOrdersPage() {
               </div>
             </details>
           </>
+        )}
+
+        {overrides.length > 0 && (
+          <details id="overrides" className="group mt-2 rounded-card bg-surface p-4 shadow-card ring-1 ring-line/70 sm:px-5">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-[15px] font-semibold">
+              <ChevronRight aria-hidden className="size-4 transition group-open:rotate-90" /> Driver checks overridden in the last 7 days ({overrides.length})
+            </summary>
+            <p className="mt-1 text-sm text-ink-3">Only an Ops Manager or Super Admin can go past a driver check, with a reason. Ops managers get this list every Monday.</p>
+            <ul className="mt-3 divide-y divide-line text-sm">
+              {overrides.map((o, i) => (
+                <li key={`${o.orderId}-${i}`} className="grid gap-0.5 py-2.5 sm:grid-cols-[10rem_9rem_1fr] sm:gap-3">
+                  <span className="tabular-nums text-ink-3">
+                    {new Date(o.at).toLocaleString('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                  <span className="font-medium">{o.by}</span>
+                  <span className="text-ink-2">{o.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
     </div>

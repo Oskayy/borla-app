@@ -12,17 +12,38 @@ import { BUTTON_QUIET, Card, CardTitle, StatusPill } from '@/components/ui'
 import HeroCard from '@/components/kit/HeroCard'
 import CancelOrderButton from '@/components/CancelOrderButton'
 import RateOrder from '@/components/customer/RateOrder'
+import OrderReport from '@/components/customer/OrderReport'
+import { reportOptions } from '@/lib/customer-reports'
 import { canRate } from '@/lib/ratings'
 import EnableAlerts from '@/components/EnableAlerts'
+import Note from '@/components/kit/Note'
+import { checkCheckout, CHECKOUT_LOCK_HOURS } from '@/lib/payment-confirm-server'
 
 export const dynamic = 'force-dynamic'
 
 // The audit-log states that mark each customer stage, so the timeline can show when it happened.
-const STAGE_STATES: string[][] = [['PAID'], ['ASSIGNED'], ['PICKED_UP', 'PICKUP_PENDING_REVIEW'], ['DISPOSAL_VERIFIED', 'COMPLETED']]
+const STAGE_STATES: string[][] = [['PAID'], ['ASSIGNED'], ['PICKED_UP'], ['COMPLETED']]
+
+// Can the customer report a problem, or answer a "gate locked" report? (Reads the clock.)
+function reportable(order: { status: string; ledgerEntries: { createdAt: Date }[]; disputes: { id: string }[]; auditLogs: { reason?: string | null }[] }) {
+  // Once they've said "all good" there's no need to ask again (they can still contact support).
+  if (order.auditLogs.some((l) => l.reason?.startsWith('CUSTOMER CONFIRMED'))) return { problems: false, gateReply: false }
+  return reportOptions(order, order.ledgerEntries[0]?.createdAt ?? null, new Date(), order.disputes.length > 0)
+}
 
 // Can the customer still rate this pickup? (Reads the clock, so it lives outside the component.)
 function rateWindowOpen(order: { status: string; driverId: string | null; ledgerEntries: { createdAt: Date }[] }): boolean {
   return canRate(order, order.ledgerEntries[0]?.createdAt ?? null, new Date())
+}
+
+// Back from the Paystack checkout (this page is its return address): if the payment hasn't been confirmed yet, ask
+// Paystack straight away rather than waiting for its webhook. Reads the clock, so it lives outside the component.
+async function confirmIfPaid(id: string, customerId: string): Promise<boolean> {
+  const o = await prisma.order.findUnique({ where: { id }, select: { customerId: true, status: true, paystackReference: true, checkoutStartedAt: true } })
+  if (!o || o.customerId !== customerId || o.status !== 'DRAFT' || !o.paystackReference || !o.checkoutStartedAt) return false
+  if (Date.now() - o.checkoutStartedAt.getTime() > CHECKOUT_LOCK_HOURS * 3600_000) return false
+  const state = await checkCheckout(id).catch(() => 'uncertain' as const)
+  return state === 'pending' || state === 'uncertain'
 }
 
 // Reads the clock, so it lives outside the component.
@@ -42,6 +63,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const stillChecking = await confirmIfPaid(id, user.id)
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
@@ -51,7 +73,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         orderBy: { createdAt: 'desc' },
         select: { id: true, amount: true, status: true, createdAt: true },
       },
-      auditLogs: { orderBy: { createdAt: 'asc' }, select: { toState: true, createdAt: true } },
+      auditLogs: { orderBy: { createdAt: 'asc' }, select: { toState: true, createdAt: true, reason: true } },
+      disputes: { where: { status: 'OPEN', kind: 'CUSTOMER' }, select: { id: true }, take: 1 },
       driver: { select: { name: true, driverProfile: { select: { vehicleType: true } } } },
       payments: { where: { status: { in: ['success', 'partially_refunded', 'refunded'] } }, select: { id: true }, take: 1 },
       rating: { select: { stars: true, comment: true } },
@@ -74,14 +97,20 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const status = customerStatus(order.status)
   const { cancel, collection } = details(order, await getShiftSettings())
   const stageTimes = STAGE_STATES.map((states) => order.auditLogs.find((l) => states.includes(l.toState))?.createdAt ?? null)
-  const waitingForNight = ['PAID', 'READY_FOR_BATCH', 'ASSIGNED', 'EN_ROUTE', 'ARRIVED'].includes(order.status)
+  const waitingForNight = ['PAID', 'ASSIGNED'].includes(order.status)
   const rateable = !order.rating && order.driver && rateWindowOpen(order)
+  const report = reportable(order)
 
   return (
     <div className="max-w-4xl">
       <Link href="/dashboard/customer/orders" className="mb-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink">
         <ArrowLeft aria-hidden className="size-4" /> My orders
       </Link>
+      {stillChecking && order.status === 'DRAFT' && (
+        <Note tone="info" className="mb-4">
+          We&apos;re confirming your payment with Paystack. Refresh this page in a minute, and please don&apos;t pay again: you&apos;ll get a message once it&apos;s through.
+        </Note>
+      )}
 
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -137,6 +166,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           )}
         </HeroCard>
 
+        {(report.problems || report.gateReply) && (
+          <Card>
+            <OrderReport orderId={order.id} mode={report.gateReply ? 'gateReply' : 'problems'} />
+          </Card>
+        )}
+        {order.disputes.length > 0 && (
+          <Card>
+            <p className="text-[15px] text-ink-2">We have your report and are looking into it. We&apos;ll message you when it&apos;s sorted.</p>
+          </Card>
+        )}
         {rateable && order.driver && (
           <Card>
             <RateOrder orderId={order.id} driverName={order.driver.name.split(/\s+/)[0]} />

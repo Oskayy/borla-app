@@ -136,3 +136,22 @@ export function trimToFit(shape: ZoneBoundary, others: ZoneBoundary[]): ZoneBoun
   const out = parseBoundary({ type: 'Polygon', coordinates: [best] })
   return isShapeError(out) ? null : out
 }
+
+// How far a point is from an outline, in km: 0 inside (or on the edge), otherwise the distance to the nearest edge.
+// A flat projection around the point is accurate to well under 1% at the few-km scale this is used for.
+export function distanceToShapeKm(shape: ZoneBoundary, lat: number, lng: number): number {
+  if (containsPoint(shape, lat, lng)) return 0
+  const kx = KM_PER_DEG * Math.cos((lat * Math.PI) / 180)
+  const ring = shape.coordinates[0].map(([x, y]) => [(x - lng) * kx, (y - lat) * KM_PER_DEG] as const)
+  let best = Infinity
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [ax, ay] = ring[i]
+    const [bx, by] = ring[i + 1]
+    const dx = bx - ax
+    const dy = by - ay
+    const len2 = dx * dx + dy * dy
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2))
+    best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy))
+  }
+  return best
+}

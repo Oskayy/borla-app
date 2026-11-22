@@ -22,16 +22,10 @@ enum UserRole {
 
 enum OrderStatus {
   DRAFT
-  PENDING_PAYMENT
   PAID
-  READY_FOR_BATCH
   ASSIGNED
-  EN_ROUTE
-  ARRIVED
-  PICKUP_PENDING_REVIEW
   PICKED_UP
   DISPOSAL_PENDING
-  DISPOSAL_VERIFIED
   COMPLETED
   FAILED_PICKUP
   DISPUTED
@@ -116,6 +110,13 @@ model DriverProfile {
   pendingRadiusKm       Float? // the radius asked for with it (within the new vehicle's limit)
   pendingVehicleAt      DateTime? // when the driver sent it for approval (with a photo of the new vehicle)
   vehicleChangeNote     String? // why ops sent the change back, shown to the driver
+  // An approved driver's move of home base or zone waits for ops (it sets their radius and presence area).
+  pendingHomeLat        Float?
+  pendingHomeLng        Float?
+  pendingHomeAddress    String?
+  pendingZoneId         String? // the zone asked for with it ("none" = no zone)
+  pendingHomeAt         DateTime? // when the driver asked
+  homeChangeNote        String? // why ops sent the move back, shown to the driver
 }
 
 enum ZoneTier {
@@ -173,6 +174,8 @@ model Facility {
   status           String                 @default("OPEN") // OPEN | CLOSED | FULL, switched by ops during the shift
   avgUnloadMinutes Int                    @default(15)
   tippingFee       Float                  @default(0) // GHS a driver pays to tip here (recorded only; not reimbursed yet)
+  unloadCode       String? // code posted at the site gate; when set, drivers type it to have an unload paid automatically
+  ticketRequired   Boolean                @default(false) // drivers type the weighbridge ticket number when unloading here
   notes            String?
   active           Boolean                @default(true)
   createdAt        DateTime               @default(now())
@@ -289,6 +292,12 @@ model Order {
   driverAcceptedAt      DateTime? // the assigned driver accepted this stop (cleared on reassignment)
   offeredAt             DateTime? // when the stop was given to the current driver (the accept clock starts here, or at shift start)
   quoteSnapshot         Json?
+  // Paystack checkout (lib/payment-confirm-server.ts): our reference, so the payment can be checked with Paystack
+  // if its webhook is late or lost; a draft with a checkout in progress can't be deleted.
+  paystackReference     String?     @unique
+  checkoutUrl           String?
+  checkoutStartedAt     DateTime?
+  paymentCheckedAt      DateTime? // last time Paystack was asked about this checkout
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
@@ -367,6 +376,7 @@ model OrderEvidence {
   gpsLng       Float?
   gpsAccuracy  Float?
   photoHash    String? // SHA-256 of the photo file, to spot the same photo used for two orders
+  ticketNumber String? // disposal: the weighbridge ticket number the driver typed
   capturedAt   DateTime
   aiAssessment Json?
   createdAt    DateTime @default(now())
@@ -417,9 +427,10 @@ model Dispute {
   id         String    @id @default(uuid())
   orderId    String
   order      Order     @relation(fields: [orderId], references: [id])
-  raisedBy   String
+  raisedBy   String // user id, or "system" for automatic holds
+  kind       String    @default("DRIVER") // DRIVER (report-issue) | CUSTOMER (report a problem) | PICKUP_CHECK | UNLOAD_AUDIT
   reason     String
-  status     String    @default("OPEN")
+  status     String    @default("OPEN") // OPEN holds the driver's pay for the order from clearing (lib/wallet-server.ts)
   resolution String?
   resolvedBy String?
   resolvedAt DateTime?
@@ -584,6 +595,7 @@ model Refund {
   approvedBy       String? // large staff refunds: the second person who approved it
   approvedAt       DateTime?
   driverFault      Boolean   @default(false) // ops recorded the driver as at fault: their shares of the order are taken back
+  requestKey       String?   @unique // sent by the staff screen, so a repeated tap or retry makes one refund
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

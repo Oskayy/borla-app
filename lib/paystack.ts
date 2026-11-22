@@ -85,6 +85,29 @@ export async function verifyTransfer(reference: string): Promise<PaystackResult 
   return { ...r, notFound }
 }
 
+// Starts a card / Mobile Money checkout with our own reference (so it can be checked later). Returns the page to send
+// the customer to in data.authorization_url.
+export async function initializeTransaction(args: { email: string; amountPesewas: number; reference: string; orderId: string; callbackUrl: string }): Promise<PaystackResult> {
+  const r = await call('POST', '/transaction/initialize', {
+    email: args.email,
+    amount: args.amountPesewas,
+    currency: 'GHS',
+    reference: args.reference,
+    metadata: { orderId: args.orderId },
+    callback_url: args.callbackUrl,
+  })
+  if (r.ok && typeof r.data?.authorization_url !== 'string') return { ...r, ok: false, error: 'Paystack did not return a checkout page', uncertain: false }
+  return r
+}
+
+// Asks Paystack what happened to a checkout, by our reference. data.status is 'success', 'abandoned', 'failed', etc.
+// A 404 means Paystack has no payment with this reference (the customer never reached the checkout).
+export async function verifyTransaction(reference: string): Promise<PaystackResult & { notFound: boolean }> {
+  const r = await call('GET', `/transaction/verify/${encodeURIComponent(reference)}`)
+  const notFound = !r.ok && !r.uncertain && (r.httpStatus === 404 || /not found/i.test(r.error))
+  return { ...r, notFound }
+}
+
 // Refunds all or part of a payment. `transaction` is the payment's Paystack reference.
 export async function createRefund(args: { transaction: string; amountGhs: number; merchantNote: string; customerNote: string }): Promise<PaystackResult> {
   return call('POST', '/refund', {
